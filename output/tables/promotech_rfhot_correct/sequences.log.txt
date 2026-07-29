@@ -1,0 +1,55 @@
+
+
+ READING FASTA FILE: ../benchmark_outputs/combined_correct_40bp.fasta
+
+ SAMPLE: 
+
+{'id': 'TSS_1_D39V_2971_+_656_SigA', 'seq': 'GACTGAGAACCCTTAGTTAGAGGGTTAGCACTTTATCCCT'}
+
+ # SEQS: 1988. SAMPLE: GACTGAGAACCCTTAGTTAGAGGGTTAGCACTTTATCCCT
+	 TIME ELAPSED FROM START (HOUR:MIN:SEC): 00:00:00
+
+ CONVERTING SEQUENCES TO RF-HOT DATA TYPE
+
+ INPUT SHAPE 1988 
+SAMPLE WITH LEN 40: 
+GACTGAGAACCCTTAGTTAGAGGGTTAGCACTTTATCCCT
+
+ CONVERTING DATA
+
+ HOT ENCODED SEQUENCES GENERATED SUCCESSFULLY. 
+
+   A  G  C  T  A  ...  T  A  G  C  T
+0  0  1  0  0  1  ...  0  0  0  0  1
+1  1  0  0  0  1  ...  0  1  0  0  0
+2  0  0  0  1  0  ...  1  0  0  0  1
+3  1  0  0  0  0  ...  0  1  0  0  0
+4  1  0  0  0  1  ...  0  0  0  0  1
+
+[5 rows x 160 columns]
+	 TIME ELAPSED FROM START (HOUR:MIN:SEC): 00:00:00
+
+ LOADING ML MODEL models/RF-HOT.model
+	 TIME ELAPSED FROM START (HOUR:MIN:SEC): 00:00:03
+
+ PREDICTING SEQUNCES USING: 
+
+GridSearchCV(cv=10,
+             estimator=RandomForestClassifier(class_weight={0: 0.5512173740112261,
+                                                            1: 5.381156147232458},
+                                              max_features='auto',
+                                              min_samples_leaf=5, verbose=2),
+             param_grid={'max_features': ['log2'], 'n_estimators': [2000]},
+             refit='average_precision',
+             scoring=['average_precision', 'precision', 'recall'], verbose=2)
+	 PREDICTIONS GENERATED SUCCESSFULLY. SAMPLE: 
+
+                          CHROM                                       SEQ      PRED
+0    TSS_1_D39V_2971_+_656_SigA  GACTGAGAACCCTTAGTTAGAGGGTTAGCACTTTATCCCT  0.159643
+1    TSS_2_D39V_8311_+_220_None  AAAAATTCCATTTGATATTTTTCTTCTATAAAATAGATAA  0.576286
+2      TSS_3_D39V_9760_-_5_None  TTACAGTCGTATCTAACTGATAAAGACCCTCATTTATTTT  0.109568
+3   TSS_4_D39V_11583_+_419_None  ATTTTGGGAATTGCGACCAATAATTTGAGTAAAAAAACGA  0.267402
+4  TSS_5_D39V_14240_+_3048_SigA  AAGGGAACAGAATGGAGAAAATGGAACAAATGTGTTTTCT  0.185964. 
+
+SAVED AT ../benchmark_outputs/promotech_rfhot_correct/sequences_predictions.csv
+	 TIME ELAPSED FROM START (HOUR:MIN:SEC): 00:00:04
