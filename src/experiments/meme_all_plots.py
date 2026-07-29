@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Generate all MEME plots: logos, optimization, position, genome scan, etc.
+Generate all MEME plots: logos, optimization, position, genome scan.
 Usage: pixi run --manifest-path tools/meme/pixi.toml python src/experiments/meme_all_plots.py
 """
-import subprocess, tempfile, shutil, csv, math, re, random
+import subprocess, tempfile, shutil, csv, math, re, random, time
 from pathlib import Path
 import numpy as np
 from Bio import SeqIO
@@ -23,10 +23,7 @@ neg = list(SeqIO.parse(NEG, "fasta"))
 print(f"D39V: {len(pos)} pos + {len(neg)} neg")
 print()
 
-
-# ═══════════════════════════════════════════════════════════════
-# 1. STREME motif discovery (shared for plots 2-5)
-# ═══════════════════════════════════════════════════════════════
+# 1. STREME motif discovery
 print("1. STREME motif discovery...")
 tmpdir = Path(tempfile.mkdtemp(prefix="meme_plots_"))
 subprocess.run(["streme", "-oc", str(tmpdir/"streme"), "-dna", "-minw", "10", "-maxw", "20",
@@ -47,10 +44,7 @@ print(f"  Found {len(motifs)} motifs")
 for c, w, ns, e in motifs:
     print(f"    {c:<35} w={w:>2}  sites={ns:>3}/988  E={e}")
 
-
-# ═══════════════════════════════════════════════════════════════
 # 2. FIMO position distribution of Motif 1
-# ═══════════════════════════════════════════════════════════════
 print("\n2. Motif position distribution...")
 combined = tmpdir / "pos.fa"
 with open(combined, "w") as f:
@@ -78,10 +72,7 @@ plt.savefig(PLOT_DIR / "meme_motif_position.svg", dpi=300)
 plt.close()
 print(f"  {PLOT_DIR}/meme_motif_position.{{svg,png}}")
 
-
-# ═══════════════════════════════════════════════════════════════
-# 3. AUC vs Motif Width (optimization)
-# ═══════════════════════════════════════════════════════════════
+# 3. AUC vs Motif Width optimization
 print("\n3. Width optimization...")
 widths = [(6,9), (6,12), (8,14), (10,20), (10,30)]
 results = []
@@ -112,7 +103,7 @@ for minw, maxw in widths:
         
         for row in csv.DictReader(res.stdout.splitlines(), delimiter="\t"):
             try: pv = float(row["p-value"])
-            except: continue
+            except (ValueError, KeyError, TypeError): continue
             nl = 999.0 if pv <= 0 else -math.log10(pv)
             s = row["sequence_name"]
             if s not in scores or nl > scores[s]: scores[s] = nl
@@ -125,8 +116,7 @@ for minw, maxw in widths:
     results.append((f"{minw}-{maxw}", roc_auc_score(y, sc)))
 
 fig, ax = plt.subplots(figsize=(7, 4), dpi=300)
-labels = [r[0] for r in results]
-aucs = [r[1] for r in results]
+labels = [r[0] for r in results]; aucs = [r[1] for r in results]
 ax.bar(range(len(aucs)), aucs, color="#002D62")
 ax.set_xticks(range(len(aucs))); ax.set_xticklabels(labels)
 ax.set_ylabel("AUC"); ax.set_xlabel("Motif width (min-max)")
@@ -142,100 +132,55 @@ plt.close()
 print(f"  {PLOT_DIR}/meme_optimization.{{svg,png}}")
 print(f"  Best: {results[np.argmax(aucs)][0]} (AUC={max(aucs):.4f})")
 
-
-# ═══════════════════════════════════════════════════════════════
-# 4. Sequence logos via ceqlogo (native MEME)
-# ═══════════════════════════════════════════════════════════════
-print("\n4. Sequence logos (ceqlogo)...")
-
-# 4a. Per-motif logos (from STREME)
-subprocess.run(["ceqlogo", "-i1", str(tmpdir/"streme"/"streme.txt"),
-    "-o", str(PLOT_DIR/"meme_logo1.eps"), "-f", "EPS", "-w", "30", "-h", "6",
-    "-t", "Motif 1: Extended -10"], capture_output=True, timeout=30)
-
-# Convert EPS to PNG
-for i in range(1, 4):
+# 4. Sequence logos via ceqlogo
+print("\n4. Sequence logos...")
+for i in range(1, min(7, len(motifs)+1)):
     eps = PLOT_DIR / f"meme_logo{i}.eps"
     png = PLOT_DIR / f"meme_logo{i}.png"
+    subprocess.run(["ceqlogo", f"-i{i}", str(tmpdir/"streme"/"streme.txt"),
+        "-o", str(eps), "-f", "EPS", "-w", "25", "-h", "5", "-S"],
+        capture_output=True, timeout=30)
     if eps.exists():
         subprocess.run(["gs", "-dNOPAUSE", "-dBATCH", "-sDEVICE=png16m",
             "-r300", "-dEPSCrop", f"-sOutputFile={png}", str(eps)],
             capture_output=True, timeout=30)
         print(f"  meme_logo{i}.png ✓")
 
-# 4b. Full 81bp info content logo
-# Compute PFM
-pfm = np.zeros((4, 81))
-bases = "ACGT"
-for s in pos:
-    for i, b in enumerate(str(s.seq)):
-        pfm[bases.index(b), i] += 1
-
-# Save as MEME format
-pfm_file = tmpdir / "full81bp.meme"
-with open(pfm_file, "w") as f:
-    f.write("MEME version 5\n\nALPHABET= ACGT\n\nstrands: + -\n\n")
-    f.write("Background letter frequencies\nA 0.25 C 0.25 G 0.25 T 0.25\n\n")
-    f.write(f"MOTIF Full81bp\nletter-probability matrix: alength= 4 w= 81 nsites= {len(pos)}\n")
-    for i in range(81):
-        total = pfm[:, i].sum()
-        f.write(f"  {pfm[0,i]/total:.6f}  {pfm[1,i]/total:.6f}  {pfm[2,i]/total:.6f}  {pfm[3,i]/total:.6f}\n")
-
-subprocess.run(["ceqlogo", "-i1", str(pfm_file), "-o", str(PLOT_DIR/"meme_full81bp_ceqlogo.eps"),
-    "-f", "EPS", "-w", "50", "-h", "8", "-S", "-B", "-O",
-    "-t", "S. pneumoniae Promoters (988, -60/+20)"], capture_output=True, timeout=30)
-
-for fmt, ext in [("png", "png"), ("svg", "svg")]:
-    out = PLOT_DIR / f"meme_full81bp_ceqlogo.{ext}"
-    eps = PLOT_DIR / "meme_full81bp_ceqlogo.eps"
-    if eps.exists():
-        if ext == "png":
-            subprocess.run(["gs", "-dNOPAUSE", "-dBATCH", "-sDEVICE=png16m",
-                "-r300", "-dEPSCrop", f"-sOutputFile={out}", str(eps)],
-                capture_output=True, timeout=30)
-        else:
-            subprocess.run(["gs", "-dNOPAUSE", "-dBATCH", "-sDEVICE=svg",
-                "-r300", "-dEPSCrop", f"-sOutputFile={out}", str(eps)],
-                capture_output=True, timeout=30)
-        print(f"  meme_full81bp_ceqlogo.{ext} ✓")
-
-
-# ═══════════════════════════════════════════════════════════════
-# 5. Genome-wide scan (quick: 10K windows)
-# ═══════════════════════════════════════════════════════════════
+# 5. Genome-wide scan
 print("\n5. Genome-wide scan...")
-genome = list(SeqIO.parse(ROOT / "data/reference/D39V.fna", "fasta"))[0]
-chrom_seq = str(genome.seq).upper()
-windows = [chrom_seq[i:i+81] for i in range(0, min(100000, len(chrom_seq)-81), 40)]
-
-genome_fa = tmpdir / "genome.fa"
-with open(genome_fa, "w") as f:
-    for i, s in enumerate(windows):
-        f.write(f">window_{i*40}\n{s}\n")
-
-res = subprocess.run(["fimo", "--text", "--skip-matched-sequence",
-    str(tmpdir/"streme"/"streme.txt"), str(genome_fa)],
-    capture_output=True, text=True, timeout=120)
-
-positions = []; scores_list = []
-for row in csv.DictReader(res.stdout.splitlines(), delimiter="\t"):
-    try: pv = float(row["p-value"])
-    except: continue
-    nl = 999.0 if pv <= 0 else -math.log10(pv)
-    start = int(row["sequence_name"].split("_")[1])
-    positions.append(start)
-    scores_list.append(nl)
-
-if positions:
-    fig, ax = plt.subplots(figsize=(12, 4), dpi=200)
-    ax.scatter(np.array(positions)/1e6, scores_list, s=1, alpha=0.3, color="#002D62")
-    ax.set_xlabel("Genomic position (Mb)"); ax.set_ylabel("MEME score")
-    ax.set_title(f"Genome-wide MEME Scan (first 100K bp, {len(positions)} hits)")
-    ax.spines[["top","right"]].set_visible(False)
-    plt.tight_layout()
-    plt.savefig(PLOT_DIR / "meme_genome_scan.png", dpi=200)
-    plt.close()
-    print(f"  {PLOT_DIR}/meme_genome_scan.png")
+genome_ref = ROOT / "data/reference/D39V.fna"
+if genome_ref.exists():
+    genome = list(SeqIO.parse(genome_ref, "fasta"))[0]
+    chrom_seq = str(genome.seq).upper()
+    windows = [chrom_seq[i:i+81] for i in range(0, min(100000, len(chrom_seq)-81), 40)]
+    
+    genome_fa = tmpdir / "genome.fa"
+    with open(genome_fa, "w") as f:
+        for i, s in enumerate(windows):
+            f.write(f">window_{i*40}\n{s}\n")
+    
+    res = subprocess.run(["fimo", "--text", "--skip-matched-sequence",
+        str(tmpdir/"streme"/"streme.txt"), str(genome_fa)],
+        capture_output=True, text=True, timeout=120)
+    
+    positions = []; scores_list = []
+    for row in csv.DictReader(res.stdout.splitlines(), delimiter="\t"):
+        try: pv = float(row["p-value"])
+        except (ValueError, KeyError, TypeError): continue
+        nl = 999.0 if pv <= 0 else -math.log10(pv)
+        start = int(row["sequence_name"].split("_")[1])
+        positions.append(start); scores_list.append(nl)
+    
+    if positions:
+        fig, ax = plt.subplots(figsize=(12, 4), dpi=200)
+        ax.scatter(np.array(positions)/1e6, scores_list, s=1, alpha=0.3, color="#002D62")
+        ax.set_xlabel("Genomic position (Mb)"); ax.set_ylabel("MEME score")
+        ax.set_title(f"Genome-wide MEME Scan (first 100K bp, {len(positions)} hits)")
+        ax.spines[["top","right"]].set_visible(False)
+        plt.tight_layout()
+        plt.savefig(PLOT_DIR / "meme_genome_scan.png", dpi=200)
+        plt.close()
+        print(f"  {PLOT_DIR}/meme_genome_scan.png")
 
 shutil.rmtree(tmpdir)
 print(f"\n═══ DONE ═══")
