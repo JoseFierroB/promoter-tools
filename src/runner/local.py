@@ -1,5 +1,7 @@
 """Local runner: execute tools via subprocess in any machine."""
-import subprocess, time
+import os
+import subprocess
+import time
 from typing import Optional
 
 from src.runner.base import Runner
@@ -39,14 +41,19 @@ class LocalRunner(Runner):
     def _run_once(self, tool: Tool) -> dict:
         env_path = tool.pixi_env
         env_dir = env_path.parent
+        code = self._build_code(tool)
+
         env_name = "ipro-mp" if "ipromp" in tool.short_name else "default"
         python_bin = env_dir / ".pixi" / "envs" / env_name / "bin" / "python"
-        code = self._build_code(tool)
+        env_bin = str(env_dir / ".pixi" / "envs" / env_name / "bin")
+
         cmd = [str(python_bin), "-c", code]
+        run_env = os.environ.copy()
+        run_env["PATH"] = f"{env_bin}:{run_env['PATH']}"
 
         t0 = time.perf_counter()
         result = subprocess.run(cmd, capture_output=True, text=True,
-                                cwd=str(ROOT), timeout=1800)
+                                cwd=str(ROOT), timeout=1800, env=run_env)
         wall = round(time.perf_counter() - t0, 3)
 
         success = result.returncode == 0
