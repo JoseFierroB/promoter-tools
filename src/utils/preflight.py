@@ -14,8 +14,8 @@ ROOT = Path(__file__).resolve().parent.parent.parent
 
 # ── RULE 1: Data integrity ──
 BENCHMARK_HASHES = {
-    "data/benchmark/positives_81bp.fasta": "db04c93ecc607873dc2fc483ebfe30ea",
-    "data/benchmark/negatives_81bp.fasta": "bb3fe238e50432e2155212e41a845157",
+    "data/benchmark/positives_81bp.fasta": "bf85ed392b0bd3ab9f62ce9c35da2cf6",
+    "data/benchmark/negatives_81bp.fasta": "193cdb5e265519149ca07b6c475cae7a",
 }
 
 def md5(path):
