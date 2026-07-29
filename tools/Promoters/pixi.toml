@@ -1,0 +1,14 @@
+[workspace]
+authors = ["JoseFierroB <josefierrobustos@gmail.com>"]
+channels = ["conda-forge"]
+name = "Promoters"
+platforms = ["linux-64"]
+version = "0.1.0"
+
+[tasks]
+
+[dependencies]
+tensorflow = "==2.6.0"
+pandas = ">=1.4.4,<2"
+scikit-learn = ">=1.6.1,<2"
+biopython = ">=1.79"
