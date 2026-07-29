@@ -1,0 +1,9 @@
+# FIMO with pre-existing E. coli motif databases (zero-shot, no training)
+name = "FIMO + E. coli DB"
+short = "fimo_db"
+category = "Other"
+pixi_env = "tools/meme/pixi.toml"
+gpu_capable = false
+n_sequences = 1988
+model_paths = []
+notes = "Zero-shot: FIMO scans with known E. coli motifs. Comparable to PromoTech (E. coli trained)."
