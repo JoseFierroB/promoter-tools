@@ -1,0 +1,64 @@
+# Large data files
+*.fasta
+*.fna
+*.fa
+*.bed
+*.bedGraph
+*.gff
+*.gff3
+*.csv
+*.tsv
+*.zip
+*.gz
+*.tar
+*.tar.gz
+
+# Machine learning model weights (large binaries)
+*.pth
+*.bin
+*.model
+*.model.v2
+*.model.*
+07-final/
+models/
+
+# Exclude/Allow datasets for final project
+!datasets/*.fasta
+!datasets/*.tsv
+
+# Logs and outputs
+*.log
+*.out
+*.err
+benchmark_results/
+benchmark_outputs/
+*.data
+
+# Exclude Promotech results and temporary files
+**/resultados/*
+!**/resultados/**/
+!**/resultados/**/*.py
+**/results/
+**/results_RF-HOT_3k/
+**/test_output/
+**/test_output_check/
+**/test_output_gru/
+**/test_output_lstm/
+scratch/*/
+
+# Python cache
+**/__pycache__/
+*.pyc
+**/.pixi/
+
+# Agent memories, logs and configurations
+
+# Exclude third-party weights and sample datasets (Best Practice)
+**/Promoters/Dataset/
+**/MLDSPP-Promoter-prediction/Sample Dataset/
+**/MLDSPP-Promoter-prediction/shuffled control predictions/
+**/MLDSPP-Promoter-prediction/downstream control predictions/
+codon_results/*
+MEMORIA.md
+.agents/
+.gemini/
