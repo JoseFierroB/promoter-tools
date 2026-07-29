@@ -29,7 +29,7 @@ def run_local(tools):
     out_dir = os.environ.get("BENCH_OUT", str(ROOT / "output" / "predictions"))
     os.makedirs(out_dir, exist_ok=True)
     # Pre-create combined FASTA for iPro-MP
-    combined = Path("/tmp/bench_combined.fasta")
+    combined = Path("$TMPDIR/bench_combined.fasta")
     if not combined.exists() and "ipromp" in tools:
         os.system(f"cat {ROOT}/data/benchmark/positives_81bp.fasta {ROOT}/data/benchmark/negatives_81bp.fasta > {combined}")
 
