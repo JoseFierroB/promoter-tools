@@ -7,3 +7,8 @@ gpu_capable = false
 n_sequences = 1988
 model_paths = []
 notes = "Zero-shot: FIMO scans with known E. coli motifs. Comparable to PromoTech (E. coli trained)."
+
+outputs = [
+    "output/predictions/fimo_db_pos.csv",
+    "output/predictions/fimo_db_neg.csv",
+]

@@ -104,7 +104,7 @@ def _enrich_sacct(results: list, results_dir: Path):
                 if r.tool.lower().replace(" ", "_").replace("(", "").replace(")", "")[:10] in f.stem.lower():
                     try:
                         sacct = collect_job_metrics(job_id, r.tool)
-                        if sacct.time_s == 0 and sacct.cpu_time_raw > 0:
+                        if (r.time_s is None or r.time_s == 0) and sacct.cpu_time_raw > 0:
                             r.time_s = sacct.cpu_time_raw
                         if sacct.max_rss_mb > 0:
                             r.peak_ram_mb = sacct.max_rss_mb

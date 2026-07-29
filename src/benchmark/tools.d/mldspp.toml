@@ -7,3 +7,8 @@ n_sequences = 1988
 
 model_paths = []
 notes = "Model trained on-the-fly, no file on disk"
+
+outputs = [
+    "output/predictions/mldspp_pos.csv",
+    "output/predictions/mldspp_neg.csv",
+]

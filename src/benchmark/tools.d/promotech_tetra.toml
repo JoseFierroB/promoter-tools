@@ -1,7 +1,7 @@
 name = "PromoTech RF-TETRA"
 short = "promotech_tetra"
 category = "ML"
-pixi_env = "pixi.toml"
+pixi_env = "tools/Promotech/pixi.toml"
 gpu_capable = false
 n_sequences = 1988
 

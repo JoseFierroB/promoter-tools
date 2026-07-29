@@ -26,8 +26,8 @@ logging.basicConfig(
 logger = logging.getLogger("resource_benchmark")
 
 # Default Configurations
-DEFAULT_POS_81 = "datasets/positives_81bp.fasta"
-DEFAULT_NEG_81 = "datasets/negatives_81bp.fasta"
+DEFAULT_POS_81 = "data/benchmark/positives_81bp.fasta"
+DEFAULT_NEG_81 = "data/benchmark/negatives_81bp.fasta"
 DEFAULT_PROMOTECH_DIR = "tools/Promotech"
 DEFAULT_IPROMP_DIR = "tools/iPro-MP"
 DEFAULT_OUTDIR = "benchmark_outputs"

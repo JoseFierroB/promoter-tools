@@ -41,13 +41,21 @@ echo "=> LCNN OK"
 
 echo ""
 echo "============================================"
-echo " TEST 3/5: PromoTech (RF-HOT + RF-TETRA)"
+echo " TEST 3/5: PromoTech RF-HOT"
 echo "============================================"
-pixi run python src/analysis/evaluate_promotech_pipelines.py \
+pixi run python src/benchmark/run_promotech.py -m RF-HOT \
   -p data/benchmark/positives_81bp.fasta \
   -n data/benchmark/negatives_81bp.fasta \
-  -o "$OUT" \
-  --promotech-dir tools/Promotech
+  -o "$OUT"
+
+echo ""
+echo "============================================"
+echo " TEST 3b/5: PromoTech RF-TETRA"
+echo "============================================"
+pixi run python src/benchmark/run_promotech.py -m RF-TETRA \
+  -p data/benchmark/positives_81bp.fasta \
+  -n data/benchmark/negatives_81bp.fasta \
+  -o "$OUT"
 echo "=> PromoTech OK"
 
 echo ""

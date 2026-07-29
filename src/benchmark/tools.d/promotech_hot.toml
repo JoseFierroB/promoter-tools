@@ -1,7 +1,7 @@
 name = "PromoTech RF-HOT"
 short = "promotech_hot"
 category = "ML"
-pixi_env = "pixi.toml"  # uses root pixi
+pixi_env = "tools/Promotech/pixi.toml"
 gpu_capable = false
 n_sequences = 1988
 

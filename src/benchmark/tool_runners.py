@@ -123,7 +123,14 @@ for r in pos_recs + neg_recs:
         all_scores[r.id] = 0.0
 
 n_total = len(pos_recs) + len(neg_recs)
-print(f"MEME: {{n_total}} seqs in {{time.perf_counter()-t0:.3f}}s")
+t_elapsed = time.perf_counter() - t0
+print(f"MEME: {{n_total}} seqs in {{t_elapsed:.3f}}s")
+
+import pandas as pd
+out_dir = Path("output/predictions")
+out_dir.mkdir(parents=True, exist_ok=True)
+pd.DataFrame({{"PRED": [all_scores[r.id] for r in pos_recs]}}).to_csv(out_dir / "meme_pos.csv", sep="\\t", index=False)
+pd.DataFrame({{"PRED": [all_scores[r.id] for r in neg_recs]}}).to_csv(out_dir / "meme_neg.csv", sep="\\t", index=False)
 """,
 
         "cnnprom": f"""
@@ -202,7 +209,17 @@ for r in pos + neg:
     if r.id not in scores: scores[r.id] = 0.0
 
 n_total = len(pos) + len(neg)
-print(f"FIMO_DB: {{n_total}} seqs in {{time.perf_counter()-t0:.3f}}s")
+t_elapsed = time.perf_counter() - t0
+print(f"FIMO_DB: {{n_total}} seqs in {{t_elapsed:.3f}}s")
+
+import pandas as pd
+out_dir = Path("output/predictions")
+out_dir.mkdir(parents=True, exist_ok=True)
+pos_scores = [scores[r.id] for r in pos]
+neg_scores = [scores[r.id] for r in neg]
+pd.DataFrame({{"PRED": pos_scores}}).to_csv(out_dir / "fimo_db_pos.csv", sep="\\t", index=False)
+pd.DataFrame({{"PRED": neg_scores}}).to_csv(out_dir / "fimo_db_neg.csv", sep="\\t", index=False)
+
 shutil.rmtree(tmpdir, ignore_errors=True)
 """,
     }

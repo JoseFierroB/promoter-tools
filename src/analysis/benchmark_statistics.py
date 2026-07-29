@@ -31,9 +31,11 @@ def load_predictions(pos_file: str, neg_file: str) -> Tuple[np.ndarray, np.ndarr
 
 # ── Tool registry: (display_name, category, pos_csv, neg_csv) ──
 TOOLS = [
-    ("PromoTech RF-HOT", "ML", "promotech_hot_pg_predictions_pos.csv", "promotech_hot_pg_predictions_neg.csv"),
-    ("PromoTech RF-TETRA", "ML", "promotech_tetra_pg_predictions_pos.csv", "promotech_tetra_pg_predictions_neg.csv"),
-    ("PromoterLCNN", "DL", "lcnn_pos.csv", "lcnn_neg.csv"),
+    ("PromoTech RF-HOT", "ML", "promotech/workdir/hot_pg_pos/sequences_predictions.csv", "promotech/workdir/hot_pg_neg/sequences_predictions.csv"),
+    ("PromoTech RF-TETRA", "ML", "promotech/workdir/tetra_pg_pos/sequences_predictions.csv", "promotech/workdir/tetra_pg_neg/sequences_predictions.csv"),
+    ("PromoterLCNN", "DL", "lcnn/lcnn_pos.csv", "lcnn/lcnn_neg.csv"),
+    ("MEME (STREME+FIMO)", "Other", "meme_pos.csv", "meme_neg.csv"),
+    ("FIMO (E. coli DB)", "Other", "fimo_db_pos.csv", "fimo_db_neg.csv"),
     ("MLDSPP (XGBoost)", "ML", "mldspp_pos.csv", "mldspp_neg.csv"),
     ("MLDSPP (RF)", "ML", "mldspp_rf_pos.csv", "mldspp_rf_neg.csv"),
     ("MLDSPP (SVM)", "ML", "mldspp_svm_pos.csv", "mldspp_svm_neg.csv"),

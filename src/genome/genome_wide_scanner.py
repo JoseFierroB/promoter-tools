@@ -120,8 +120,8 @@ def non_maximum_suppression(hits, cluster_dist):
 def main():
     parser = argparse.ArgumentParser(description="Genome-wide promoter scanner using MLDSPP biophysical model.")
     parser.add_argument("-g", "--genome", required=True, help="Path to genome FASTA file.")
-    parser.add_argument("-p", "--positives", default="datasets/positives_81bp.fasta", help="Path to positive training FASTA.")
-    parser.add_argument("-n", "--negatives", default="datasets/negatives_81bp.fasta", help="Path to negative training FASTA.")
+    parser.add_argument("-p", "--positives", default="data/benchmark/positives_81bp.fasta", help="Path to positive training FASTA.")
+    parser.add_argument("-n", "--negatives", default="data/benchmark/negatives_81bp.fasta", help="Path to negative training FASTA.")
     parser.add_argument("-t", "--threshold", type=float, default=0.6822, help="Probability threshold (default: 0.6822).")
     parser.add_argument("-c", "--cluster-distance", type=int, default=50, help="Clustering distance for overlapping peaks (default: 50 bp).")
     parser.add_argument("-o", "--output", default="mldspp_genome_predictions", help="Output prefix for GFF3/TSV files.")

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Master ROC plot — 7 tools compared on S. pneumoniae D39V.
-iPro-MP sp12, PromoterLCNN, PromoTech HOT/TETRA, MEME, MLDSPP 0%/75%.
+Master ROC plot — 8 curves on S. pneumoniae D39V.
+iPro-MP sp12, PromoterLCNN, PromoTech HOT/TETRA, MEME, FIMO_DB, MLDSPP 0%/75%.
 """
 
 import numpy as np
@@ -48,16 +48,16 @@ if ipromp_file.exists():
         print(f"iPro-MP sp12: AUC={result[2]:.4f}")
 
 # ── 2. PromoTech RF-HOT ──
-hot_pos = PRED_DIR / "promotech/workdir/hot_s_pos/sequences_predictions.csv"
-hot_neg = PRED_DIR / "promotech/workdir/hot_s_neg/sequences_predictions.csv"
+hot_pos = PRED_DIR / "promotech/workdir/hot_pg_pos/sequences_predictions.csv"
+hot_neg = PRED_DIR / "promotech/workdir/hot_pg_neg/sequences_predictions.csv"
 if hot_pos.exists() and hot_neg.exists():
     fpr, tpr, a = auc_from_csv(hot_pos, hot_neg)
     curves.append(("PromoTech RF-HOT", fpr, tpr, a, "#E07614", "-", 2.0))
     print(f"PromoTech RF-HOT: AUC={a:.4f}")
 
 # ── 3. PromoTech RF-TETRA ──
-tetra_pos = PRED_DIR / "promotech/workdir/tetra_s_pos/sequences_predictions.csv"
-tetra_neg = PRED_DIR / "promotech/workdir/tetra_s_neg/sequences_predictions.csv"
+tetra_pos = PRED_DIR / "promotech/workdir/tetra_pg_pos/sequences_predictions.csv"
+tetra_neg = PRED_DIR / "promotech/workdir/tetra_pg_neg/sequences_predictions.csv"
 if tetra_pos.exists() and tetra_neg.exists():
     fpr, tpr, a = auc_from_csv(tetra_pos, tetra_neg)
     curves.append(("PromoTech RF-TETRA", fpr, tpr, a, "#C21700", "-", 2.0))
@@ -78,6 +78,14 @@ if meme_pos.exists() and meme_neg.exists():
     fpr, tpr, a = auc_from_csv(meme_pos, meme_neg)
     curves.append(("MEME (STREME+FIMO)", fpr, tpr, a, "#1D14C8", "-.", 2.0))
     print(f"MEME: AUC={a:.4f}")
+
+# ── 5.5. FIMO + E. coli DB (zero-shot) ──
+fimo_db_pos = PRED_DIR / "fimo_db_pos.csv"
+fimo_db_neg = PRED_DIR / "fimo_db_neg.csv"
+if fimo_db_pos.exists() and fimo_db_neg.exists():
+    fpr, tpr, a = auc_from_csv(fimo_db_pos, fimo_db_neg)
+    curves.append(("FIMO (E. coli DB)", fpr, tpr, a, "#17BECF", "--", 1.8))
+    print(f"FIMO_DB: AUC={a:.4f}")
 
 # ── 6. MLDSPP 0% strepto (cross-species) ──
 if (PRED_DIR / "mldspp_pos.csv").exists():

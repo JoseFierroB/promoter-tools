@@ -53,7 +53,9 @@ PROMOTER_TOOLS = {
         pixi_env=config.promotech_dir / "pixi.toml",
         outputs=[
             ROOT / "output/predictions/promotech/workdir/hot_pg_pos/genome_predictions.csv",
+            ROOT / "output/predictions/promotech/workdir/hot_pg_pos/sequences_predictions.csv",
             ROOT / "output/predictions/promotech/workdir/hot_pg_neg/genome_predictions.csv",
+            ROOT / "output/predictions/promotech/workdir/hot_pg_neg/sequences_predictions.csv",
         ],
         model_paths=[config.promotech_models_dir / "RF-HOT.model"],
         gpu_capable=False,
@@ -65,7 +67,9 @@ PROMOTER_TOOLS = {
         pixi_env=config.promotech_dir / "pixi.toml",
         outputs=[
             ROOT / "output/predictions/promotech/workdir/tetra_pg_pos/genome_predictions.csv",
+            ROOT / "output/predictions/promotech/workdir/tetra_pg_pos/sequences_predictions.csv",
             ROOT / "output/predictions/promotech/workdir/tetra_pg_neg/genome_predictions.csv",
+            ROOT / "output/predictions/promotech/workdir/tetra_pg_neg/sequences_predictions.csv",
         ],
         model_paths=[config.promotech_models_dir / "RF-TETRA.model"],
         gpu_capable=False,

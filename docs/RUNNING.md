@@ -24,10 +24,15 @@ pixi run --manifest-path tools/Promoters/pixi.toml \
   -p data/benchmark/positives_81bp.fasta -n data/benchmark/negatives_81bp.fasta \
   -o OUT_DIR -m tools/Promoters/weights/PromoterLCNN/IsPromoter_fold_5
 
-# PromoTech (RF-HOT + RF-TETRA in one run)
-pixi run python src/analysis/evaluate_promotech_pipelines.py \
+# PromoTech RF-HOT
+pixi run python src/benchmark/run_promotech.py -m RF-HOT \
   -p data/benchmark/positives_81bp.fasta -n data/benchmark/negatives_81bp.fasta \
-  -o OUT_DIR --promotech-dir tools/Promotech --no-cleanup
+  -o OUT_DIR
+
+# PromoTech RF-TETRA
+pixi run python src/benchmark/run_promotech.py -m RF-TETRA \
+  -p data/benchmark/positives_81bp.fasta -n data/benchmark/negatives_81bp.fasta \
+  -o OUT_DIR
 
 # iPro-MP sp12 (needs GPU)
 cat data/benchmark/positives_81bp.fasta data/benchmark/negatives_81bp.fasta > /tmp/all.fa

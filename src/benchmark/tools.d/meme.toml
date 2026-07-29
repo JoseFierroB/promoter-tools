@@ -8,3 +8,8 @@ gpu_capable = false
 n_sequences = 1988
 model_paths = []
 notes = "STREME w=10-20 de novo motif discovery + FIMO scanning. Score = max -log10(p-value) per sequence."
+
+outputs = [
+    "output/predictions/meme_pos.csv",
+    "output/predictions/meme_neg.csv",
+]
