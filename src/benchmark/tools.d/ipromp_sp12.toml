@@ -1,0 +1,14 @@
+name = "iPro-MP (H. pylori)"
+short = "ipromp_sp12"
+category = "DL"
+pixi_env = "tools/iPro-MP/pixi.toml"
+gpu_capable = true
+n_sequences = 1988
+
+model_paths = [
+    "tools/iPro-MP/07-final",
+    "tools/iPro-MP/DNABERT-6",
+]
+pixi_feature = "ipro-mp"
+
+notes = "DNABERT-6 transformer. Heavy on CPU, fast on GPU (84x speedup on A100)."

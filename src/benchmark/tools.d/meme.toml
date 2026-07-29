@@ -1,0 +1,10 @@
+# MEME Suite — STREME motif discovery + FIMO scanning
+# Unsupervised promoter detection via de novo sequence motifs.
+name = "MEME Suite (STREME+FIMO)"
+short = "meme"
+category = "Other"
+pixi_env = "tools/meme/pixi.toml"
+gpu_capable = false
+n_sequences = 1988
+model_paths = []
+notes = "STREME w=10-20 de novo motif discovery + FIMO scanning. Score = max -log10(p-value) per sequence."

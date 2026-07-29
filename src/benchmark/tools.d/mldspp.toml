@@ -1,0 +1,9 @@
+name = "MLDSPP XGBoost"
+short = "mldspp"
+category = "ML"
+pixi_env = "tools/MLDSPP-Promoter-prediction/pixi.toml"
+gpu_capable = false
+n_sequences = 1988
+
+model_paths = []
+notes = "Model trained on-the-fly, no file on disk"

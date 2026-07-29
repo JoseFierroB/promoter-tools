@@ -1,0 +1,15 @@
+# PromoterLCNN — CNN promoter predictor (TensorFlow, E. coli trained)
+name = "PromoterLCNN"
+short = "lcnn"
+category = "DL"
+pixi_env = "tools/Promoters/pixi.toml"
+gpu_capable = true
+n_sequences = 1988
+
+model_paths = ["tools/Promoters/weights/PromoterLCNN/IsPromoter_fold_5"]
+
+# Output files
+outputs = [
+    "output/predictions/lcnn/lcnn_pos.csv",
+    "output/predictions/lcnn/lcnn_neg.csv",
+]

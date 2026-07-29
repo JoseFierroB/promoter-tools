@@ -1,0 +1,13 @@
+name = "PromoTech RF-TETRA"
+short = "promotech_tetra"
+category = "ML"
+pixi_env = "pixi.toml"
+gpu_capable = false
+n_sequences = 1988
+
+model_paths = ["tools/Promotech/models/RF-TETRA.model"]
+
+outputs = [
+    "output/predictions/promotech/workdir/tetra_pg_pos/genome_predictions.csv",
+    "output/predictions/promotech/workdir/tetra_pg_neg/genome_predictions.csv",
+]

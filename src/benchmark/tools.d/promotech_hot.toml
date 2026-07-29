@@ -1,0 +1,13 @@
+name = "PromoTech RF-HOT"
+short = "promotech_hot"
+category = "ML"
+pixi_env = "pixi.toml"  # uses root pixi
+gpu_capable = false
+n_sequences = 1988
+
+model_paths = ["tools/Promotech/models/RF-HOT.model"]
+
+outputs = [
+    "output/predictions/promotech/workdir/hot_pg_pos/genome_predictions.csv",
+    "output/predictions/promotech/workdir/hot_pg_neg/genome_predictions.csv",
+]
