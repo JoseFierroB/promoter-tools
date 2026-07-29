@@ -43,3 +43,9 @@ scratch/*/
 MEMORIA.md
 .agents/
 .gemini/
+*.zip
+**/downstream control predictions/
+**/shuffled control predictions/
+tools/Promotech/datasets/
+tools/Promotech/Predictions/
+tools/Promoters/Dataset/
