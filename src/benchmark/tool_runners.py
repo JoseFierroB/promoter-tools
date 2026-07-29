@@ -161,7 +161,9 @@ model.load_state_dict(state_dict, strict=False)
 model.eval()
 
 for s in seqs:
-    inp = tok(' '.join(s), return_tensors='pt', max_length=128, truncation=True, padding=True)
+    kmers = [s[i:i+6] for i in range(len(s) - 5)]
+    inp = tok(kmers, is_split_into_words=True, padding='max_length',
+              max_length=128, return_tensors='pt', truncation=True)
     inp = {{k: inp[k] for k in ['input_ids', 'attention_mask'] if k in inp}}
     with torch.no_grad():
         _ = model(**inp)

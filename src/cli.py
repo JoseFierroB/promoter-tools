@@ -71,12 +71,12 @@ def cmd_dataset(args):
     out_dir = args.output or str(ROOT / "output")
 
     if args.positives:
-        cmd = f"pixi run python src/dataset/positive_tss.py --fasta {fasta} --gff {gff_tss} --gff-cds {gff_cds} -u {args.upstream} -d {args.downstream} -o {out_dir}"
+        cmd = f"pixi run python src/dataset/positive_tss.py --fasta {fasta} --gff {gff_tss} --gff-cds {gff_cds} -u {args.upstream} -d {args.downstream} -o {out_dir}/positives"
         print(f"[RUN] {cmd}")
         subprocess.run(cmd, shell=True, cwd=str(ROOT))
 
     if args.negatives:
-        cmd = f"pixi run python src/dataset/negatives_tss_master.py --gff-cds {gff_cds} --fasta {fasta} --gff-tss {gff_tss} --window {args.upstream + 1 + args.downstream} --limit {args.neg_limit} -o {out_dir}"
+        cmd = f"pixi run python src/dataset/negatives_tss_master.py --gff-cds {gff_cds} --fasta {fasta} --gff-tss {gff_tss} --window {args.upstream + 1 + args.downstream} --limit {args.neg_limit} -o {out_dir}/negatives"
         print(f"[RUN] {cmd}")
         subprocess.run(cmd, shell=True, cwd=str(ROOT))
 

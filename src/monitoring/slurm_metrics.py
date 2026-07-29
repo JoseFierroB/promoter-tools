@@ -57,11 +57,21 @@ def collect_job_metrics(job_id: str, tool_name: str = "",
 
             metrics.state = parts[1]
 
-            # Wall time: "00:01:23" format
+            # Wall time: "MM:SS", "HH:MM:SS", or "D-HH:MM:SS"
             elapsed = parts[2]
             if elapsed and ":" in elapsed:
-                h, m, s = elapsed.split(":")
-                metrics.wall_seconds = int(h) * 3600 + int(m) * 60 + int(s)
+                days = 0
+                if "-" in elapsed:
+                    days_str, elapsed = elapsed.split("-", 1)
+                    days = int(days_str)
+                parts_ts = elapsed.split(":")
+                if len(parts_ts) == 3:
+                    h, m, s = parts_ts
+                elif len(parts_ts) == 2:
+                    h, m, s = 0, parts_ts[0], parts_ts[1]
+                else:
+                    h, m, s = 0, 0, 0
+                metrics.wall_seconds = days * 86400 + int(h) * 3600 + int(m) * 60 + int(s)
 
             # CPU time raw (seconds)
             if parts[3]:

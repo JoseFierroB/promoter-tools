@@ -81,7 +81,8 @@ def main():
             y_true_j, s_j = tool_data[tool_names[j]]
             # Ensure same test set ordering
             assert np.array_equal(y_true_i, y_true_j), f"Label mismatch: {tool_names[i]} vs {tool_names[j]}"
-            p = delong_test(y_true_i, s_i, s_j)
+            res = delong_test(y_true_i, s_i, s_j)
+            p = res["p_value"]
             pvalues[i, j] = p
             pvalues[j, i] = p
             sig = "***" if p < 0.001 else "**" if p < 0.01 else "*" if p < 0.05 else ""
