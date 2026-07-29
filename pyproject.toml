@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "promoter-tools"
+version = "0.2.0"
+description = "Unified promoter prediction benchmark pipeline for bacterial genomics"
+authors = [{name = "Jose Fierro", email = "josefierrobustos@gmail.com"}]
+license = {text = "MIT"}
+readme = "README.md"
+requires-python = ">=3.10"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+
+[project.scripts]
+promoter-tools = "src.cli:main"
+
+[project.optional-dependencies]
+dev = [
+    "pre-commit>=3",
+    "black>=24",
+    "ruff>=0.4",
+    "mypy>=1.8",
+]
+
+[tool.black]
+line-length = 100
+target-version = ["py310"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+
+[tool.mypy]
+python_version = "3.10"
+ignore_missing_imports = true
