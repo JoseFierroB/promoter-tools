@@ -1,0 +1,123 @@
+#!/usr/bin/env python3
+"""
+Master ROC plot — 7 tools compared on S. pneumoniae D39V.
+iPro-MP sp12, PromoterLCNN, PromoTech HOT/TETRA, MEME, MLDSPP 0%/75%.
+"""
+
+import numpy as np
+import pandas as pd
+import matplotlib; matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+from pathlib import Path
+from sklearn.metrics import roc_curve, auc
+from Bio import SeqIO
+
+ROOT = Path(__file__).resolve().parent.parent.parent
+PRED_DIR = ROOT / "output" / "predictions"
+OUT_DIR = ROOT / "output" / "plots" / "benchmark"
+OUT_DIR.mkdir(parents=True, exist_ok=True)
+
+curves = []
+
+def auc_from_csv(pos_file, neg_file):
+    pos = pd.read_csv(pos_file, sep="\t")
+    neg = pd.read_csv(neg_file, sep="\t")
+    y = np.hstack([np.ones(len(pos)), np.zeros(len(neg))])
+    s = np.hstack([pos["PRED"].values, neg["PRED"].values])
+    fpr, tpr, _ = roc_curve(y, s)
+    return fpr, tpr, auc(fpr, tpr)
+
+def auc_from_ipromp(csv_file):
+    """iPro-MP format: Sequence,Prediction,Probability"""
+    df = pd.read_csv(csv_file)
+    # Ground truth: first 988 rows are pos, next 1000 are neg
+    n_pos = 988; n_neg = 1000
+    if len(df) >= n_pos + n_neg:
+        y = np.hstack([np.ones(n_pos), np.zeros(n_neg)])
+        s = df["Probability"].values[:n_pos + n_neg]
+        fpr, tpr, _ = roc_curve(y, s)
+        return fpr, tpr, auc(fpr, tpr)
+    return None
+
+# ── 1. iPro-MP sp12 (best) ──
+ipromp_file = PRED_DIR / "ipromp/ipromp_12_predictions.csv"
+if ipromp_file.exists():
+    result = auc_from_ipromp(ipromp_file)
+    if result:
+        curves.append(("iPro-MP (sp 12)", *result, "#3D185A", "-", 2.0))
+        print(f"iPro-MP sp12: AUC={result[2]:.4f}")
+
+# ── 2. PromoTech RF-HOT ──
+hot_pos = PRED_DIR / "promotech/workdir/hot_s_pos/sequences_predictions.csv"
+hot_neg = PRED_DIR / "promotech/workdir/hot_s_neg/sequences_predictions.csv"
+if hot_pos.exists() and hot_neg.exists():
+    fpr, tpr, a = auc_from_csv(hot_pos, hot_neg)
+    curves.append(("PromoTech RF-HOT", fpr, tpr, a, "#E07614", "-", 2.0))
+    print(f"PromoTech RF-HOT: AUC={a:.4f}")
+
+# ── 3. PromoTech RF-TETRA ──
+tetra_pos = PRED_DIR / "promotech/workdir/tetra_s_pos/sequences_predictions.csv"
+tetra_neg = PRED_DIR / "promotech/workdir/tetra_s_neg/sequences_predictions.csv"
+if tetra_pos.exists() and tetra_neg.exists():
+    fpr, tpr, a = auc_from_csv(tetra_pos, tetra_neg)
+    curves.append(("PromoTech RF-TETRA", fpr, tpr, a, "#C21700", "-", 2.0))
+    print(f"PromoTech RF-TETRA: AUC={a:.4f}")
+
+# ── 4. PromoterLCNN ──
+lcnn_pos = PRED_DIR / "lcnn/lcnn_pos.csv"
+lcnn_neg = PRED_DIR / "lcnn/lcnn_neg.csv"
+if lcnn_pos.exists() and lcnn_neg.exists():
+    fpr, tpr, a = auc_from_csv(lcnn_pos, lcnn_neg)
+    curves.append(("PromoterLCNN", fpr, tpr, a, "#228B22", "-", 2.0))
+    print(f"PromoterLCNN: AUC={a:.4f}")
+
+# ── 5. MEME (2-fold CV) ──
+meme_pos = PRED_DIR / "meme_pos.csv"
+meme_neg = PRED_DIR / "meme_neg.csv"
+if meme_pos.exists() and meme_neg.exists():
+    fpr, tpr, a = auc_from_csv(meme_pos, meme_neg)
+    curves.append(("MEME (STREME+FIMO)", fpr, tpr, a, "#1D14C8", "-.", 2.0))
+    print(f"MEME: AUC={a:.4f}")
+
+# ── 6. MLDSPP 0% strepto (cross-species) ──
+if (PRED_DIR / "mldspp_pos.csv").exists():
+    fpr, tpr, a = auc_from_csv(PRED_DIR/"mldspp_pos.csv", PRED_DIR/"mldspp_neg.csv")
+    curves.append(("MLDSPP XGBoost (0% strepto)", fpr, tpr, a, "#942C76", "-", 1.8))
+    print(f"MLDSPP 0%: AUC={a:.4f}")
+
+# ── 7. MLDSPP 75% strepto* ──
+if (PRED_DIR / "mldspp_75spn_pos.csv").exists():
+    fpr, tpr, a = auc_from_csv(PRED_DIR/"mldspp_75spn_pos.csv", PRED_DIR/"mldspp_75spn_neg.csv")
+    curves.append(("MLDSPP XGBoost (75% strepto)*", fpr, tpr, a, "#B07AA1", "--", 2.5))
+    print(f"MLDSPP 75%: AUC={a:.4f}")
+
+# ── PLOT ──
+fig, ax = plt.subplots(figsize=(9.5, 7.5), dpi=300)
+
+colors_used = set()
+for name, fpr, tpr, auc_val, color, ls, lw in curves:
+    ax.plot(fpr, tpr, lw=lw, ls=ls, color=color, alpha=0.9,
+            label=f"{name}  (AUC={auc_val:.3f})")
+
+ax.plot([0, 1], [0, 1], "k--", lw=0.8, alpha=0.3)
+ax.set_xlabel("False Positive Rate", fontsize=11)
+ax.set_ylabel("True Positive Rate", fontsize=11)
+ax.set_title("Promoter Prediction — S. pneumoniae D39V",
+             fontweight="bold", fontsize=12)
+ax.legend(fontsize=8.5, loc="lower right", framealpha=0.9)
+ax.spines[["top", "right"]].set_visible(False)
+ax.set_xlim(-0.01, 1.01); ax.set_ylim(-0.01, 1.01)
+
+ax.text(0.98, 0.04, "* 75% S. pneumoniae in training",
+        transform=ax.transAxes, fontsize=7, ha="right", color="#B07AA1", fontstyle="italic")
+
+plt.tight_layout()
+plt.savefig(OUT_DIR / "master_benchmark_roc.svg", dpi=300, bbox_inches="tight")
+plt.savefig(OUT_DIR / "master_benchmark_roc.png", dpi=300, bbox_inches="tight")
+plt.close()
+
+print(f"\nSaved: {OUT_DIR}/master_benchmark_roc.{{svg,png}}")
+print(f"\nCurves plotted ({len(curves)}):")
+for name, _, _, a, _, _, _ in sorted(curves, key=lambda x: -x[3]):
+    star = " *" if "*" in name else ""
+    print(f"  {name:<35} AUC={a:.4f}{star}")
