@@ -1,0 +1,23 @@
+[workspace]
+authors = ["JoseFierroB <josefierrobustos@gmail.com>"]
+channels = ["conda-forge", "pytorch"]
+name = "iPro-MP"
+platforms = ["linux-64"]
+version = "0.1.0"
+
+[tasks]
+
+[feature.ipro-mp.dependencies]
+python = "3.10.*"
+pip = ">=26.1.2,<27"
+pytorch = ">=2.0,<3"
+transformers = ">=4.29,<5"
+numpy = "*"
+biopython = "*"
+pandas = "*"
+scikit-learn = "*"
+matplotlib = "*"
+tokenizers = "*"
+
+[environments]
+ipro-mp = { features = ["ipro-mp"], no-default-feature = true }
