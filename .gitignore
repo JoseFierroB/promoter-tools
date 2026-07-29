@@ -1,64 +1,45 @@
-# Large data files
-*.fasta
-*.fna
-*.fa
-*.bed
-*.bedGraph
-*.gff
-*.gff3
-*.csv
-*.tsv
-*.zip
-*.gz
-*.tar
-*.tar.gz
+# Python cache
+**/__pycache__/
+*.pyc
 
-# Machine learning model weights (large binaries)
+# Pixi environments (large, not portable)
+**/.pixi/
+
+# Machine learning model weights (large binaries — on NFS, not in git)
 *.pth
 *.bin
 *.model
 *.model.v2
 *.model.*
+*.h5
+*.keras
 07-final/
 models/
+tools/Promoters/weights/
 
-# Exclude/Allow datasets for final project
-!datasets/*.fasta
-!datasets/*.tsv
-
-# Logs and outputs
-*.log
-*.out
-*.err
+# Large generated outputs (not source code)
+*.zip *.gz *.tar *.tar.gz
+*.log *.out *.err
 benchmark_results/
 benchmark_outputs/
+codon_results/*
 *.data
 
-# Exclude Promotech results and temporary files
-**/resultados/*
-!**/resultados/**/
-!**/resultados/**/*.py
-**/results/
+# Promotech temp/generated
 **/results_RF-HOT_3k/
 **/test_output/
 **/test_output_check/
 **/test_output_gru/
 **/test_output_lstm/
 scratch/*/
+**/Predict_Results/
 
-# Python cache
-**/__pycache__/
-*.pyc
-**/.pixi/
+# Promotech results (generated)
+**/resultados/*
+!**/resultados/**/
+!**/resultados/**/*.py
 
-# Agent memories, logs and configurations
-
-# Exclude third-party weights and sample datasets (Best Practice)
-**/Promoters/Dataset/
-**/MLDSPP-Promoter-prediction/Sample Dataset/
-**/MLDSPP-Promoter-prediction/shuffled control predictions/
-**/MLDSPP-Promoter-prediction/downstream control predictions/
-codon_results/*
+# Agent memories and configs (local only)
 MEMORIA.md
 .agents/
 .gemini/
