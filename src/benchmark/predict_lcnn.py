@@ -115,8 +115,10 @@ def main():
         neg_scores = neg_probs.ravel()
 
     # Save
-    save_csv(pos_ids, pos_seqs, pos_scores, os.path.join(args.output_dir, "lcnn_pos.csv"))
-    save_csv(neg_ids, neg_seqs, neg_scores, os.path.join(args.output_dir, "lcnn_neg.csv"))
+    import os as _os
+    _os.makedirs(os.path.join(args.output_dir, "lcnn"), exist_ok=True)
+    save_csv(pos_ids, pos_seqs, pos_scores, os.path.join(args.output_dir, "lcnn", "lcnn_pos.csv"))
+    save_csv(neg_ids, neg_seqs, neg_scores, os.path.join(args.output_dir, "lcnn", "lcnn_neg.csv"))
 
     print("\n[SUCCESS] PromoterLCNN predictions complete.")
 
