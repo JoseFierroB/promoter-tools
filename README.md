@@ -3,6 +3,3 @@
 Suite modular para evaluación comparativa de herramientas de predicción de promotores bacterianos. Extrae datasets desde anotaciones genómicas (GFF3 + FASTA), ejecuta 7 modelos de predicción (DL, ML, y basados en motivos) cada uno en su propio entorno pixi aislado, y genera métricas comparativas (AUC, F1, MCC, matriz de confusión) con bootstrap CIs. Todo funciona sin permisos de administrador — los entornos pixi usan exclusivamente conda-forge, cero dependencias PyPI.
 
 Las herramientas incluyen: iPro-MP (DNABERT-6, 23 especies), PromoterLCNN (CNN pre-entrenada), PromoTech (Random Forest sobre k-mers), MLDSPP (estabilidad termodinámica + XGBoost), y MEME Suite (STREME/FIMO con 2-fold CV + FIMO zero-shot contra bases de datos de *E. coli*). La ejecución puede ser local (`python submit/run_benchmark.py local all`) o distribuida vía Slurm en clusters HPC (`python submit/run_benchmark.py slurm all`). Ver `docs/RUNNING.md` para instrucciones detalladas.
-
-**TFM** — José Miguel Fierro Bustos · EMBL-EBI · Lees Group  
-Supervisores: John Lees, PhD · Víctor Rodríguez Bouza, PhD
