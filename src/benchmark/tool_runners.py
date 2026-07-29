@@ -9,7 +9,8 @@ from typing import Optional
 def get_runner_code(tool_name: str, pos_fasta: str, neg_fasta: str,
                     combined_fasta: Optional[str] = None,
                     dnabert_dir: str = "tools/iPro-MP/DNABERT-6",
-                    ipromp_model_dir: str = "tools/iPro-MP/07-final") -> str:
+                    ipromp_model_dir: str = "tools/iPro-MP/07-final",
+                    fimo_db: str = "tools/meme/motif_databases/ecoli_combined.meme") -> str:
     """Return inline Python code string for the given tool.
 
     Args:
@@ -108,7 +109,7 @@ for fold in range(2):
 
     for row in csv.DictReader(res.stdout.splitlines(), delimiter="\\t"):
         try: pval = float(row["p-value"])
-        except: continue
+        except (ValueError, KeyError, TypeError): continue
         nl = 999.0 if pval <= 0 else -math.log10(pval)
         s = row["sequence_name"]
         if s not in all_scores or nl > all_scores[s]:
@@ -165,6 +166,42 @@ for s in seqs:
     with torch.no_grad():
         _ = model(**inp)
 print('DONE')
+""",
+
+        "fimo_db": f"""
+import time, subprocess, tempfile, shutil, csv, math
+from pathlib import Path
+from Bio import SeqIO
+import numpy as np
+
+tmpdir = Path(tempfile.mkdtemp(prefix="fimo_db_"))
+pos = list(SeqIO.parse("{pos_fasta}", "fasta"))
+neg = list(SeqIO.parse("{neg_fasta}", "fasta"))
+
+combined = tmpdir / "all.fa"
+with open(combined, "w") as f:
+    for r in pos: SeqIO.write(r, f, "fasta")
+    for r in neg: SeqIO.write(r, f, "fasta")
+
+t0 = time.perf_counter()
+res = subprocess.run(["fimo", "--text", "--skip-matched-sequence",
+    "{fimo_db}", str(combined)],
+    capture_output=True, text=True, timeout=120)
+
+scores = {{}}
+for row in csv.DictReader(res.stdout.splitlines(), delimiter="\\t"):
+    try: pv = float(row["p-value"])
+    except (ValueError, KeyError, TypeError): continue
+    nl = 999.0 if pv <= 0 else -math.log10(pv)
+    s = row["sequence_name"]
+    if s not in scores or nl > scores[s]: scores[s] = nl
+
+for r in pos + neg:
+    if r.id not in scores: scores[r.id] = 0.0
+
+n_total = len(pos) + len(neg)
+print(f"FIMO_DB: {{n_total}} seqs in {{time.perf_counter()-t0:.3f}}s")
+shutil.rmtree(tmpdir, ignore_errors=True)
 """,
     }
 
