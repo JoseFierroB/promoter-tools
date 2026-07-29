@@ -38,13 +38,15 @@ class LocalRunner(Runner):
 
     def _run_once(self, tool: Tool) -> dict:
         env_path = tool.pixi_env
-        extra = ["-e", "ipro-mp"] if "ipromp" in tool.short_name else []
+        env_dir = env_path.parent
+        env_name = "ipro-mp" if "ipromp" in tool.short_name else "default"
+        python_bin = env_dir / ".pixi" / "envs" / env_name / "bin" / "python"
         code = self._build_code(tool)
-        cmd = ["pixi", "run", "--manifest-path", str(env_path)] + extra + ["python", "-c", code]
+        cmd = [str(python_bin), "-c", code]
 
         t0 = time.perf_counter()
         result = subprocess.run(cmd, capture_output=True, text=True,
-                                cwd=str(ROOT), timeout=600)
+                                cwd=str(ROOT), timeout=1800)
         wall = round(time.perf_counter() - t0, 3)
 
         success = result.returncode == 0
@@ -104,5 +106,6 @@ class LocalRunner(Runner):
             dnabert_dir=str(config.dnabert_dir),
             ipromp_model_dir=str(config.ipromp_model_dir),
             fimo_db=str(ROOT / "tools/meme/motif_databases/ecoli_combined.meme"),
+            promotech_dir=str(config.promotech_dir),
         )
         return code

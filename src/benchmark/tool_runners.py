@@ -1,5 +1,5 @@
 """Single source of truth for inline tool runner code.
-Used by both LocalRunner and Orchestrator to avoid code duplication.
+Used by both LocalRunner and SlurmRunner to avoid code duplication.
 """
 
 import textwrap
@@ -10,7 +10,8 @@ def get_runner_code(tool_name: str, pos_fasta: str, neg_fasta: str,
                     combined_fasta: Optional[str] = None,
                     dnabert_dir: str = "tools/iPro-MP/DNABERT-6",
                     ipromp_model_dir: str = "tools/iPro-MP/07-final",
-                    fimo_db: str = "tools/meme/motif_databases/ecoli_combined.meme") -> str:
+                    fimo_db: str = "tools/meme/motif_databases/ecoli_combined.meme",
+                    promotech_dir: str = "tools/Promotech") -> str:
     """Return inline Python code string for the given tool.
 
     Args:
@@ -147,7 +148,7 @@ print('DONE')
 """,
 
         "ipromp_sp12": f"""
-import sys, torch, os
+import sys, torch, os, time
 os.chdir('tools/iPro-MP')
 sys.path.insert(0, '.')
 
@@ -167,6 +168,7 @@ state_dict = {{k: v for k, v in state_dict.items() if 'position_ids' not in k}}
 model.load_state_dict(state_dict, strict=False)
 model.eval()
 
+t0 = time.perf_counter()
 for s in seqs:
     kmers = [s[i:i+6] for i in range(len(s) - 5)]
     inp = tok(kmers, is_split_into_words=True, padding='max_length',
@@ -174,7 +176,7 @@ for s in seqs:
     inp = {{k: inp[k] for k in ['input_ids', 'attention_mask'] if k in inp}}
     with torch.no_grad():
         _ = model(**inp)
-print('DONE')
+print(f"iPro-MP: {{len(seqs)}} seqs in {{time.perf_counter()-t0:.3f}}s")
 """,
 
         "fimo_db": f"""
@@ -220,6 +222,74 @@ neg_scores = [scores[r.id] for r in neg]
 pd.DataFrame({{"PRED": pos_scores}}).to_csv(out_dir / "fimo_db_pos.csv", sep="\\t", index=False)
 pd.DataFrame({{"PRED": neg_scores}}).to_csv(out_dir / "fimo_db_neg.csv", sep="\\t", index=False)
 
+shutil.rmtree(tmpdir, ignore_errors=True)
+""",
+
+        "promotech_hot": f"""
+import time, subprocess, tempfile, shutil
+from pathlib import Path
+import pandas as pd
+
+tmpdir = Path(tempfile.mkdtemp(prefix="pt_hot_"))
+t0 = time.perf_counter()
+
+for label, fasta in [("pos", "{pos_fasta}"), ("neg", "{neg_fasta}")]:
+    od = tmpdir / f"hot_pg_{{label}}"
+    od.mkdir(parents=True, exist_ok=True)
+    subprocess.run(["pixi", "run", "--manifest-path", "{promotech_dir}/pixi.toml",
+        "python", "promotech.py", "-pg", "-m", "RF-HOT",
+        "-f", fasta, "-o", str(od)],
+        cwd="{promotech_dir}",
+        capture_output=True, text=True, timeout=300, check=True)
+    subprocess.run(["pixi", "run", "--manifest-path", "{promotech_dir}/pixi.toml",
+        "python", "promotech.py", "-g", "-m", "RF-HOT",
+        "-t", "0.0", "-i", str(od), "-o", str(od)],
+        cwd="{promotech_dir}",
+        capture_output=True, text=True, timeout=600, check=True)
+    df = pd.read_csv(od / "genome_predictions.csv", sep="\\t")
+    pd.DataFrame({{"PRED": df["score"].values}}).to_csv(
+        od / "sequences_predictions.csv", sep="\\t", index=False)
+
+    out_dest = Path("output/predictions/promotech/workdir") / od.name
+    out_dest.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(od, out_dest, dirs_exist_ok=True)
+
+t_elapsed = time.perf_counter() - t0
+print(f"PromoTech RF-HOT: 1988 seqs in {{t_elapsed:.1f}}s")
+shutil.rmtree(tmpdir, ignore_errors=True)
+""",
+
+        "promotech_tetra": f"""
+import time, subprocess, tempfile, shutil
+from pathlib import Path
+import pandas as pd
+
+tmpdir = Path(tempfile.mkdtemp(prefix="pt_tetra_"))
+t0 = time.perf_counter()
+
+for label, fasta in [("pos", "{pos_fasta}"), ("neg", "{neg_fasta}")]:
+    od = tmpdir / f"tetra_pg_{{label}}"
+    od.mkdir(parents=True, exist_ok=True)
+    subprocess.run(["pixi", "run", "--manifest-path", "{promotech_dir}/pixi.toml",
+        "python", "promotech.py", "-pg", "-m", "RF-TETRA",
+        "-f", fasta, "-o", str(od)],
+        cwd="{promotech_dir}",
+        capture_output=True, text=True, timeout=300, check=True)
+    subprocess.run(["pixi", "run", "--manifest-path", "{promotech_dir}/pixi.toml",
+        "python", "promotech.py", "-g", "-m", "RF-TETRA",
+        "-t", "0.0", "-i", str(od), "-o", str(od)],
+        cwd="{promotech_dir}",
+        capture_output=True, text=True, timeout=600, check=True)
+    df = pd.read_csv(od / "genome_predictions.csv", sep="\\t")
+    pd.DataFrame({{"PRED": df["score"].values}}).to_csv(
+        od / "sequences_predictions.csv", sep="\\t", index=False)
+
+    out_dest = Path("output/predictions/promotech/workdir") / od.name
+    out_dest.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(od, out_dest, dirs_exist_ok=True)
+
+t_elapsed = time.perf_counter() - t0
+print(f"PromoTech RF-TETRA: 1988 seqs in {{t_elapsed:.1f}}s")
 shutil.rmtree(tmpdir, ignore_errors=True)
 """,
     }
