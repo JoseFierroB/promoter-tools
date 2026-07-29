@@ -91,7 +91,7 @@ if __name__ == "__main__":
 
     mode = sys.argv[1]
     tools_arg = sys.argv[2]
-    all_tools = ["meme", "mldspp", "lcnn", "promotech", "ipromp"]
+    all_tools = ["meme", "mldspp", "lcnn", "fimo_db", "promotech_hot", "promotech_tetra", "ipromp_sp12"]
     tools = all_tools if tools_arg == "all" else tools_arg.split(",")
 
     print(f"Benchmark: {mode} {' '.join(tools)}")

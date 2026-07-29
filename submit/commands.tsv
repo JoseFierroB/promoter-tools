@@ -1,0 +1,15 @@
+tool	mode	command
+meme	local	pixi run python src/cli.py run meme
+meme	slurm	pixi run python src/cli.py run meme
+mldspp	local	pixi run --manifest-path tools/MLDSPP-Promoter-prediction/pixi.toml python src/benchmark/run_mldspp_cv_predictions.py -p data/benchmark/positives_81bp.fasta -n data/benchmark/negatives_81bp.fasta -o OUT_DIR
+mldspp	slurm	pixi run --manifest-path tools/MLDSPP-Promoter-prediction/pixi.toml python src/benchmark/run_mldspp_cv_predictions.py -p data/benchmark/positives_81bp.fasta -n data/benchmark/negatives_81bp.fasta -o OUT_DIR
+lcnn	local	pixi run --manifest-path tools/Promoters/pixi.toml python src/benchmark/predict_lcnn.py -p data/benchmark/positives_81bp.fasta -n data/benchmark/negatives_81bp.fasta -o OUT_DIR -m tools/Promoters/weights/PromoterLCNN/IsPromoter_fold_5
+lcnn	slurm	pixi run --manifest-path tools/Promoters/pixi.toml python src/benchmark/predict_lcnn.py -p data/benchmark/positives_81bp.fasta -n data/benchmark/negatives_81bp.fasta -o OUT_DIR -m tools/Promoters/weights/PromoterLCNN/IsPromoter_fold_5
+fimo_db	local	pixi run python src/cli.py run fimo_db
+fimo_db	slurm	pixi run python src/cli.py run fimo_db
+promotech_hot	local	pixi run python src/analysis/evaluate_promotech_pipelines.py -p data/benchmark/positives_81bp.fasta -n data/benchmark/negatives_81bp.fasta -o OUT_DIR --promotech-dir tools/Promotech --no-cleanup
+promotech_hot	slurm	pixi run python src/analysis/evaluate_promotech_pipelines.py -p data/benchmark/positives_81bp.fasta -n data/benchmark/negatives_81bp.fasta -o OUT_DIR --promotech-dir tools/Promotech --no-cleanup
+promotech_tetra	local	pixi run python src/analysis/evaluate_promotech_pipelines.py -p data/benchmark/positives_81bp.fasta -n data/benchmark/negatives_81bp.fasta -o OUT_DIR --promotech-dir tools/Promotech --no-cleanup
+promotech_tetra	slurm	pixi run python src/analysis/evaluate_promotech_pipelines.py -p data/benchmark/positives_81bp.fasta -n data/benchmark/negatives_81bp.fasta -o OUT_DIR --promotech-dir tools/Promotech --no-cleanup
+ipromp_sp12	local	cat data/benchmark/positives_81bp.fasta data/benchmark/negatives_81bp.fasta > /tmp/bench_combined.fasta && pixi run -e ipro-mp --manifest-path tools/iPro-MP/pixi.toml python tools/iPro-MP/iPro-MP_predict.py -i /tmp/bench_combined.fasta -s 12 -o OUT_DIR/ipromp_sp12.csv -m tools/iPro-MP/07-final -d tools/iPro-MP/DNABERT-6
+ipromp_sp12	slurm	cat data/benchmark/positives_81bp.fasta data/benchmark/negatives_81bp.fasta > /tmp/bench_combined.fasta && pixi run -e ipro-mp --manifest-path tools/iPro-MP/pixi.toml python tools/iPro-MP/iPro-MP_predict.py -i /tmp/bench_combined.fasta -s 12 -o OUT_DIR/ipromp_sp12.csv -m tools/iPro-MP/07-final -d tools/iPro-MP/DNABERT-6

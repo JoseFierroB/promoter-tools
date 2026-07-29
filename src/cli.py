@@ -32,7 +32,7 @@ def cmd_run(args):
         runner = SlurmRunner()
     else:
         from src.runner.local import LocalRunner
-        runner = LocalRunner(n_runs=args.runs, warmup=not args.no_warmup)
+        runner = LocalRunner(n_runs=args.runs)
 
     if not runner.available():
         print(f"Runner '{type(runner).__name__}' not available.")
@@ -90,7 +90,6 @@ def main():
     p_run.add_argument("tools", nargs="*", help="Tool keys to run (lcnn, promotech_hot, ...)")
     p_run.add_argument("--slurm", action="store_true", help="Use Slurm backend")
     p_run.add_argument("--runs", type=int, default=1, help="Number of independent runs (N≥3 recommended)")
-    p_run.add_argument("--no-warmup", action="store_true", help="Skip warmup inference")
     p_run.add_argument("-o", "--output", help="Output TSV path")
 
     # results
@@ -106,8 +105,8 @@ def main():
     p_ds.add_argument("--gff-tss", help="TSS GFF path")
     p_ds.add_argument("--gff-cds", help="CDS GFF path")
     p_ds.add_argument("-o", "--output", help="Output directory")
-    p_ds.add_argument("--positives", action="store_true", default=True, help="Generate positives")
-    p_ds.add_argument("--negatives", action="store_true", default=True, help="Generate negatives")
+    p_ds.add_argument("--positives", action="store_true", default=False, help="Generate positives")
+    p_ds.add_argument("--negatives", action="store_true", default=False, help="Generate negatives")
     p_ds.add_argument("--neg-limit", type=int, default=1000, help="Negative sequence limit")
 
     args = parser.parse_args()

@@ -1,5 +1,5 @@
 """Local runner: execute tools via subprocess in any machine."""
-import os, sys, subprocess, time, json
+import subprocess, time
 from typing import Optional
 
 from src.runner.base import Runner
@@ -12,9 +12,8 @@ ROOT = config.root
 class LocalRunner(Runner):
     """Run a tool locally using pixi env subprocess. Works on any machine."""
 
-    def __init__(self, n_runs: int = 1, warmup: bool = True):
+    def __init__(self, n_runs: int = 1):
         self.n_runs = n_runs
-        self.warmup = warmup
 
     def available(self) -> bool:
         return True  # Always available (no Slurm needed)
@@ -38,30 +37,28 @@ class LocalRunner(Runner):
         return aggregate_runs(runs)
 
     def _run_once(self, tool: Tool) -> dict:
-        # Build command
         env_path = tool.pixi_env
         extra = ["-e", "ipro-mp"] if "ipromp" in tool.short_name else []
         code = self._build_code(tool)
         cmd = ["pixi", "run", "--manifest-path", str(env_path)] + extra + ["python", "-c", code]
 
-        ram_before = self._get_ram()
         t0 = time.perf_counter()
         result = subprocess.run(cmd, capture_output=True, text=True,
                                 cwd=str(ROOT), timeout=600)
         wall = round(time.perf_counter() - t0, 3)
-        ram_after = self._get_ram()
 
         success = result.returncode == 0
         output = result.stdout.strip()
         notes = result.stderr.strip()[-200:] if not success else ""
 
         time_s, throughput = self._parse_time(output, tool)
+        ram_mb = self._get_child_ram()
 
         return {
             "tool": tool.name,
             "category": tool.category,
             "wall_seconds": wall,
-            "peak_ram_mb": round(ram_after - ram_before, 1),
+            "peak_ram_mb": round(ram_mb, 1),
             "peak_vram_mb": 0,
             "gpu_name": "",
             "gpu_available": False,
@@ -74,10 +71,11 @@ class LocalRunner(Runner):
             "notes": notes or output[:200],
         }
 
-    def _get_ram(self) -> float:
+    def _get_child_ram(self) -> float:
+        """Get max RSS of completed child processes (MB)."""
         try:
             import resource
-            return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024.0
+            return resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss / 1024.0
         except Exception:
             return 0.0
 
@@ -105,5 +103,6 @@ class LocalRunner(Runner):
             combined_fasta=str(config.combined_fasta),
             dnabert_dir=str(config.dnabert_dir),
             ipromp_model_dir=str(config.ipromp_model_dir),
+            fimo_db=str(ROOT / "tools/meme/motif_databases/ecoli_combined.meme"),
         )
         return code
