@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Master ROC plot — 8 curves on S. pneumoniae D39V.
-iPro-MP sp12, PromoterLCNN, PromoTech HOT/TETRA, MEME, FIMO_DB, MLDSPP 0%/75%.
+Master ROC plot — S. pneumoniae D39V.
+iPro-MP, LCNN, PromoTech HOT/TETRA, MEME, FIMO (E.coli/Prok), MLDSPP 0%/75%.
 """
 
 import numpy as np
@@ -84,8 +84,16 @@ fimo_db_pos = PRED_DIR / "fimo_db_pos.csv"
 fimo_db_neg = PRED_DIR / "fimo_db_neg.csv"
 if fimo_db_pos.exists() and fimo_db_neg.exists():
     fpr, tpr, a = auc_from_csv(fimo_db_pos, fimo_db_neg)
-    curves.append(("FIMO (E. coli DB)", fpr, tpr, a, "#17BECF", "--", 1.8))
+    curves.append(("FIMO (E. coli DB)", fpr, tpr, a, "#17BECF", "--", 1.5))
     print(f"FIMO_DB: AUC={a:.4f}")
+
+# ── 5.6. FIMO + Prokaryote DB (zero-shot) ──
+fimo_prok_pos = PRED_DIR / "fimo_prok_pos.csv"
+fimo_prok_neg = PRED_DIR / "fimo_prok_neg.csv"
+if fimo_prok_pos.exists() and fimo_prok_neg.exists():
+    fpr, tpr, a = auc_from_csv(fimo_prok_pos, fimo_prok_neg)
+    curves.append(("FIMO (Prok DB, 838)", fpr, tpr, a, "#00BFC4", "-.", 1.5))
+    print(f"FIMO_PROK: AUC={a:.4f}")
 
 # ── 6. MLDSPP 0% strepto (cross-species) ──
 if (PRED_DIR / "mldspp_pos.csv").exists():

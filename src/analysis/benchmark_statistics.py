@@ -36,6 +36,7 @@ TOOLS = [
     ("PromoterLCNN", "DL", "lcnn/lcnn_pos.csv", "lcnn/lcnn_neg.csv"),
     ("MEME (STREME+FIMO)", "Other", "meme_pos.csv", "meme_neg.csv"),
     ("FIMO (E. coli DB)", "Other", "fimo_db_pos.csv", "fimo_db_neg.csv"),
+    ("FIMO (Prok DB)", "Other", "fimo_prok_pos.csv", "fimo_prok_neg.csv"),
     ("MLDSPP (XGBoost)", "ML", "mldspp_pos.csv", "mldspp_neg.csv"),
     ("MLDSPP (RF)", "ML", "mldspp_rf_pos.csv", "mldspp_rf_neg.csv"),
     ("MLDSPP (SVM)", "ML", "mldspp_svm_pos.csv", "mldspp_svm_neg.csv"),

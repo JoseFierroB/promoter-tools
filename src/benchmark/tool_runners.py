@@ -225,6 +225,48 @@ pd.DataFrame({{"PRED": neg_scores}}).to_csv(out_dir / "fimo_db_neg.csv", sep="\\
 shutil.rmtree(tmpdir, ignore_errors=True)
 """,
 
+        "fimo_prok": f"""
+import time, subprocess, tempfile, shutil, csv, math
+from pathlib import Path
+from Bio import SeqIO
+import numpy as np, pandas as pd
+
+tmpdir = Path(tempfile.mkdtemp(prefix="fimo_prok_"))
+pos = list(SeqIO.parse("{pos_fasta}", "fasta"))
+neg = list(SeqIO.parse("{neg_fasta}", "fasta"))
+
+combined = tmpdir / "all.fa"
+with open(combined, "w") as f:
+    for r in pos: SeqIO.write(r, f, "fasta")
+    for r in neg: SeqIO.write(r, f, "fasta")
+
+t0 = time.perf_counter()
+res = subprocess.run(["fimo", "--text", "--skip-matched-sequence",
+    "tools/meme/motif_databases/unified_prokaryote.meme", str(combined)],
+    capture_output=True, text=True, timeout=120)
+
+scores = {{}}
+for row in csv.DictReader(res.stdout.splitlines(), delimiter="\\t"):
+    try: pv = float(row["p-value"])
+    except (ValueError, KeyError, TypeError): continue
+    nl = 999.0 if pv <= 0 else -math.log10(pv)
+    s = row["sequence_name"]
+    if s not in scores or nl > scores[s]: scores[s] = nl
+
+for r in pos + neg:
+    if r.id not in scores: scores[r.id] = 0.0
+
+n_total = len(pos) + len(neg)
+t_elapsed = time.perf_counter() - t0
+print(f"FIMO_PROK: {{n_total}} seqs in {{t_elapsed:.3f}}s")
+
+out_dir = Path("output/predictions")
+out_dir.mkdir(parents=True, exist_ok=True)
+pd.DataFrame({{"PRED": [scores[r.id] for r in pos]}}).to_csv(out_dir / "fimo_prok_pos.csv", sep="\\t", index=False)
+pd.DataFrame({{"PRED": [scores[r.id] for r in neg]}}).to_csv(out_dir / "fimo_prok_neg.csv", sep="\\t", index=False)
+shutil.rmtree(tmpdir, ignore_errors=True)
+""",
+
         "promotech_hot": f"""
 import time, subprocess, tempfile, shutil
 from pathlib import Path
