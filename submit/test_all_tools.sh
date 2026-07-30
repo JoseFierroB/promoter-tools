@@ -62,15 +62,17 @@ echo ""
 echo "============================================"
 echo " TEST 4/5: iPro-MP (sp 12)"
 echo "============================================"
-cat data/benchmark/positives_81bp.fasta data/benchmark/negatives_81bp.fasta > /tmp/test_combined.fasta
+TMPDIR="${TMPDIR:-/tmp}"
+COMBINED="$TMPDIR/test_combined.fasta"
+cat data/benchmark/positives_81bp.fasta data/benchmark/negatives_81bp.fasta > "$COMBINED"
 pixi run -e ipro-mp --manifest-path tools/iPro-MP/pixi.toml \
   python tools/iPro-MP/iPro-MP_predict.py \
-  -i /tmp/test_combined.fasta \
+  -i "$COMBINED" \
   -s 12 \
   -o "$OUT/ipromp_sp12_test.csv" \
   -m tools/iPro-MP/07-final \
   -d tools/iPro-MP/DNABERT-6
-rm -f /tmp/test_combined.fasta
+rm -f "$COMBINED"
 echo "=> iPro-MP OK"
 
 echo ""

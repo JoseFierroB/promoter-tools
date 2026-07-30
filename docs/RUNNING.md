@@ -35,10 +35,11 @@ pixi run python src/benchmark/run_promotech.py -m RF-TETRA \
   -o OUT_DIR
 
 # iPro-MP sp12 (needs GPU)
-cat data/benchmark/positives_81bp.fasta data/benchmark/negatives_81bp.fasta > /tmp/all.fa
+TMPDIR="${TMPDIR:-/tmp}"
+cat data/benchmark/positives_81bp.fasta data/benchmark/negatives_81bp.fasta > "$TMPDIR/all.fa"
 pixi run -e ipro-mp --manifest-path tools/iPro-MP/pixi.toml \
   python tools/iPro-MP/iPro-MP_predict.py \
-  -i /tmp/all.fa -s 12 -o OUT_DIR/ipromp_sp12.csv \
+  -i "$TMPDIR/all.fa" -s 12 -o OUT_DIR/ipromp_sp12.csv \
   -m tools/iPro-MP/07-final -d tools/iPro-MP/DNABERT-6
 ```
 

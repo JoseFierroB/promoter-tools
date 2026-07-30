@@ -28,8 +28,8 @@ def run_local(tools):
     cmds = load_commands()
     out_dir = os.environ.get("BENCH_OUT", str(ROOT / "output" / "predictions"))
     os.makedirs(out_dir, exist_ok=True)
-    # Pre-create combined FASTA for iPro-MP
-    combined = Path("$TMPDIR/bench_combined.fasta")
+    tmpdir = os.environ.get("TMPDIR", "/tmp")
+    combined = Path(f"{tmpdir}/bench_combined.fasta")
     if not combined.exists() and "ipromp" in tools:
         os.system(f"cat {ROOT}/data/benchmark/positives_81bp.fasta {ROOT}/data/benchmark/negatives_81bp.fasta > {combined}")
 
@@ -53,7 +53,7 @@ def run_local(tools):
 
 def run_slurm(tools):
     cmds = load_commands()
-    out_dir = os.environ.get("BENCH_OUT", "/nfs/research/jlees/fierro/resultados")
+    out_dir = os.environ.get("BENCH_OUT", str(ROOT / "output" / "predictions"))
     os.makedirs(out_dir, exist_ok=True)
     job_ids = []
     for tool in tools:
@@ -65,8 +65,8 @@ def run_slurm(tools):
         mem = "32G" if tool == "ipromp" else "16G" if tool in ("lcnn", "promotech") else "4G"
         cpus = 4 if tool == "ipromp" else 2
         gpu = "--gres=gpu:1" if tool == "ipromp" else ""
-        # Write to temp script to avoid sbatch --wrap quoting issues
-        script = Path(f"/tmp/bench_{tool}.sh")
+        tmpdir = os.environ.get("TMPDIR", "/tmp")
+        script = Path(f"{tmpdir}/bench_{tool}.sh")
         script.write_text(f"#!/bin/bash\n{cmd}")
         script.chmod(0o755)
         sbatch_cmd = f"sbatch --parsable -t 2:00:00 -c {cpus} --mem={mem} {gpu} {script}"
