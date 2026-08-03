@@ -14,7 +14,6 @@ These work immediately after `git clone` + `pixi install`:
 | FIMO + E. coli DB | `ecoli_combined.meme` (165 motifs) |
 | MLDSPP XGBoost | Training data (12 species, `tools/MLDSPP-Promoter-prediction/Sample Dataset/`) |
 | PromoterLCNN | Keras weights (`tools/Promoters/weights/`, ~121 MB) |
-| CNNProm | `output/predictions/cnnprom_ecoli_model.keras` (~12 MB) |
 
 ---
 

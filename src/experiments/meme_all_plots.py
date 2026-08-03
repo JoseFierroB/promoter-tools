@@ -138,13 +138,38 @@ for i in range(1, min(7, len(motifs)+1)):
     eps = PLOT_DIR / f"meme_logo{i}.eps"
     png = PLOT_DIR / f"meme_logo{i}.png"
     subprocess.run(["ceqlogo", f"-i{i}", str(tmpdir/"streme"/"streme.txt"),
-        "-o", str(eps), "-f", "EPS", "-w", "25", "-h", "5", "-S"],
+        "-o", str(eps), "-f", "EPS", "-w", "12", "-h", "6", "-S"],
         capture_output=True, timeout=30)
     if eps.exists():
         subprocess.run(["gs", "-dNOPAUSE", "-dBATCH", "-sDEVICE=png16m",
             "-r300", "-dEPSCrop", f"-sOutputFile={png}", str(eps)],
             capture_output=True, timeout=30)
         print(f"  meme_logo{i}.png ✓")
+
+# 4b. Combined logo montage
+logo_pngs = sorted(PLOT_DIR.glob("meme_logo[0-9].png"))
+if logo_pngs:
+    from matplotlib import image as mpimg
+    n = len(logo_pngs)
+    cols = min(3, n)
+    rows = (n + cols - 1) // cols
+    fig, axes = plt.subplots(rows, cols, figsize=(cols * 4, rows * 2.5), dpi=300)
+    if rows == 1:
+        axes = [axes]
+    else:
+        axes = axes.flatten() if isinstance(axes, np.ndarray) else [axes]
+    for ax, png in zip(axes, logo_pngs):
+        img = mpimg.imread(str(png))
+        ax.imshow(img)
+        ax.set_title(png.stem, fontsize=9)
+        ax.axis("off")
+    for ax in axes[len(logo_pngs):]:
+        ax.axis("off")
+    plt.tight_layout()
+    plt.savefig(PLOT_DIR / "meme_all_logos.png", dpi=300, bbox_inches="tight")
+    plt.savefig(PLOT_DIR / "meme_all_logos.svg", dpi=300, bbox_inches="tight")
+    plt.close()
+    print(f"  meme_all_logos.{{png,svg}} ✓")
 
 # 5. Genome-wide scan
 print("\n5. Genome-wide scan...")

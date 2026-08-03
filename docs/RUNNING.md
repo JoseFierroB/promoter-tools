@@ -2,97 +2,100 @@
 
 ## Individual Tools
 
+All tools can be run via the unified CLI:
+
 ```bash
 # MEME: STREME + FIMO 2-fold CV (de novo discovery)
 pixi run python src/cli.py run meme
 
-# MEME: FIMO + E. coli DB (zero-shot, comparable to PromoTech)
-pixi run --manifest-path tools/meme/pixi.toml python src/experiments/fimo_db_pipeline.py
+# FIMO + E. coli DB (zero-shot)
+pixi run python src/cli.py run fimo_db
 
-# MEME: All plots (logos, optimization, genome scan)
-pixi run --manifest-path tools/meme/pixi.toml python src/experiments/meme_all_plots.py
+# FIMO + Prokaryote DB (zero-shot, 838 motifs)
+pixi run python src/cli.py run fimo_prok
 
-# MLDSPP (cross-species, no local training)
-pixi run --manifest-path tools/MLDSPP-Promoter-prediction/pixi.toml \
-  python src/benchmark/run_mldspp_cv_predictions.py \
-  -p data/benchmark/positives_81bp.fasta -n data/benchmark/negatives_81bp.fasta \
-  -o OUT_DIR
+# MLDSPP XGBoost (cross-species, trains on-the-fly)
+pixi run python src/cli.py run mldspp
 
 # PromoterLCNN
-pixi run --manifest-path tools/Promoters/pixi.toml \
-  python src/benchmark/predict_lcnn.py \
-  -p data/benchmark/positives_81bp.fasta -n data/benchmark/negatives_81bp.fasta \
-  -o OUT_DIR -m tools/Promoters/weights/PromoterLCNN/IsPromoter_fold_5
+pixi run python src/cli.py run lcnn
 
-# PromoTech RF-HOT
-pixi run python src/benchmark/run_promotech.py -m RF-HOT \
-  -p data/benchmark/positives_81bp.fasta -n data/benchmark/negatives_81bp.fasta \
-  -o OUT_DIR
+# PromoTech RF-HOT (PG mode, sliding window)
+pixi run python src/cli.py run promotech_hot
 
-# PromoTech RF-TETRA
-pixi run python src/benchmark/run_promotech.py -m RF-TETRA \
-  -p data/benchmark/positives_81bp.fasta -n data/benchmark/negatives_81bp.fasta \
-  -o OUT_DIR
+# PromoTech RF-TETRA (PG mode)
+pixi run python src/cli.py run promotech_tetra
 
-# iPro-MP sp12 (needs GPU)
-TMPDIR="${TMPDIR:-/tmp}"
-cat data/benchmark/positives_81bp.fasta data/benchmark/negatives_81bp.fasta > "$TMPDIR/all.fa"
-pixi run -e ipro-mp --manifest-path tools/iPro-MP/pixi.toml \
-  python tools/iPro-MP/iPro-MP_predict.py \
-  -i "$TMPDIR/all.fa" -s 12 -o OUT_DIR/ipromp_sp12.csv \
-  -m tools/iPro-MP/07-final -d tools/iPro-MP/DNABERT-6
+# iPro-MP sp12 (H. pylori, needs GPU for speed)
+pixi run python src/cli.py run ipromp_sp12
 ```
 
-## Batch (Local)
+Runners are at `src/runners/{tool}.py` and can also be executed standalone:
 
 ```bash
-# One or more tools
+pixi run --manifest-path tools/meme/pixi.toml python src/runners/meme.py \
+  --pos data/benchmark/positives_81bp.fasta \
+  --neg data/benchmark/negatives_81bp.fasta \
+  -o output/predictions
+```
+
+## Batch Benchmarks
+
+```bash
+# Local — one or more tools
 python submit/run_benchmark.py local meme,mldspp,lcnn,fimo_db
 
-# All tools
+# Local — all tools
 python submit/run_benchmark.py local all
-```
 
-## Complete Benchmark (Slurm / HPC)
-
-```bash
-# All tools in parallel via Slurm
+# Slurm — all tools in parallel
 python submit/run_benchmark.py slurm all
 
-# Single tool via Slurm
+# Slurm — single tool
 python submit/run_benchmark.py slurm meme
 ```
 
-## MEME Pipeline Variants
-
-| Command | Method | AUC | Notes |
-|---------|--------|-----|-------|
-| `src/cli.py run meme` | STREME + FIMO (2-fold CV) | ~0.85 | De novo, needs negatives |
-| `src/experiments/fimo_db_pipeline.py` | FIMO + E. coli DB (zero-shot) | ~0.74 | No training, E. coli motifs only |
-| `src/experiments/meme_all_plots.py` | All MEME plots | — | Logos, position, optimization, genome scan |
-
-## Plots
+## MEME Plots & Experiments
 
 ```bash
-# Master ROC (individual)
-pixi run python src/analysis/generate_master_roc.py --tool meme
+# All MEME plots (logos, position, optimization, genome scan)
+pixi run --manifest-path tools/meme/pixi.toml python src/experiments/meme_all_plots.py
 
-# Master ROC (combined)
+# FIMO against all DBs individually
+pixi run --manifest-path tools/meme/pixi.toml python src/experiments/meme_fimo_all_dbs.py
+
+# De novo vs zero-shot ROC
+pixi run --manifest-path tools/meme/pixi.toml python src/experiments/meme_zero_shot_roc.py
+```
+
+## Analysis
+
+```bash
+# Master ROC (combined, all tools)
 pixi run python src/analysis/generate_master_roc.py
 
-# Stability profiles
-pixi run python src/experiments/stability_profiles_ci.py
+# Bootstrap CIs + DeLong pairwise tests
+pixi run python src/analysis/benchmark_statistics.py
 
-# All MEME plots
-pixi run --manifest-path tools/meme/pixi.toml python src/experiments/meme_all_plots.py
+# Resource plots (compute time + peak RAM)
+pixi run python src/analysis/resource_plots.py
+
+# Scalability plot (time vs N)
+pixi run python src/analysis/scalability_plot.py
+
+# Process Slurm benchmark results
+pixi run python src/analysis/process_results.py <results_dir>
 ```
 
 ## Output Files
 
 | File | Content |
 |------|---------|
-| `output/tables/resource_metrics.tsv` | Time, RAM per tool (auto-generated) |
-| `output/tables/motif_stats.tsv` | STREME motifs with Tomtom annotation |
-| `output/plots/benchmark/master_benchmark_roc.{svg,png}` | 7-curve ROC |
+| `output/tables/resource_metrics.tsv` | Time, RAM per tool (auto-generated by CLI) |
+| `output/tables/benchmark_statistics.tsv` | AUC + 95% CI + DeLong tests |
+| `output/plots/benchmark/master_benchmark_roc.{svg,png}` | 8-curve ROC |
+| `output/plots/benchmark/compute_time.{svg,png}` | Resource bar chart |
+| `output/plots/benchmark/ram.{svg,png}` | RAM bar chart |
+| `output/plots/benchmark/scalability.{svg,png}` | Scalability projection |
 | `output/plots/meme/` | All MEME plots |
-| `OUT_DIR/` | Per-tool prediction CSVs |
+| `output/predictions/` | Per-tool prediction CSVs |

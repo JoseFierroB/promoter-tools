@@ -1,0 +1,14 @@
+name = "MLDSPP XGBoost (75% S. pneumoniae)"
+short = "mldspp_75"
+category = "ML"
+pixi_env = "tools/MLDSPP-Promoter-prediction/pixi.toml"
+gpu_capable = false
+n_sequences = 1988
+
+model_paths = []
+notes = "75% S. pneumoniae in training — data leakage, for reference only"
+
+outputs = [
+    "output/predictions/mldspp_75spn_pos.csv",
+    "output/predictions/mldspp_75spn_neg.csv",
+]

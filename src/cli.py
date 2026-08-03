@@ -32,7 +32,7 @@ def cmd_run(args):
         runner = SlurmRunner()
     else:
         from src.runner.local import LocalRunner
-        runner = LocalRunner(n_runs=args.runs)
+        runner = LocalRunner(n_runs=args.runs, output_dir=args.output_dir)
 
     if not runner.available():
         print(f"Runner '{type(runner).__name__}' not available.")
@@ -71,12 +71,12 @@ def cmd_dataset(args):
     out_dir = args.output or str(ROOT / "output")
 
     if args.positives:
-        cmd = f"pixi run python src/dataset/positive_tss.py --fasta {fasta} --gff {gff_tss} --gff-cds {gff_cds} -u {args.upstream} -d {args.downstream} -o {out_dir}/positives"
+        cmd = f"pixi run python src/dataset/positive_tss_d39v.py --fasta {fasta} --gff {gff_tss} --gff-cds {gff_cds} -u {args.upstream} -d {args.downstream} -o {out_dir}/positives"
         print(f"[RUN] {cmd}")
         subprocess.run(cmd, shell=True, cwd=str(ROOT))
 
     if args.negatives:
-        cmd = f"pixi run python src/dataset/negatives_tss_master.py --gff-cds {gff_cds} --fasta {fasta} --gff-tss {gff_tss} --window {args.upstream + 1 + args.downstream} --limit {args.neg_limit} -o {out_dir}/negatives"
+        cmd = f"pixi run python src/dataset/negatives_tss_d39v.py --gff-cds {gff_cds} --fasta {fasta} --gff-tss {gff_tss} --window {args.upstream + 1 + args.downstream} --limit {args.neg_limit} -o {out_dir}/negatives"
         print(f"[RUN] {cmd}")
         subprocess.run(cmd, shell=True, cwd=str(ROOT))
 
@@ -91,6 +91,8 @@ def main():
     p_run.add_argument("--slurm", action="store_true", help="Use Slurm backend")
     p_run.add_argument("--runs", type=int, default=1, help="Number of independent runs (N≥3 recommended)")
     p_run.add_argument("-o", "--output", help="Output TSV path")
+    p_run.add_argument("--output-dir", default=None,
+                       help="Predictions output dir (default: output/predictions)")
 
     # results
     p_res = sub.add_parser("results", help="Process benchmark results directory")

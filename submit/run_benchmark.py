@@ -31,7 +31,10 @@ def run_local(tools):
     tmpdir = os.environ.get("TMPDIR", "/tmp")
     combined = Path(f"{tmpdir}/bench_combined.fasta")
     if not combined.exists() and "ipromp" in tools:
-        os.system(f"cat {ROOT}/data/benchmark/positives_81bp.fasta {ROOT}/data/benchmark/negatives_81bp.fasta > {combined}")
+        with open(combined, "wb") as out:
+            for fname in ["positives_81bp.fasta", "negatives_81bp.fasta"]:
+                with open(ROOT / "data/benchmark" / fname, "rb") as fin:
+                    out.write(fin.read())
 
     for tool in tools:
         cmd = cmds.get(tool, {}).get("local")
@@ -62,12 +65,17 @@ def run_slurm(tools):
             print(f"  ✗ {tool}: no slurm command")
             continue
         cmd = cmd.replace("OUT_DIR", out_dir)
-        mem = "32G" if tool == "ipromp" else "16G" if tool in ("lcnn", "promotech") else "4G"
-        cpus = 4 if tool == "ipromp" else 2
+        mem = "32G"
+        cpus = 1
         gpu = "--gres=gpu:1" if tool == "ipromp" else ""
         tmpdir = os.environ.get("TMPDIR", "/tmp")
         script = Path(f"{tmpdir}/bench_{tool}.sh")
-        script.write_text(f"#!/bin/bash\n{cmd}")
+        pixi_home = os.environ.get("PIXI_HOME", "")
+        script.write_text(f"""#!/bin/bash
+export PIXI_HOME="{pixi_home}"
+export PATH="$PIXI_HOME/bin:$PATH"
+{cmd}
+""")
         script.chmod(0o755)
         sbatch_cmd = f"sbatch --parsable -t 2:00:00 -c {cpus} --mem={mem} {gpu} {script}"
         res = subprocess.run(sbatch_cmd, shell=True, cwd=str(ROOT),
@@ -91,7 +99,7 @@ if __name__ == "__main__":
 
     mode = sys.argv[1]
     tools_arg = sys.argv[2]
-    all_tools = ["meme", "mldspp", "lcnn", "fimo_db", "promotech_hot", "promotech_tetra", "ipromp_sp12"]
+    all_tools = ["meme", "mldspp", "mldspp_75", "lcnn", "fimo_db", "fimo_prok", "promotech_hot", "promotech_tetra", "ipromp_sp12"]
     tools = all_tools if tools_arg == "all" else tools_arg.split(",")
 
     print(f"Benchmark: {mode} {' '.join(tools)}")

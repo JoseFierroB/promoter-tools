@@ -56,7 +56,7 @@ res = subprocess.run(["fimo", "--text", "--skip-matched-sequence",
 scores = {}
 for row in csv.DictReader(res.stdout.splitlines(), delimiter="\t"):
     try: pv = float(row["p-value"])
-    except: continue
+    except (ValueError, KeyError, TypeError): continue
     nl = 999.0 if pv <= 0 else -math.log10(pv)
     s = row["sequence_name"]
     if s not in scores or nl > scores[s]: scores[s] = nl

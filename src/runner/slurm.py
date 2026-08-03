@@ -70,19 +70,14 @@ class SlurmRunner(Runner):
 
     def _build_script(self, tool: Tool) -> str:
         """Build Slurm batch script from tool definition."""
+        runner = ROOT / "src/runners" / f"{tool.short_name}.py"
         env_path = tool.pixi_env
-        extra = "-e ipro-mp" if "ipromp" in tool.short_name else ""
+        env_name = "ipro-mp" if "ipromp" in tool.short_name else "default"
+        python_bin = str(env_path.parent / ".pixi/envs" / env_name / "bin/python")
 
-        # Reuse runner code from LocalRunner for LCNN/MLDSPP
-        from src.runner.local import LocalRunner
-        lr = LocalRunner()
-        try:
-            code = lr._build_code(tool)
-        except NotImplementedError:
-            code = f'print("Tool {tool.name} — manual run needed")'
-
-        # Escape for bash heredoc
-        code_escaped = code.replace("\\", "\\\\").replace('"', '\\"').replace("$", "\\$")
+        extra_args = ""
+        if "ipromp" in tool.short_name:
+            extra_args = f'  -m "{config.ipromp_model_dir}" -d "{config.dnabert_dir}"'
 
         return f"""#!/bin/bash
 #SBATCH --output={config.temp_dir / f"{tool.short_name}_%j.out"}
@@ -90,8 +85,9 @@ class SlurmRunner(Runner):
 
 export PIXI_HOME="{os.environ.get('PIXI_HOME', os.path.expanduser('~/.pixi'))}"
 export PATH="$PIXI_HOME/bin:$PATH"
-
-pixi run --manifest-path {env_path} {extra} python -c "{code_escaped}"
+PYTHONPATH="{ROOT}" {python_bin} "{runner}" \\
+  --pos "{config.pos_fasta}" --neg "{config.neg_fasta}" \\
+  -o "{ROOT / 'output/predictions'}"{extra_args}
 """
 
     def _wait(self, job_id: str, poll_seconds: int = 10, max_wait: int = 7200):

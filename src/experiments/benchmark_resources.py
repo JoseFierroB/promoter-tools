@@ -84,16 +84,6 @@ model = tf.keras.models.load_model('{ROOT}/tools/Promoters/weights/PromoterLCNN/
     return bench("PromoterLCNN", env, imports, inference,
                  [ROOT / "tools/Promoters/weights/PromoterLCNN/IsPromoter_fold_5"])
 
-def bench_cnnprom():
-    env = ROOT / "tools/Promoters/pixi.toml"
-    imports = f"""import numpy as np; from Bio import SeqIO; import tensorflow as tf
-{TF_LOAD_POS}; {TF_LOAD_NEG}
-{TF_ONESHOT}; {TF_ENCODE}
-model = tf.keras.models.load_model('{ROOT}/output/predictions/cnnprom_ecoli_model.keras')"""
-    inference = "model.predict(X, verbose=0, batch_size=128)"
-    return bench("CNNProm", env, imports, inference,
-                 [ROOT / "output/predictions/cnnprom_ecoli_model.keras"])
-
 def bench_mldspp():
     env = ROOT / "tools/MLDSPP-Promoter-prediction/pixi.toml"
     imports = f"""
@@ -152,7 +142,7 @@ def main():
     print("=" * 55)
 
     results = []
-    for fn in [bench_lcnn, bench_cnnprom, bench_mldspp]:
+    for fn in [bench_lcnn, bench_mldspp]:
         try: results.append(fn())
         except Exception as e: print(f"  FAILED: {e}")
 

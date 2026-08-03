@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Master ROC plot — S. pneumoniae D39V.
+Master ROC plot — S. pneumoniae D39V / TIGR4.
 iPro-MP, LCNN, PromoTech HOT/TETRA, MEME, FIMO (E.coli/Prok), MLDSPP 0%/75%.
 """
-
+import argparse
 import numpy as np
 import pandas as pd
 import matplotlib; matplotlib.use("Agg")
@@ -13,9 +13,22 @@ from sklearn.metrics import roc_curve, auc
 from Bio import SeqIO
 
 ROOT = Path(__file__).resolve().parent.parent.parent
-PRED_DIR = ROOT / "output" / "predictions"
 OUT_DIR = ROOT / "output" / "plots" / "benchmark"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def parse_args():
+    p = argparse.ArgumentParser()
+    p.add_argument("--predictions-dir", default=None,
+                   help="Directory with prediction CSVs (default: output/predictions)")
+    p.add_argument("-o", "--output", default=None,
+                   help="Output filename prefix (default: master_benchmark_roc)")
+    return p.parse_args()
+
+
+args = parse_args()
+PRED_DIR = Path(args.predictions_dir) if args.predictions_dir else ROOT / "output" / "predictions"
+OUT_PREFIX = args.output or "master_benchmark_roc"
 
 curves = []
 
@@ -27,11 +40,9 @@ def auc_from_csv(pos_file, neg_file):
     fpr, tpr, _ = roc_curve(y, s)
     return fpr, tpr, auc(fpr, tpr)
 
-def auc_from_ipromp(csv_file):
+def auc_from_ipromp(csv_file, n_pos=988, n_neg=1000):
     """iPro-MP format: Sequence,Prediction,Probability"""
     df = pd.read_csv(csv_file)
-    # Ground truth: first 988 rows are pos, next 1000 are neg
-    n_pos = 988; n_neg = 1000
     if len(df) >= n_pos + n_neg:
         y = np.hstack([np.ones(n_pos), np.zeros(n_neg)])
         s = df["Probability"].values[:n_pos + n_neg]
@@ -39,13 +50,27 @@ def auc_from_ipromp(csv_file):
         return fpr, tpr, auc(fpr, tpr)
     return None
 
-# ── 1. iPro-MP sp12 (best) ──
+# ── 1. iPro-MP sp12 ──
 ipromp_file = PRED_DIR / "ipromp/ipromp_12_predictions.csv"
+if not ipromp_file.exists():
+    ipromp_file = PRED_DIR / "ipromp_sp12_predictions.csv"
 if ipromp_file.exists():
-    result = auc_from_ipromp(ipromp_file)
-    if result:
-        curves.append(("iPro-MP (sp 12)", *result, "#3D185A", "-", 2.0))
-        print(f"iPro-MP sp12: AUC={result[2]:.4f}")
+    df = pd.read_csv(ipromp_file, sep="\t")
+    n_total = len(df)
+    n_pos = n_total // 2
+    n_neg = n_total - n_pos
+    if "Probability" in df.columns:
+        y = np.hstack([np.ones(n_pos), np.zeros(n_neg)])
+        s = df["Probability"].values[:n_total]
+    elif "PRED" in df.columns:
+        y = np.hstack([np.ones(n_pos), np.zeros(n_neg)])
+        s = df["PRED"].values[:n_total]
+    else:
+        y = None; s = None
+    if y is not None:
+        fpr, tpr, _ = roc_curve(y, s)
+        curves.append(("iPro-MP (sp 12)", fpr, tpr, auc(fpr, tpr), "#3D185A", "-", 2.0))
+        print(f"iPro-MP sp12: AUC={auc(fpr, tpr):.4f}")
 
 # ── 2. PromoTech RF-HOT ──
 hot_pos = PRED_DIR / "promotech/workdir/hot_pg_pos/sequences_predictions.csv"
@@ -118,8 +143,15 @@ for name, fpr, tpr, auc_val, color, ls, lw in curves:
 ax.plot([0, 1], [0, 1], "k--", lw=0.8, alpha=0.3)
 ax.set_xlabel("False Positive Rate", fontsize=11)
 ax.set_ylabel("True Positive Rate", fontsize=11)
-ax.set_title("Promoter Prediction — S. pneumoniae D39V",
-             fontweight="bold", fontsize=12)
+
+# Detect dataset name and sequence counts
+ds_name = PRED_DIR.name.replace("predictions_", "").replace("tigr4_", "TIGR4 ").replace("d39v", "D39V").replace("_", " ").replace("ext nogc", "2K").replace("high nogc", "high").title()
+pos_csv = next(PRED_DIR.glob("*pos*.csv"), None)
+neg_csv = next(PRED_DIR.glob("*neg*.csv"), None)
+n_pos = len(pd.read_csv(pos_csv, sep="\t")) if pos_csv and pos_csv.exists() else "?"
+n_neg = len(pd.read_csv(neg_csv, sep="\t")) if neg_csv and neg_csv.exists() else "?"
+title = f"Promoter Prediction — {ds_name} ({n_pos} pos + {n_neg} neg)"
+ax.set_title(title, fontweight="bold", fontsize=12)
 ax.legend(fontsize=8.5, loc="lower right", framealpha=0.9)
 ax.spines[["top", "right"]].set_visible(False)
 ax.set_xlim(-0.01, 1.01); ax.set_ylim(-0.01, 1.01)
@@ -128,11 +160,11 @@ ax.text(0.98, 0.04, "* 75% S. pneumoniae in training",
         transform=ax.transAxes, fontsize=7, ha="right", color="#B07AA1", fontstyle="italic")
 
 plt.tight_layout()
-plt.savefig(OUT_DIR / "master_benchmark_roc.svg", dpi=300, bbox_inches="tight")
-plt.savefig(OUT_DIR / "master_benchmark_roc.png", dpi=300, bbox_inches="tight")
+plt.savefig(OUT_DIR / f"{OUT_PREFIX}.svg", dpi=300, bbox_inches="tight")
+plt.savefig(OUT_DIR / f"{OUT_PREFIX}.png", dpi=300, bbox_inches="tight")
 plt.close()
 
-print(f"\nSaved: {OUT_DIR}/master_benchmark_roc.{{svg,png}}")
+print(f"\nSaved: {OUT_DIR}/{OUT_PREFIX}.{{svg,png}}")
 print(f"\nCurves plotted ({len(curves)}):")
 for name, _, _, a, _, _, _ in sorted(curves, key=lambda x: -x[3]):
     star = " *" if "*" in name else ""

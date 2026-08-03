@@ -87,7 +87,7 @@ def check_benchmark_consistency():
     tmpdir = Path(tempfile.mkdtemp(prefix="preflight_"))
     try:
         res = subprocess.run([
-            "pixi", "run", "python", "src/dataset/positive_tss.py",
+            "pixi", "run", "python", "src/dataset/positive_tss_d39v.py",
             "--gff", "data/reference/D39V_annotation_TSS_Victor.gff",
             "--fasta", "data/reference/D39V.fna",
             "--gff-cds", "data/reference/sequence.gff3",
