@@ -69,6 +69,15 @@ class LocalRunner(Runner):
                 "-m", str(config.ipromp_model_dir),
                 "-d", str(config.dnabert_dir),
             ]
+        if tool.short_name == "mldspp_75":
+            pos_path = str(config.pos_fasta)
+            if "tigr4_extended" in pos_path or "tigr4_2k" in pos_path:
+                split_file = "mldspp_75_split_tigr4_2k.npz"
+            elif "tigr4" in pos_path:
+                split_file = "mldspp_75_split_tigr4_high.npz"
+            else:
+                split_file = "mldspp_75_split_d39v.npz"
+            cmd += ["--split", split_file]
         run_env = os.environ.copy()
         run_env["PATH"] = f"{env_bin}:{run_env['PATH']}"
         run_env["PYTHONPATH"] = str(ROOT)

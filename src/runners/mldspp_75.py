@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""MLDSPP XGBoost (75% S. pneumoniae) — dinucleotide stability + mixed training."""
+"""MLDSPP XGBoost (75% S. pneumoniae) — dinucleotide stability + mixed training.
+Uses pre-built 75/25 splits from data/benchmark/mldspp_75_split_*.npz (seed=42).
+"""
 import argparse
 import time
 from pathlib import Path
@@ -11,7 +13,9 @@ from xgboost import XGBClassifier
 
 from src.runners._shared import STABILITY_MAP
 
-TRAIN_DIR = Path(__file__).resolve().parent.parent.parent / "tools/MLDSPP-Promoter-prediction/Sample Dataset/Promoter Sequences"
+ROOT = Path(__file__).resolve().parent.parent.parent
+TRAIN_DIR = ROOT / "tools/MLDSPP-Promoter-prediction/Sample Dataset/Promoter Sequences"
+SPLIT_DIR = ROOT / "data/benchmark"
 RNG = np.random.RandomState(42)
 
 
@@ -40,20 +44,25 @@ def main():
     p.add_argument("--pos", required=True, help="Positive test FASTA")
     p.add_argument("--neg", required=True, help="Negative test FASTA")
     p.add_argument("-o", "--output", default="output/predictions", help="Output dir")
+    p.add_argument("--split", default=None,
+                   help="Pre-built split .npz from data/benchmark/ (seed=42, ratio=0.75)")
     args = p.parse_args()
 
     X_ext = load_external_training()
 
     pos = list(SeqIO.parse(args.pos, "fasta"))
     neg = list(SeqIO.parse(args.neg, "fasta"))
-    pos_seqs = [str(r.seq) for r in pos]
-    neg_seqs = [str(r.seq) for r in neg]
-    X_pos_all = np.array([extract_aligned(s) for s in pos_seqs])
-    X_neg_all = np.array([extract_aligned(s) for s in neg_seqs])
+    X_pos_all = np.array([extract_aligned(str(r.seq)) for r in pos])
+    X_neg_all = np.array([extract_aligned(str(r.seq)) for r in neg])
 
-    n_spn = int(len(pos) * 0.75)
-    idx = RNG.permutation(len(pos))
-    train_idx = idx[:n_spn]
+    # Load pre-built split or generate random one
+    if args.split:
+        split_data = np.load(SPLIT_DIR / args.split)
+        train_idx = split_data["train_idx"]
+    else:
+        n_spn = int(len(pos) * 0.75)
+        idx = RNG.permutation(len(pos))
+        train_idx = idx[:n_spn]
 
     X_spn_pos = X_pos_all[train_idx]
     X_spn_neg = np.array([RNG.permutation(row) for row in X_spn_pos])

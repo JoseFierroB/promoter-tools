@@ -63,9 +63,9 @@ def parse_arguments() -> argparse.Namespace:
     )
     parser.add_argument(
         "--tier",
-        choices=["high_conf_primary", "extended_primary", "all_tss"],
+        choices=["high_conf_primary", "extended_high", "extended_primary", "all_tss"],
         default="high_conf_primary",
-        help="Dataset tier: 'high_conf_primary' (Core 742), 'extended_primary' (2028), 'all_tss' (2150).",
+        help="Dataset tier: 'high_conf_primary' (742), 'extended_high' (742+48 sec), 'extended_primary' (2028), 'all_tss' (2150).",
     )
     parser.add_argument(
         "-u",
@@ -128,6 +128,7 @@ def load_tigr4_tss_table(xlsx_path: Path, tier: str) -> Tuple[pd.DataFrame, List
 
     tier_sheet_map = {
         "high_conf_primary": ["High Confidence (TSS_100.4)"],
+        "extended_high": ["High Confidence (TSS_100.4)", "Secondary TSS, High confidence"],
         "extended_primary": ["High Confidence (TSS_100.4)", "Low Confidence (TSS_2.1)"],
         "all_tss": [
             "High Confidence (TSS_100.4)",
@@ -184,8 +185,10 @@ def extract_promoter_windows(
 
         tss_col = (
             "TSS_position"
-            if "TSS_position" in row
-            else ("Primary_TSS" if "Primary_TSS" in row else "TSS")
+            if "TSS_position" in row and pd.notna(row["TSS_position"])
+            else ("Secondary_TSS" if "Secondary_TSS" in row and pd.notna(row["Secondary_TSS"])
+            else ("Primary_TSS" if "Primary_TSS" in row and pd.notna(row["Primary_TSS"])
+            else "TSS"))
         )
         if tss_col not in row or pd.isna(row[tss_col]):
             exclusion_stats["skipped_missing_tss"] += 1
