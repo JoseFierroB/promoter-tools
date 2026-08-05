@@ -28,10 +28,10 @@ def cmd_run(args):
         sys.exit(1)
 
     if args.slurm:
-        from src.runner.slurm import SlurmRunner
+        from src.backend.slurm import SlurmRunner
         runner = SlurmRunner()
     else:
-        from src.runner.local import LocalRunner
+        from src.backend.local import LocalRunner
         runner = LocalRunner(n_runs=args.runs, output_dir=args.output_dir)
 
     if not runner.available():

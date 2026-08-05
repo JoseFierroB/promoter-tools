@@ -42,7 +42,7 @@ def main():
     t0 = time.perf_counter()
     res = subprocess.run(
         ["fimo", "--text", "--skip-matched-sequence", args.db, str(combined)],
-        capture_output=True, text=True, timeout=120)
+        capture_output=True, text=True, timeout=900)
 
     scores = {}
     for row in csv.DictReader(res.stdout.splitlines(), delimiter="\t"):

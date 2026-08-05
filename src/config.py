@@ -10,7 +10,9 @@ Override any path via env var:
     PROMOTECH_DIR=/custom/path pixi run python ...
 """
 
+import json
 import os
+import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -150,6 +152,51 @@ class Config:
     @property
     def n_total(self) -> int:
         return self.n_positives + self.n_negatives
+
+
+    # ── Pixi python binary resolution (detached-environments aware) ──
+    _python_cache: dict = {}
+
+    def get_env_python(self, pixi_env_path, feature: str = "default"):
+        """Resolve the python binary for a pixi environment.
+
+        Uses pixi info --json (detached-environments aware) with
+        fallback to <pixi_env>/../.pixi/envs/<feature>/bin/python.
+        Results are cached — only calls pixi info once per environment.
+
+        Args:
+            pixi_env_path: path to pixi.toml (str or Path)
+            feature: environment name (default for most tools, "ipro-mp" for iPro-MP)
+
+        Returns:
+            Path to python binary
+        """
+        from pathlib import Path as _Path
+        pixi_env_path = _Path(pixi_env_path)
+        cache_key = str(pixi_env_path)
+
+        if cache_key in self._python_cache:
+            return self._python_cache[cache_key]
+
+        # Try pixi info (works with detached-environments)
+        try:
+            info = subprocess.run(
+                ["pixi", "info", "--manifest-path", cache_key, "--json"],
+                capture_output=True, text=True, timeout=10, check=True)
+            for env_info in json.loads(info.stdout).get("environments_info", []):
+                prefix = env_info.get("prefix", "")
+                if prefix:
+                    candidate = _Path(prefix) / "bin" / "python"
+                    if candidate.exists():
+                        self._python_cache[cache_key] = candidate
+                        return candidate
+        except Exception:
+            pass
+
+        # Fallback: .pixi/envs/<feature>/bin/python
+        fallback = pixi_env_path.parent / ".pixi" / "envs" / feature / "bin" / "python"
+        self._python_cache[cache_key] = fallback
+        return fallback
 
 
 # Singleton

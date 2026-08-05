@@ -15,10 +15,10 @@ Pipeline Steps:
 
 Usage:
     pixi run python src/dataset/positive_tss_master.py \
-      --annotation output/tigr4_data/S1_TSS.xlsx \
+      --annotation data/tigr4/S1_TSS.xlsx \
       --fasta data/reference/NC_003028.fasta \
       --tier high_conf_primary \
-      -o output/tigr4_data/positives_tigr4_master_81bp
+      -o data/tigr4/positives_master_81bp
 """
 
 import argparse

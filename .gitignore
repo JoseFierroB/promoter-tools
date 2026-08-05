@@ -57,3 +57,6 @@ output/tables/kmer_counts.fasta
 output/tables/predicted_promoters.gff3
 output/predictions/btssfinder/
 output/predictions/combined_81bp.fa
+__pycache__/
+output/intergenic/
+output/

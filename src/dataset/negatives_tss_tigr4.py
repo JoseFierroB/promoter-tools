@@ -12,11 +12,11 @@ Features:
 
 Usage:
     pixi run python src/dataset/negatives_tss_tigr4.py \
-      --xlsx output/tigr4_data/S1_TSS.xlsx \
+      --xlsx data/tigr4/S1_TSS.xlsx \
       --fasta data/reference/NC_003028.fasta \
       --tier high_conf_primary \
       --limit 738 \
-      -o output/tigr4_data/negatives_tigr4_high_conf_primary_81bp
+      -o data/tigr4/negatives_high_81bp
 """
 
 import argparse
@@ -44,7 +44,7 @@ def parse_arguments() -> argparse.Namespace:
 
     parser.add_argument(
         "--xlsx",
-        default="output/tigr4_data/S1_TSS.xlsx",
+        default="data/tigr4/S1_TSS.xlsx",
         help="Path to TIGR4 S1_TSS.xlsx file.",
     )
     parser.add_argument(
@@ -55,7 +55,7 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument(
         "-o",
         "--output",
-        default="output/tigr4_data/negatives_tigr4_high_conf_primary_81bp",
+        default="data/tigr4/negatives_high_81bp",
         help="Output prefix (generates .fasta and .tsv).",
     )
     parser.add_argument(

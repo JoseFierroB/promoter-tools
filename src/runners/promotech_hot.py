@@ -14,7 +14,8 @@ PROMOTECH_DIR = Path(__file__).resolve().parent.parent.parent / "tools/Promotech
 
 
 def get_promotech_python():
-    return str(PROMOTECH_DIR / ".pixi" / "envs" / "default" / "bin" / "python")
+    from src.config import config
+    return str(config.get_env_python(PROMOTECH_DIR / "pixi.toml"))
 
 
 def main():
