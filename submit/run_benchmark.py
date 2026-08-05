@@ -67,7 +67,7 @@ def run_slurm(tools):
         cmd = cmd.replace("OUT_DIR", out_dir)
         mem = "32G"
         cpus = 1
-        gpu = "--gres=gpu:1" if tool == "ipromp" else ""
+        gpu = "--gres=gpu:1" if "ipromp" in tool else ""
         tmpdir = os.environ.get("TMPDIR", "/tmp")
         script = Path(f"{tmpdir}/bench_{tool}.sh")
         pixi_home = os.environ.get("PIXI_HOME", "")

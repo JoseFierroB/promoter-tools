@@ -39,24 +39,15 @@ def parse_tool_output(out_file: Path) -> Optional[dict]:
     Expected formats:
         LCNN: 1988 seqs in 1.027s
         MLDSPP: 1988 seqs in 0.0024s
-        iPro-MP: 14.2ms/seq (50 reps on 1 seqs)
-        PromoTech RF-HOT done
+        iPro-MP: 1988 seqs in 243.639s
+        PromoTech: PromoTech RF-HOT done
     """
     if not out_file.exists() or out_file.stat().st_size == 0:
         return None
 
     text = out_file.read_text()
 
-    # iPro-MP format: "X.Xms/seq (50 reps on N seqs)"
-    m = re.search(r"(\d+\.?\d*)ms/seq \(50 reps on (\d+) seqs\)", text)
-    if m:
-        ms_per_seq = float(m.group(1))
-        n_measured = int(m.group(2))
-        return {"time_s": round(ms_per_seq * 1988 / 1000, 1), "n_seqs": n_measured,
-                "throughput_seq_s": round(1000 / ms_per_seq, 1),
-                "notes": f"extrapolated from {n_measured} seqs (8.2ms/seq), actual n={n_measured}"}
-
-    # LCNN/MLDSPP format: "N seqs in X.XXXs"
+    # Generic format: "NAME: N seqs in X.XXXs" (LCNN, MLDSPP, iPro-MP, MEME, FIMO)
     m = re.search(r"(\d+)\s+seqs\s+in\s+([\d.]+)s", text)
     if m:
         n = int(m.group(1))
@@ -64,9 +55,9 @@ def parse_tool_output(out_file: Path) -> Optional[dict]:
         return {"time_s": round(t, 4), "n_seqs": n,
                 "throughput_seq_s": round(n / t, 1) if t > 0 else None}
 
-    # PromoTech format: "PromoTech RF-XXX done"
+    # PromoTech format: "PromoTech RF-XXX done" or "PromoTech RF-XXX: N seqs in X.XXXs"
     if "RF-HOT done" in text or "RF-TETRA done" in text:
-        return {"time_s": None, "n_seqs": 1988, "throughput_seq_s": None,
+        return {"time_s": None, "n_seqs": 0, "throughput_seq_s": None,
                 "notes": "full pipeline, use sacct CPU time"}
 
     return None
@@ -140,7 +131,7 @@ def main():
             r = ToolResult(
                 tool=tool_name,
                 category=category,
-                n_sequences=info.get("n_seqs", 1988),
+                n_sequences=info.get("n_seqs", 0),
                 time_s=info.get("time_s"),
                 throughput_seq_s=info.get("throughput_seq_s"),
                 success=True,
@@ -155,7 +146,7 @@ def main():
             r = ToolResult(
                 tool=tool_name,
                 category=category,
-                n_sequences=1988,
+                n_sequences=0,
                 success=False,
                 notes=f"FAILED: {err_text.strip()[-80:]}" if err_text else "FAILED (no output)",
             )
