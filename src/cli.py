@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
-"""Unified CLI for promoter-tools — dataset generation, benchmarking, results.
+"""Unified CLI for promoter-tools — benchmarking and results analysis.
 
 Usage:
     pixi run python src/cli.py run lcnn
     pixi run python src/cli.py run --slurm promotech_hot
     pixi run python src/cli.py results /path/to/output/
-    pixi run python src/cli.py dataset generate -u 60 -d 20
 """
 import argparse
 import sys
@@ -61,26 +60,6 @@ def cmd_results(args):
     process()
 
 
-def cmd_dataset(args):
-    """Generate positive and negative datasets."""
-    import subprocess
-
-    fasta = args.fasta or str(ROOT / "data/reference/D39V.fna")
-    gff_tss = args.gff_tss or str(ROOT / "data/reference/D39V_annotation_TSS_Victor.gff")
-    gff_cds = args.gff_cds or str(ROOT / "data/reference/sequence.gff3")
-    out_dir = args.output or str(ROOT / "output")
-
-    if args.positives:
-        cmd = f"pixi run python src/dataset/positive_tss_d39v.py --fasta {fasta} --gff {gff_tss} --gff-cds {gff_cds} -u {args.upstream} -d {args.downstream} -o {out_dir}/positives"
-        print(f"[RUN] {cmd}")
-        subprocess.run(cmd, shell=True, cwd=str(ROOT))
-
-    if args.negatives:
-        cmd = f"pixi run python src/dataset/negatives_tss_d39v.py --gff-cds {gff_cds} --fasta {fasta} --gff-tss {gff_tss} --window {args.upstream + 1 + args.downstream} --limit {args.neg_limit} -o {out_dir}/negatives"
-        print(f"[RUN] {cmd}")
-        subprocess.run(cmd, shell=True, cwd=str(ROOT))
-
-
 def main():
     parser = argparse.ArgumentParser(description="Promoter Tools — Benchmark Pipeline")
     sub = parser.add_subparsers(dest="command")
@@ -98,27 +77,12 @@ def main():
     p_res = sub.add_parser("results", help="Process benchmark results directory")
     p_res.add_argument("directory", help="Results directory path")
 
-    # dataset
-    p_ds = sub.add_parser("dataset", help="Generate positive/negative datasets")
-    p_ds.add_argument("action", choices=["generate"], default="generate", nargs="?")
-    p_ds.add_argument("-u", "--upstream", type=int, default=60)
-    p_ds.add_argument("-d", "--downstream", type=int, default=20)
-    p_ds.add_argument("--fasta", help="Genome FASTA path")
-    p_ds.add_argument("--gff-tss", help="TSS GFF path")
-    p_ds.add_argument("--gff-cds", help="CDS GFF path")
-    p_ds.add_argument("-o", "--output", help="Output directory")
-    p_ds.add_argument("--positives", action="store_true", default=False, help="Generate positives")
-    p_ds.add_argument("--negatives", action="store_true", default=False, help="Generate negatives")
-    p_ds.add_argument("--neg-limit", type=int, default=1000, help="Negative sequence limit")
-
     args = parser.parse_args()
 
     if args.command == "run":
         cmd_run(args)
     elif args.command == "results":
         cmd_results(args)
-    elif args.command == "dataset":
-        cmd_dataset(args)
     else:
         parser.print_help()
 

@@ -1,0 +1,78 @@
+
+
+ LOADING MACHINE LEARNING MODEL AT: models/RF-HOT.model WITH SIZE: 3,770.57 MB
+
+GridSearchCV(cv=10,
+             estimator=RandomForestClassifier(class_weight={0: 0.5512173740112261,
+                                                            1: 5.381156147232458},
+                                              max_features='auto',
+                                              min_samples_leaf=5, verbose=2),
+             param_grid={'max_features': ['log2'], 'n_estimators': [2000]},
+             refit='average_precision',
+             scoring=['average_precision', 'precision', 'recall'], verbose=2)
+
+
+	 TIME ELAPSED FROM START (HOUR:MIN:SEC): 00:00:05
+
+ LOADING FORWARD STRAND SEQUENCES CONVERTED TO HOT-ENCODED SEQUENCES: /tmp/pt_hot_iivg851b/hot_pg_neg/RF-HOT.data WITH SIZE: 26.88 MB
+
+ LOADING INVERSE STRAND SEQUENCES CONVERTED TO HOT-ENCODED SEQUENCES AT: /tmp/pt_hot_iivg851b/hot_pg_neg/RF-HOT-INV.data WITH SIZE: 26.88 MB
+
+ FORWARD STRAND SEQS: (42000, 160) 
+INVERSE STRAND SEQS: (42000, 160) 
+ML-MODEL: 
+
+GridSearchCV(cv=10,
+             estimator=RandomForestClassifier(class_weight={0: 0.5512173740112261,
+                                                            1: 5.381156147232458},
+                                              max_features='auto',
+                                              min_samples_leaf=5, verbose=2),
+             param_grid={'max_features': ['log2'], 'n_estimators': [2000]},
+             refit='average_precision',
+             scoring=['average_precision', 'precision', 'recall'], verbose=2)
+	 TIME ELAPSED FROM START (HOUR:MIN:SEC): 00:00:05
+
+ GENERATING PREDICTIONS FOR FORWARD STRAND SEQUENCES WITH SHAPE: (42000, 160)
+	 TIME ELAPSED FROM START (HOUR:MIN:SEC): 00:00:18
+
+ GENERATING PREDICTIONS FOR INVERSE STRAND SEQUENCES WITH SHAPE: (42000, 160)
+	 TIME ELAPSED FROM START (HOUR:MIN:SEC): 00:00:31
+
+ PREDICTIONS GENERATED SUCCESSFULLY
+
+ FORWARD SEQUENCE SAMPLE: 
+	SEQ: 
+
+0010001010000001010001000001100000010001100000100010000100010001000110001000001000010001010010000001000101001000010001000100000101000001100010000001001000010001 
+	PREDICTION: 0.1475
+
+
+ INVERSE SEQUENCE SAMPLE: 
+	SEQ: 1000100001001000000100011000001010000010001000100001001010001000000100101000100001000001000110001000100010000100010000011000100000011000001000101000000101000100 
+	PREDICTION: 0.2092
+
+
+ FORWARD STRAND PREDICTIONS ABOVE THRESHOLD: 42,000 and BELOW: 0 FROM TOTAL 42,000
+
+ INVERSE STRAND PREDICTIONS ABOVE THRESHOLD: 42,000 and BELOW: 0 FROM TOTAL 42,000
+
+ GENERATING DETECTED PROMOTERS' BED FILE BASED ON THRESHOLD: 0.000. # SEQS: 42000 # INV SEQS: 42000. # UNIQUE CHROMS: 42000 # SEQS ABOVE THRES: 42000 # INV SEQS ABOVE THRES: 42000
+
+ AGGREGATED TO MAX PER SEQUENCE (FORWARD ONLY). RESULTING SHAPE: (1000, 6)
+
+ SAVING BED FILE WITH SHAPE (1000, 6) TO /tmp/pt_hot_iivg851b/hot_pg_neg/genome_predictions.csv. SAMPLE: 
+
+                                      chrom  start  end    score strand  \
+0  NEG_SPV_0001_CP027540.1_1080_+_offset_20     20   59  0.58666      +   
+1  NEG_SPV_0002_CP027540.1_1780_+_offset_13     13   52  0.38214      +   
+2  NEG_SPV_0004_CP027540.1_3879_+_offset_34     34   73  0.76028      +   
+3  NEG_SPV_0006_CP027540.1_5605_+_offset_15     15   54  0.50038      +   
+4   NEG_SPV_0006_CP027540.1_6825_+_offset_1      1   40  0.35682      +   
+
+                                   sequence  
+0  AACTGAAGTTGGTAACTTTTATGGTGTTAGTATCAAAGAA  
+1  GTAACTCTTGATTTTAAAGAAATTGAACAAAATCAAATTG  
+2  TGGTATGAAGGCTCCTCAAGCAGCTGGTATTATCCACTCA  
+3  TTGATTATATTGAAAAAGATACTCCAATATTCTTTGATGA  
+4  ATGTTGATGTGTTGAGTCGCTTTAGAAGTAAAAAAGAGCA  
+	 TIME ELAPSED FROM START (HOUR:MIN:SEC): 00:00:31

@@ -17,15 +17,32 @@ from typing import Dict, List, Tuple
 ROOT = Path(__file__).resolve().parent.parent.parent
 PRED_DIR = ROOT / "output" / "predictions"
 
-from src.analysis.statistics import bootstrap_auc_ci, delong_test
+from statistics import bootstrap_auc_ci, delong_test
 
 
 def load_predictions(pos_file: str, neg_file: str) -> Tuple[np.ndarray, np.ndarray]:
     """Load prediction scores, return (y_true, y_scores)."""
-    pos = pd.read_csv(PRED_DIR / pos_file, sep="\t")
-    neg = pd.read_csv(PRED_DIR / neg_file, sep="\t")
+    if "ipromp" in pos_file.lower():
+        ip_path = PRED_DIR / pos_file
+        if not ip_path.exists():
+            ip_path = PRED_DIR / "ipromp" / "ipromp_12_predictions.csv"
+        content_sample = ip_path.read_text()[:200]
+        sep = "\t" if "\t" in content_sample else ","
+        df = pd.read_csv(ip_path, sep=sep)
+        col = "Probability" if "Probability" in df.columns else "PRED"
+        n_total = len(df)
+        n_pos = 988 if n_total == 1988 else n_total // 2
+        n_neg = n_total - n_pos
+        y_true = np.hstack([np.ones(n_pos), np.zeros(n_neg)])
+        y_score = df[col].values[:n_total]
+        return y_true, y_score
+
+    pos = pd.read_csv(PRED_DIR / pos_file, sep="\t" if (PRED_DIR / pos_file).suffix == ".csv" else ",")
+    neg = pd.read_csv(PRED_DIR / neg_file, sep="\t" if (PRED_DIR / neg_file).suffix == ".csv" else ",")
+    pos_c = "PRED" if "PRED" in pos.columns else "Probability"
+    neg_c = "PRED" if "PRED" in neg.columns else "Probability"
     y_true = np.hstack([np.ones(len(pos)), np.zeros(len(neg))])
-    y_score = np.hstack([pos["PRED"].values, neg["PRED"].values])
+    y_score = np.hstack([pos[pos_c].values, neg[neg_c].values])
     return y_true, y_score
 
 
@@ -38,7 +55,7 @@ TOOLS = [
     ("FIMO (E. coli DB)", "Other", "fimo_db_pos.csv", "fimo_db_neg.csv"),
     ("FIMO (Prok DB)", "Other", "fimo_prok_pos.csv", "fimo_prok_neg.csv"),
     ("MLDSPP (XGBoost)", "ML", "mldspp_pos.csv", "mldspp_neg.csv"),
-    ("iPro-MP (sp 12)", "DL", "ipromp_pos.csv", "ipromp_neg.csv"),
+    ("iPro-MP (sp 12)", "DL", "ipromp/ipromp_12_predictions.csv", "ipromp/ipromp_12_predictions.csv"),
 ]
 
 

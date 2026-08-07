@@ -53,11 +53,13 @@ def main():
     curves = []
 
     # ── 1. iPro-MP sp12 ──
-    ipromp_file = pr_dir / "ipromp/ipromp_12_predictions.csv"
+    ipromp_file = pr_dir / "ipromp" / "ipromp_12_predictions.csv"
     if not ipromp_file.exists():
         ipromp_file = pr_dir / "ipromp_sp12_predictions.csv"
     if ipromp_file.exists():
-        df = pd.read_csv(ipromp_file, sep="\t")
+        content_sample = ipromp_file.read_text()[:200]
+        sep = "\t" if "\t" in content_sample else ","
+        df = pd.read_csv(ipromp_file, sep=sep)
         n_total = len(df)
         n_pos = n_total // 2
         n_neg = n_total - n_pos
