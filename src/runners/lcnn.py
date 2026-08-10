@@ -27,9 +27,21 @@ def main():
     m = {"A": [1, 0, 0, 0], "T": [0, 1, 0, 0], "C": [0, 0, 1, 0], "G": [0, 0, 0, 1]}
     X = np.array([[m[c] for c in s] for s in seqs], dtype=np.float32)
 
-    model = tf.keras.models.load_model(args.model, compile=False)
+    import tensorflow.compat.v1 as tf
+    tf.disable_eager_execution()
+
     t0 = time.perf_counter()
-    probs = model.predict(X, verbose=0, batch_size=128)
+    with tf.Session() as sess:
+        meta_graph_def = tf.saved_model.loader.load(sess, [tf.saved_model.tag_constants.SERVING], args.model)
+        signature = meta_graph_def.signature_def["serving_default"]
+        in_tensor_name = signature.inputs[list(signature.inputs.keys())[0]].name
+        out_tensor_name = signature.outputs[list(signature.outputs.keys())[0]].name
+        
+        in_tensor = sess.graph.get_tensor_by_name(in_tensor_name)
+        out_tensor = sess.graph.get_tensor_by_name(out_tensor_name)
+        
+        probs = sess.run(out_tensor, feed_dict={in_tensor: X})
+
     elapsed = time.perf_counter() - t0
     probs = probs[:, 1] if probs.ndim == 2 and probs.shape[1] >= 2 else probs.ravel()
 

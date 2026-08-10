@@ -100,23 +100,7 @@ def main():
         curves.append(("PromoterLCNN", fpr, tpr, a, "#228B22", "-", 2.0))
         print(f"PromoterLCNN: AUC={a:.4f}")
 
-    # ── 5. MEME (2-fold CV) ──
-    meme_pos = pr_dir / "meme_pos.csv"
-    meme_neg = pr_dir / "meme_neg.csv"
-    if meme_pos.exists() and meme_neg.exists():
-        fpr, tpr, a = auc_from_csv(meme_pos, meme_neg)
-        curves.append(("MEME (STREME+FIMO)", fpr, tpr, a, "#1D14C8", "-.", 2.0))
-        print(f"MEME: AUC={a:.4f}")
-
-    # ── 5.5. FIMO + E. coli DB (zero-shot) ──
-    fimo_db_pos = pr_dir / "fimo_db_pos.csv"
-    fimo_db_neg = pr_dir / "fimo_db_neg.csv"
-    if fimo_db_pos.exists() and fimo_db_neg.exists():
-        fpr, tpr, a = auc_from_csv(fimo_db_pos, fimo_db_neg)
-        curves.append(("FIMO (E. coli DB)", fpr, tpr, a, "#17BECF", "--", 1.5))
-        print(f"FIMO_DB: AUC={a:.4f}")
-
-    # ── 5.6. FIMO + Prokaryote DB (zero-shot) ──
+    # ── 5. FIMO + Prokaryote DB (zero-shot) ──
     fimo_prok_pos = pr_dir / "fimo_prok_pos.csv"
     fimo_prok_neg = pr_dir / "fimo_prok_neg.csv"
     if fimo_prok_pos.exists() and fimo_prok_neg.exists():

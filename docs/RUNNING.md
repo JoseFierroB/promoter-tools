@@ -1,5 +1,29 @@
 # Running Instructions — promoter-tools
 
+## Quick Setup
+
+```bash
+git clone <repo-url> promoter-tools
+cd promoter-tools
+
+# Install all environments (root + tools)
+pixi install
+(cd tools/meme                         && pixi install)
+(cd tools/MLDSPP-Promoter-prediction   && pixi install)
+(cd tools/Promoters                    && pixi install)
+(cd tools/Promotech                    && pixi install)
+(cd tools/iPro-MP                      && pixi install)
+```
+
+**Codon cluster setup**: pixi is at `/hps/software/users/jlees/fierro/.pixi/bin/pixi`. Add to PATH:
+
+```bash
+export PIXI_HOME=/hps/software/users/jlees/fierro/.pixi
+export PATH="$PIXI_HOME/bin:$PATH"
+```
+
+Then run the `pixi install` commands above. The lock file is committed — environments will be resolved from cache on `/hps/software/`.
+
 ## Individual Tools
 
 All tools can be run via the unified CLI:

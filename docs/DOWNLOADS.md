@@ -75,10 +75,45 @@ cd tools/iPro-MP/07-final
 After downloads, verify with:
 
 ```bash
-# PromoTech
-ls -lh tools/Promotech/models/RF-HOT.model tools/Promotech/models/RF-TETRA.model
+# PromoTech (expected: ~3.5 GB each)
+ls -lh tools/Promotech/models/RF-HOT.model    # 3.6 GB
+ls -lh tools/Promotech/models/RF-TETRA.model  # 3.5 GB
 
-# iPro-MP
-ls -lh tools/iPro-MP/07-final/12_fold_1.pth
+# iPro-MP folds (expected: ~343 MB each, ~1.7 GB total)
+ls -lh tools/iPro-MP/07-final/12_fold_{1..5}.pth
+
+# iPro-MP DNABERT-6 (expected: ~341 MB)
 ls -lh tools/iPro-MP/DNABERT-6/pytorch_model.bin
+
+# PromoterLCNN weights (already in git, ~121 MB)
+ls -lh tools/Promoters/weights/weights/IPromoter/*.h5
+```
+
+## Verify Before Running
+
+To confirm all models are present before starting a benchmark run:
+
+```bash
+python -c "
+from pathlib import Path
+ROOT = Path('.')
+checks = [
+    ('PromoTech HOT', ROOT/'tools/Promotech/models/RF-HOT.model'),
+    ('PromoTech TETRA', ROOT/'tools/Promotech/models/RF-TETRA.model'),
+    ('iPro-MP fold 1', ROOT/'tools/iPro-MP/07-final/12_fold_1.pth'),
+    ('DNABERT-6', ROOT/'tools/iPro-MP/DNABERT-6/pytorch_model.bin'),
+    ('LCNN weights', ROOT/'tools/Promoters/weights/weights/IPromoter/promoter_saved_model.h5'),
+]
+missing = []
+for name, path in checks:
+    if path.exists():
+        print(f'  ✅ {name}: {path.stat().st_size/1e9:.1f} GB')
+    else:
+        print(f'  ❌ {name}: MISSING — {path}')
+        missing.append(name)
+if missing:
+    print(f'\n⚠️  Missing {len(missing)} model(s). Run the commands above.')
+else:
+    print(f'\n✅ All models present.')
+"
 ```

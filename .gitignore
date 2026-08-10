@@ -60,3 +60,4 @@ output/predictions/combined_81bp.fa
 __pycache__/
 output/intergenic/
 output/
+mmseqs_db/
