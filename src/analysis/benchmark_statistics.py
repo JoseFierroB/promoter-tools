@@ -17,7 +17,7 @@ from typing import Dict, List, Tuple
 ROOT = Path(__file__).resolve().parent.parent.parent
 PRED_DIR = ROOT / "output" / "predictions"
 
-from statistics import bootstrap_auc_ci, delong_test
+from src.analysis.statistics import bootstrap_auc_ci, delong_test
 
 
 def load_predictions(pos_file: str, neg_file: str) -> Tuple[np.ndarray, np.ndarray]:
@@ -31,8 +31,9 @@ def load_predictions(pos_file: str, neg_file: str) -> Tuple[np.ndarray, np.ndarr
         df = pd.read_csv(ip_path, sep=sep)
         col = "Probability" if "Probability" in df.columns else "PRED"
         n_total = len(df)
-        n_pos = 988 if n_total == 1988 else n_total // 2
-        n_neg = n_total - n_pos
+        from src.config import config
+        n_pos = config.n_positives if n_total >= config.n_total else n_total // 2
+        n_neg = min(config.n_negatives, n_total - n_pos)
         y_true = np.hstack([np.ones(n_pos), np.zeros(n_neg)])
         y_score = df[col].values[:n_total]
         return y_true, y_score

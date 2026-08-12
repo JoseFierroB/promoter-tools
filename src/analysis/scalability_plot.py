@@ -12,7 +12,7 @@ OUT_DIR = ROOT / "output" / "plots" / "benchmark"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 TOOLS = [
-    ("MLDSPP XGBoost",      [[100, 0.001], [500, 0.008], [1988, 0.0023]], "#942C76", "o"),
+    ("MLDSPP XGBoost",      [[100, 0.001], [500, 0.008]], "#942C76", "o"),
     ("PromoterLCNN",        [[100, 0.41],  [500, 0.48],  [1988, 0.40]],   "#228B22", "s"),
     ("PromoTech RF-HOT",    [[1988, 97.4]],                                "#E07614", "D"),
     ("iPro-MP (H. pylori)", [[100, 289.3], [500, 262.7], [1988, 270.5]],   "#3D185A", "^"),

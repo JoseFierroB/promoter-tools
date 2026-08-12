@@ -48,7 +48,7 @@ def process_tigr4_sigma_assignment():
     print("Executing TIGR4 Sigma Factor Assignment Pipeline...")
 
     # Load D39V SigX reference promoters
-    d39v_sigx_df = pd.read_csv(BENCHMARK_DIR / "positives_81bp_SigX_metadata.tsv", sep="\t")
+    d39v_sigx_df = pd.read_csv(BENCHMARK_DIR / "d39v" / "confirmed" / "positives_81bp_SigX_metadata.tsv", sep="\t")
     sigx_genes_d39v = set(d39v_sigx_df["Downstream_Gene"].dropna().unique())
     print(f"Loaded {len(sigx_genes_d39v)} D39V SigX reference target genes.")
 

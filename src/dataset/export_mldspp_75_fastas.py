@@ -22,7 +22,7 @@ SPLITS_DIR.mkdir(parents=True, exist_ok=True)
 SPLIT_MAPPINGS = [
     {
         "npz": BENCHMARK_DIR / "mldspp_75_split_d39v.npz",
-        "fasta": BENCHMARK_DIR / "positives_81bp.fasta",
+        "fasta": BENCHMARK_DIR / "d39v" / "positives_81bp.fasta",
         "prefix": "d39v"
     },
     {

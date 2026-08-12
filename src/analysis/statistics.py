@@ -26,12 +26,15 @@ def bootstrap_auc_ci(y_true: np.ndarray, y_scores: np.ndarray,
     aucs = np.zeros(n_bootstrap)
     rng = np.random.RandomState(42)
 
+    pos_idx = np.where(y_true == 1)[0]
+    neg_idx = np.where(y_true == 0)[0]
+    n_pos, n_neg = len(pos_idx), len(neg_idx)
+
     for i in range(n_bootstrap):
-        idx = rng.choice(n, size=n, replace=True)
-        # Skip degenerate samples
-        if len(np.unique(y_true[idx])) < 2:
-            aucs[i] = 0.5
-            continue
+        idx_pos = rng.choice(pos_idx, size=n_pos, replace=True)
+        idx_neg = rng.choice(neg_idx, size=n_neg, replace=True)
+        idx = np.concatenate([idx_pos, idx_neg])
+        rng.shuffle(idx)
         fpr, tpr, _ = roc_curve(y_true[idx], y_scores[idx])
         aucs[i] = auc(fpr, tpr)
 

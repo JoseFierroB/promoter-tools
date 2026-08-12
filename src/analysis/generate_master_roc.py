@@ -16,6 +16,11 @@ OUT_DIR = ROOT / "output" / "plots" / "benchmark"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 
+def _count_positives():
+    from src.config import config
+    return config.n_positives
+
+
 def parse_args():
     p = argparse.ArgumentParser()
     p.add_argument("--predictions-dir", default=None,
@@ -61,7 +66,7 @@ def main():
         sep = "\t" if "\t" in content_sample else ","
         df = pd.read_csv(ipromp_file, sep=sep)
         n_total = len(df)
-        n_pos = 988
+        n_pos = _count_positives()
         n_neg = n_total - n_pos
         if "Probability" in df.columns:
             y = np.hstack([np.ones(n_pos), np.zeros(n_neg)])

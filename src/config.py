@@ -143,10 +143,14 @@ class Config:
     # ── Convenience ──
     @property
     def n_positives(self) -> int:
+        if self.pos_fasta.exists():
+            return sum(1 for l in open(self.pos_fasta) if l.startswith(">"))
         return 988
 
     @property
     def n_negatives(self) -> int:
+        if self.neg_fasta.exists():
+            return sum(1 for l in open(self.neg_fasta) if l.startswith(">"))
         return 1000
 
     @property

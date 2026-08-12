@@ -38,7 +38,11 @@ def load_simple_scores(csv_path):
     return scores
 
 
-def load_ipromp_scores(csv_path, n_pos=988, n_neg=1000):
+from src.config import config as _cfg
+
+def load_ipromp_scores(csv_path, n_pos=None, n_neg=None):
+    n_pos = n_pos or _cfg.n_positives
+    n_neg = n_neg or _cfg.n_negatives
     pos_scores = []
     neg_scores = []
     with open(csv_path) as f:
