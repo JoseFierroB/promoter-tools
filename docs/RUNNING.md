@@ -104,9 +104,6 @@ pixi run python src/analysis/benchmark_statistics.py
 # Resource plots (compute time + peak RAM)
 pixi run python src/analysis/resource_plots.py
 
-# Scalability plot (time vs N)
-pixi run python src/analysis/scalability_plot.py
-
 # Process Slurm benchmark results
 pixi run python src/analysis/process_results.py <results_dir>
 ```
@@ -120,6 +117,5 @@ pixi run python src/analysis/process_results.py <results_dir>
 | `output/plots/benchmark/master_benchmark_roc.{svg,png}` | 8-curve ROC |
 | `output/plots/benchmark/compute_time.{svg,png}` | Resource bar chart |
 | `output/plots/benchmark/ram.{svg,png}` | RAM bar chart |
-| `output/plots/benchmark/scalability.{svg,png}` | Scalability projection |
 | `output/plots/meme/` | All MEME plots |
 | `output/predictions/` | Per-tool prediction CSVs |
