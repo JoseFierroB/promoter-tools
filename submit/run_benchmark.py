@@ -33,7 +33,7 @@ def run_local(tools):
     if not combined.exists() and "ipromp" in tools:
         with open(combined, "wb") as out:
             for fname in ["positives_81bp.fasta", "negatives_81bp.fasta"]:
-                with open(ROOT / "data/benchmark" / fname, "rb") as fin:
+                with open(ROOT / "data/benchmark/d39v" / fname, "rb") as fin:
                     out.write(fin.read())
 
     for tool in tools:

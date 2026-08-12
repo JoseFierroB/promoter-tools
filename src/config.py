@@ -3,7 +3,7 @@
 Usage:
     from src.config import Config
     cfg = Config()
-    print(cfg.pos_fasta)  # → data/benchmark/positives_81bp.fasta
+    print(cfg.pos_fasta)  # → data/benchmark/d39v/positives_81bp.fasta
     print(cfg.combined_fasta)  # → auto-generated combined pos+neg
 
 Override any path via env var:
@@ -38,11 +38,11 @@ class Config:
     # ── Dataset paths ──
     @property
     def pos_fasta(self) -> Path:
-        return Path(os.environ.get("POS_FASTA", str(ROOT / "data/benchmark/positives_81bp.fasta")))
+        return Path(os.environ.get("POS_FASTA", str(ROOT / "data/benchmark/d39v/positives_81bp.fasta")))
 
     @property
     def neg_fasta(self) -> Path:
-        return Path(os.environ.get("NEG_FASTA", str(ROOT / "data/benchmark/negatives_81bp.fasta")))
+        return Path(os.environ.get("NEG_FASTA", str(ROOT / "data/benchmark/d39v/negatives_81bp.fasta")))
 
     @property
     def combined_fasta(self) -> Path:

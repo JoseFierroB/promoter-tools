@@ -61,7 +61,7 @@ def main():
         sep = "\t" if "\t" in content_sample else ","
         df = pd.read_csv(ipromp_file, sep=sep)
         n_total = len(df)
-        n_pos = n_total // 2
+        n_pos = 988
         n_neg = n_total - n_pos
         if "Probability" in df.columns:
             y = np.hstack([np.ones(n_pos), np.zeros(n_neg)])

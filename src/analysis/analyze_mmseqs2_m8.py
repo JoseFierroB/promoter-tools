@@ -113,8 +113,8 @@ def load_nucmer_coords(path):
                 t_coords = parts[1].strip().split()
                 lens = parts[2].strip().split()
                 pct_str = parts[3].strip().split()
-                d_s, d_e = int(d_coords[0]), int(d_coords[1])
-                t_s, t_e = int(t_coords[0]), int(t_coords[1])
+                d_s, d_e = int(d_coords[0]) - 1, int(d_coords[1]) - 1
+                t_s, t_e = int(t_coords[0]) - 1, int(t_coords[1]) - 1
                 pct = float(pct_str[0]) if pct_str else 0.0
                 blocks.append({"d39v_s": d_s, "d39v_e": d_e,
                                "tigr4_s": t_s, "tigr4_e": t_e,
@@ -224,12 +224,93 @@ def nucmer_overlap(df, blocks, d39v_meta, tigr4_meta):
     print(f"  MMseqs2 pairs overlapping nucmer blocks: {overlapping}/{total_checked} ({overlapping/total_checked*100:.1f}%)")
 
 
+def analyze_pribnow_box_mutations(df_fwd):
+    """Analyze specific Pribnow -10 box mutations (TATAAT) in orthologous D39V vs TIGR4 promoters."""
+    d39v_fa = ROOT / "data" / "benchmark" / "d39v" / "positives_81bp.fasta"
+    tigr4_fa = ROOT / "data" / "tigr4" / "positives_high_81bp.fasta"
+    d39v_meta_path = ROOT / "data" / "benchmark" / "d39v" / "positives_81bp_metadata.tsv"
+    tigr4_meta_path = ROOT / "data" / "tigr4" / "positives_high_81bp_metadata.tsv"
+
+    from Bio import SeqIO
+    d39v_seqs = {rec.id: str(rec.seq) for rec in SeqIO.parse(d39v_fa, "fasta")} if d39v_fa.exists() else {}
+    tigr4_seqs = {rec.id: str(rec.seq) for rec in SeqIO.parse(tigr4_fa, "fasta")} if tigr4_fa.exists() else {}
+
+    d39v_meta = pd.read_csv(d39v_meta_path, sep="\t") if d39v_meta_path.exists() else pd.DataFrame()
+    tigr4_meta = pd.read_csv(tigr4_meta_path, sep="\t") if tigr4_meta_path.exists() else pd.DataFrame()
+
+    out_tsv = ROOT / "output" / "tables" / "pribnow_box_ortholog_mutations.tsv"
+    out_tsv.parent.mkdir(parents=True, exist_ok=True)
+
+    # Filter 1-to-1 high identity ortholog pairs
+    qc = df_fwd["query"].value_counts()
+    unique_queries = set(qc[qc == 1].index)
+    ortho_df = df_fwd[df_fwd["query"].isin(unique_queries)].copy()
+
+    mut_records = []
+    exact_count = 0
+    single_mut_count = 0
+    multi_mut_count = 0
+    total_eval = 0
+
+    for _, row in ortho_df.iterrows():
+        q_id = row["query"]
+        t_id = row["target"]
+        
+        # Check if both have 81bp sequences
+        if q_id in d39v_seqs and t_id in tigr4_seqs:
+            s_d39v = d39v_seqs[q_id]
+            s_tigr4 = tigr4_seqs[t_id]
+            
+            # Upstream [-15, -5] window is at indices 45:55 in 81bp sequence
+            box_d39v = s_d39v[45:55]
+            box_tigr4 = s_tigr4[45:55]
+            
+            total_eval += 1
+            is_exact = (box_d39v == box_tigr4)
+            diffs = sum(a != b for a, b in zip(box_d39v, box_tigr4))
+            
+            if is_exact:
+                exact_count += 1
+                status = "Identical"
+            elif diffs == 1:
+                single_mut_count += 1
+                status = "Point_Mutation_1bp"
+            else:
+                multi_mut_count += 1
+                status = f"Mutation_{diffs}bp"
+                
+            mut_records.append({
+                "D39V_TSS_ID": q_id,
+                "TIGR4_TSS_ID": t_id,
+                "Alignment_Identity_Pct": row["pident_pct"],
+                "D39V_10_Window": box_d39v,
+                "TIGR4_10_Window": box_tigr4,
+                "Mismatch_Count": diffs,
+                "Mutation_Status": status
+            })
+
+    mut_df = pd.DataFrame(mut_records)
+    if not mut_df.empty:
+        mut_df.to_csv(out_tsv, sep="\t", index=False)
+
+    print(f"\n{'='*60}")
+    print(f"  ANÁLISIS DE MUTACIONES EN LA CAJA -10 (TATAAT) DE PROMOTORES ORTÓLOGOS")
+    print(f"{'='*60}")
+    print(f"  Promotores Ortólogos Evaluados (1-a-1): {total_eval}")
+    if total_eval > 0:
+        print(f"  Cajas -10 100% Idénticas (Conservados): {exact_count} ({exact_count/total_eval*100:.1f}%)")
+        print(f"  Cajas -10 con Mutación Puntual (1 bp):  {single_mut_count} ({single_mut_count/total_eval*100:.1f}%)")
+        print(f"  Cajas -10 con Mutación Múltiple (>1 bp): {multi_mut_count} ({multi_mut_count/total_eval*100:.1f}%)")
+        print(f"  Tabla de detalles guardada en: {out_tsv}")
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--mode", choices=["forward", "reverse", "bidir"], default="forward")
     parser.add_argument("--nucmer", type=str, default=None)
     parser.add_argument("--separate-repeats", action="store_true")
     parser.add_argument("--by-orientation", action="store_true")
+    parser.add_argument("--pribnow-mutations", action="store_true")
     args = parser.parse_args()
 
     print("Loading IGR metadata...")
@@ -290,6 +371,11 @@ def main():
         print(f"  Pairs from repeats:     {n_repeat_pairs} ({n_repeat_pairs/len(df)*100:.1f}%)")
         print(f"  Unique 1-to-1 pairs:    {n_unique_pairs} ({n_unique_pairs/len(df)*100:.1f}%)")
         print(f"  After removing repeats:  {len(df) - n_repeat_pairs} high-confidence pairs")
+
+    # Pribnow box mutations
+    if args.pribnow_mutations:
+        df = df_fwd if args.mode != "reverse" else df_rev
+        analyze_pribnow_box_mutations(df)
 
 
 if __name__ == "__main__":

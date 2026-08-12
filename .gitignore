@@ -19,7 +19,6 @@ tools/Promoters/weights/
 
 # Large generated outputs (not source code)
 *.zip *.gz *.tar *.tar.gz
-*.log *.out *.err
 benchmark_results/
 benchmark_outputs/
 codon_results/*
@@ -52,12 +51,5 @@ tools/Promoters/Dataset/
 **/Promotech/results/
 tools/Promotech/results/
 tools/Promotech/examples/
-output/tables/resource_metrics.tsv
-output/tables/kmer_counts.fasta
-output/tables/predicted_promoters.gff3
-output/predictions/btssfinder/
-output/predictions/combined_81bp.fa
-__pycache__/
-output/intergenic/
 output/
 mmseqs_db/

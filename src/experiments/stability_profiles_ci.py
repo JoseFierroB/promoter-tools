@@ -21,7 +21,7 @@ STABILITY = {
 }
 
 DATA_DIR = Path("tools/MLDSPP-Promoter-prediction/Sample Dataset/Promoter Sequences")
-POS_81BP = "data/benchmark/positives_81bp.fasta"
+POS_81BP = "data/benchmark/d39v/positives_81bp.fasta"
 OUT_DIR = Path("output/plots/stability")
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 

@@ -86,25 +86,25 @@ def delong_test(y_true: np.ndarray, scores_a: np.ndarray,
     v10_b = compute_v10(scores_b, y_true)
 
     # Covariance matrix
-    s_aa = np.cov(v10_a[y_true == 1], rowvar=False) if n_pos > 1 else np.array([[np.var(v10_a[y_true == 1])]])
-    s_bb = np.cov(v10_b[y_true == 1], rowvar=False) if n_pos > 1 else np.array([[np.var(v10_b[y_true == 1])]])
+    s_aa = float(np.var(v10_a[y_true == 1], ddof=1)) if n_pos > 1 else 0.0
+    s_bb = float(np.var(v10_b[y_true == 1], ddof=1)) if n_pos > 1 else 0.0
     if n_pos > 1:
         s_ab = np.cov(v10_a[y_true == 1], v10_b[y_true == 1])[0, 1] if len(v10_a[y_true == 1]) > 1 else 0
     else:
         s_ab = 0
 
-    s_aa_n = np.cov(v10_a[y_true == 0], rowvar=False) if n_neg > 1 else np.array([[np.var(v10_a[y_true == 0])]])
-    s_bb_n = np.cov(v10_b[y_true == 0], rowvar=False) if n_neg > 1 else np.array([[np.var(v10_b[y_true == 0])]])
+    s_aa_n = float(np.var(v10_a[y_true == 0], ddof=1)) if n_neg > 1 else 0.0
+    s_bb_n = float(np.var(v10_b[y_true == 0], ddof=1)) if n_neg > 1 else 0.0
     if n_neg > 1:
         s_ab_n = np.cov(v10_a[y_true == 0], v10_b[y_true == 0])[0, 1] if len(v10_a[y_true == 0]) > 1 else 0
     else:
         s_ab_n = 0
 
     # Variance of difference
-    var_diff = (float(s_aa[0, 0] if s_aa.ndim > 1 else s_aa) / n_pos +
-                float(s_bb[0, 0] if s_bb.ndim > 1 else s_bb) / n_pos +
-                float(s_aa_n[0, 0] if s_aa_n.ndim > 1 else s_aa_n) / n_neg +
-                float(s_bb_n[0, 0] if s_bb_n.ndim > 1 else s_bb_n) / n_neg -
+    var_diff = (float(s_aa) / n_pos +
+                float(s_bb) / n_pos +
+                float(s_aa_n) / n_neg +
+                float(s_bb_n) / n_neg -
                 2 * s_ab / n_pos - 2 * s_ab_n / n_neg)
 
     if var_diff <= 0:

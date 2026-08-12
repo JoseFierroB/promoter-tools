@@ -14,8 +14,8 @@ ROOT = Path(__file__).resolve().parent.parent.parent
 
 # ── RULE 1: Data integrity ──
 BENCHMARK_HASHES = {
-    "data/benchmark/positives_81bp.fasta": "bf85ed392b0bd3ab9f62ce9c35da2cf6",
-    "data/benchmark/negatives_81bp.fasta": "193cdb5e265519149ca07b6c475cae7a",
+    "data/benchmark/d39v/positives_81bp.fasta": "bf85ed392b0bd3ab9f62ce9c35da2cf6",
+    "data/benchmark/d39v/negatives_81bp.fasta": "193cdb5e265519149ca07b6c475cae7a",
 }
 
 def md5(path):
@@ -99,14 +99,14 @@ def check_benchmark_consistency():
             return False, f"Regeneration failed: {res.stderr[-200:]}"
         
         new_hash = md5(tmpdir / "test.fasta")
-        bench_hash = md5(ROOT / "data/benchmark/positives_81bp.fasta")
+        bench_hash = md5(ROOT / "data/benchmark/d39v/positives_81bp.fasta")
         
         if new_hash == bench_hash:
             return True, "Benchmark regenerates identically"
         else:
             # Check per-sequence match
             new_seqs = {r.id: str(r.seq) for r in SeqIO.parse(tmpdir / "test.fasta", "fasta")}
-            bench_seqs = {r.id: str(r.seq) for r in SeqIO.parse(ROOT / "data/benchmark/positives_81bp.fasta", "fasta")}
+            bench_seqs = {r.id: str(r.seq) for r in SeqIO.parse(ROOT / "data/benchmark/d39v/positives_81bp.fasta", "fasta")}
             shared = set(new_seqs) & set(bench_seqs)
             diffs = sum(1 for k in shared if new_seqs[k] != bench_seqs[k])
             only_new = len(new_seqs) - len(shared)
@@ -138,8 +138,8 @@ def run_all(strict=False):
     print()
     
     for label, path in [
-        ("Positives (81bp)", "data/benchmark/positives_81bp.fasta"),
-        ("Negatives (81bp)", "data/benchmark/negatives_81bp.fasta"),
+        ("Positives (81bp)", "data/benchmark/d39v/positives_81bp.fasta"),
+        ("Negatives (81bp)", "data/benchmark/d39v/negatives_81bp.fasta"),
     ]:
         p = ROOT / path
         if p.exists():
@@ -157,7 +157,7 @@ def run_all(strict=False):
             all_ok = False
     
     # R2: Strand verification
-    pos_ok, neg_ok, strand_issues = verify_strands(ROOT / "data/benchmark/positives_81bp.fasta")
+    pos_ok, neg_ok, strand_issues = verify_strands(ROOT / "data/benchmark/d39v/positives_81bp.fasta")
     print(f"  {'✓' if pos_ok and neg_ok else '✗'} Strand check: +{pos_ok}/-{neg_ok}")
     for issue in strand_issues:
         print(f"     ⚠  {issue}")
@@ -165,7 +165,7 @@ def run_all(strict=False):
             all_ok = False
     
     # R3: Sample sizes
-    pos_n = sum(1 for _ in SeqIO.parse(ROOT / "data/benchmark/positives_81bp.fasta", "fasta"))
+    pos_n = sum(1 for _ in SeqIO.parse(ROOT / "data/benchmark/d39v/positives_81bp.fasta", "fasta"))
     print(f"  {'✓' if pos_n >= MIN_SAMPLE else f'✗ n={pos_n} < {MIN_SAMPLE}'} Sample size: n={pos_n}")
     
     # R4: Data leakage check (if train/test files specified)

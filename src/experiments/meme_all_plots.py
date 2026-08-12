@@ -12,8 +12,8 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import roc_auc_score, roc_curve, auc
 
 ROOT = Path(__file__).resolve().parent.parent.parent
-POS = ROOT / "data/benchmark/positives_81bp.fasta"
-NEG = ROOT / "data/benchmark/negatives_81bp.fasta"
+POS = ROOT / "data/benchmark/d39v/positives_81bp.fasta"
+NEG = ROOT / "data/benchmark/d39v/negatives_81bp.fasta"
 PLOT_DIR = ROOT / "output" / "plots" / "meme"
 PLOT_DIR.mkdir(parents=True, exist_ok=True)
 random.seed(42)

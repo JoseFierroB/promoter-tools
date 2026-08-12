@@ -94,7 +94,7 @@ def analyze_d39v():
     rows = []
     cds = load_d39v_cds()
     binding = load_d39v_binding_sites()
-    tss = pd.read_csv(ROOT / "data/benchmark/positives_81bp_metadata.tsv", sep="\t")
+    tss = pd.read_csv(ROOT / "data/benchmark/d39v/positives_81bp_metadata.tsv", sep="\t")
 
     n_tss = len(tss)
     n_cds = len(cds)
@@ -116,7 +116,7 @@ def analyze_d39v():
 
         in_cds = False
         for c in cds:
-            if c["start"] <= pos <= c["end"]:
+            if c["start"] <= pos < c["end"]:
                 in_cds = True
                 inside += 1
                 if strand == c["strand"]: same_s += 1
@@ -148,7 +148,7 @@ def analyze_d39v():
     rows.append(("D39V", "TSS ≤40nt downstream de 3' CDS", f"{near_3p} ({near_3p/n_tss*100:.1f}%)"))
 
     # Binding sites
-    bs_in_cds = sum(1 for b in binding if any(c["start"] <= b["start"] <= c["end"] for c in cds))
+    bs_in_cds = sum(1 for b in binding if any(c["start"] <= b["start"] < c["end"] for c in cds))
     bs_near_5p = sum(1 for b in binding if any(0 < c["start"] - b["end"] <= 40 for c in cds))
     bs_near_3p = sum(1 for b in binding if any(0 < b["start"] - c["end"] <= 40 for c in cds))
     bs_near_tss = sum(1 for b in binding if any(abs(b["start"] - t["TSS_Position_0based"]) <= 40 for _, t in tss.iterrows()))
@@ -165,8 +165,8 @@ def analyze_d39v():
     none_s = n_tss - siga - sigx
     rows.append(("D39V", "SigA / SigX / None", f"{siga} / {sigx} / {none_s}"))
 
-    siga_inside = sum(1 for _, t in tss.iterrows() if t["Sigma_Factor"] == "SigA" and any(c["start"] <= t["TSS_Position_0based"] <= c["end"] for c in cds))
-    sigx_inside = sum(1 for _, t in tss.iterrows() if t["Sigma_Factor"] == "SigX" and any(c["start"] <= t["TSS_Position_0based"] <= c["end"] for c in cds))
+    siga_inside = sum(1 for _, t in tss.iterrows() if t["Sigma_Factor"] == "SigA" and any(c["start"] <= t["TSS_Position_0based"] < c["end"] for c in cds))
+    sigx_inside = sum(1 for _, t in tss.iterrows() if t["Sigma_Factor"] == "SigX" and any(c["start"] <= t["TSS_Position_0based"] < c["end"] for c in cds))
     rows.append(("D39V", "SigA dentro de CDS", f"{siga_inside} ({siga_inside/siga*100:.1f}%)" if siga else "n/a"))
     rows.append(("D39V", "SigX dentro de CDS", f"{sigx_inside} ({sigx_inside/sigx*100:.1f}%)" if sigx else "n/a"))
 

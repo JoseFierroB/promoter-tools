@@ -15,14 +15,14 @@ pixi install
 (cd tools/iPro-MP                      && pixi install)
 ```
 
-**Codon cluster setup**: pixi is at `/hps/software/users/jlees/fierro/.pixi/bin/pixi`. Add to PATH:
+**HPC cluster setup**: if pixi is not in your PATH, add it:
 
 ```bash
-export PIXI_HOME=/hps/software/users/jlees/fierro/.pixi
+export PIXI_HOME=~/.pixi               # or cluster-specific path
 export PATH="$PIXI_HOME/bin:$PATH"
 ```
 
-Then run the `pixi install` commands above. The lock file is committed — environments will be resolved from cache on `/hps/software/`.
+Then run the `pixi install` commands above. The lock file is committed — environments will be resolved from cache.
 
 ## Individual Tools
 
@@ -58,8 +58,8 @@ Runners are at `src/runners/{tool}.py` and can also be executed standalone:
 
 ```bash
 pixi run --manifest-path tools/meme/pixi.toml python src/runners/meme.py \
-  --pos data/benchmark/positives_81bp.fasta \
-  --neg data/benchmark/negatives_81bp.fasta \
+  --pos data/benchmark/d39v/positives_81bp.fasta \
+  --neg data/benchmark/d39v/negatives_81bp.fasta \
   -o output/predictions
 ```
 

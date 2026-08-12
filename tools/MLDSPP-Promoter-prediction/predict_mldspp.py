@@ -68,7 +68,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Train and run MLDSPP (SantaLucia stability + XGBoost) predictions.")
     parser.add_argument('-i', '--input_file', type=str, required=True, help="Input FASTA file to predict (101 bp sequences).")
     parser.add_argument('-o', '--output_file', type=str, required=True, help="Output CSV predictions path.")
-    parser.add_argument('-d', '--dataset_dir', type=str, default="/home/fierro/Desktop/MLDSPP-Promoter-prediction/Sample Dataset", help="Path to MLDSPP training Sample Dataset.")
+    parser.add_argument('-d', '--dataset_dir', type=str, default="Sample Dataset", help="Path to MLDSPP training Sample Dataset.")
     return parser.parse_args()
 
 def main():

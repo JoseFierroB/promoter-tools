@@ -10,8 +10,8 @@ from Bio import SeqIO
 import numpy as np
 from sklearn.metrics import roc_auc_score
 
-POS = "data/benchmark/positives_81bp.fasta"
-NEG = "data/benchmark/negatives_81bp.fasta"
+POS = "data/benchmark/d39v/positives_81bp.fasta"
+NEG = "data/benchmark/d39v/negatives_81bp.fasta"
 
 tmpdir = Path(tempfile.mkdtemp(prefix="m1_"))
 pos = list(SeqIO.parse(POS, "fasta"))

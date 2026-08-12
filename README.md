@@ -4,7 +4,7 @@ Modular benchmark suite for bacterial promoter prediction. Extracts datasets fro
 
 **Tools:** iPro-MP (DNABERT-6), PromoterLCNN (CNN), PromoTech (Random Forest), MLDSPP (XGBoost), MEME Suite (STREME + FIMO), and FIMO zero-shot against *E. coli* and prokaryote motif databases.
 
-**Everything runs without admin rights** — isolated pixi environments using conda-forge exclusively.
+**Everything runs without admin rights** — isolated pixi environments using conda-forge (with pytorch channel for iPro-MP).
 
 ## Quick Start
 

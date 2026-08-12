@@ -9,8 +9,8 @@ import numpy as np, pandas as pd
 from Bio import SeqIO
 
 ROOT = Path(__file__).resolve().parent.parent.parent
-POS = ROOT / "data/benchmark/positives_81bp.fasta"
-NEG = ROOT / "data/benchmark/negatives_81bp.fasta"
+POS = ROOT / "data/benchmark/d39v/positives_81bp.fasta"
+NEG = ROOT / "data/benchmark/d39v/negatives_81bp.fasta"
 OUT_DIR = ROOT / "output/predictions"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 

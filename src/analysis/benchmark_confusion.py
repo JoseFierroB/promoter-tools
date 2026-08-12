@@ -156,8 +156,8 @@ def main():
 
     print("=== D39V ===")
     d39v_r = process_strain("D39V",
-                             ROOT / "data/benchmark/positives_81bp.fasta",
-                             ROOT / "data/benchmark/negatives_81bp.fasta",
+                             ROOT / "data/benchmark/d39v/positives_81bp.fasta",
+                              ROOT / "data/benchmark/d39v/negatives_81bp.fasta",
                              ROOT / "output/predictions",
                              d39v_tools)
     all_results.extend(d39v_r)

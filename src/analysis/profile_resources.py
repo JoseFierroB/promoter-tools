@@ -170,8 +170,8 @@ def main():
     args = parser.parse_args()
 
     tools = get_tool_list()
-    pos = args.pos or str(ROOT / "data/benchmark/positives_81bp.fasta")
-    neg = args.neg or str(ROOT / "data/benchmark/negatives_81bp.fasta")
+    pos = args.pos or str(ROOT / "data/benchmark/d39v/positives_81bp.fasta")
+    neg = args.neg or str(ROOT / "data/benchmark/d39v/negatives_81bp.fasta")
 
     if args.all:
         tool_keys = list(tools.keys())

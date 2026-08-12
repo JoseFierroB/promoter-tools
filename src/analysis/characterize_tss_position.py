@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parent.parent.parent
 OUT = ROOT / "output" / "tables" / "tss_position_classification.tsv"
 OUT.parent.mkdir(parents=True, exist_ok=True)
 
-D39V_TSS = ROOT / "data" / "benchmark" / "positives_81bp_metadata.tsv"
+D39V_TSS = ROOT / "data" / "benchmark" / "d39v" / "positives_81bp_metadata.tsv"
 TIGR4_TSS = ROOT / "data" / "tigr4" / "positives_high_81bp_metadata.tsv"
 D39V_GFF = ROOT / "data" / "reference" / "D39V.gff3"
 TIGR4_GFF = ROOT / "data" / "reference" / "NC_003028.gff3"
