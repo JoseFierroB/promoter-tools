@@ -15,7 +15,7 @@
 *.keras
 07-final/
 models/
-tools/Promoters/weights/
+tools/Promoters/weights/weights/
 
 # Large generated outputs (not source code)
 *.zip *.gz *.tar *.tar.gz

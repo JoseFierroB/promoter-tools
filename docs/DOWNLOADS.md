@@ -15,6 +15,7 @@ These work immediately after `git clone` + `pixi install`:
 | FIMO + Prokaryote DB | `unified_prokaryote.meme` (838 motifs) |
 | MLDSPP XGBoost (0%) | Training data (12 species, `tools/MLDSPP-Promoter-prediction/Sample Dataset/`) |
 | MLDSPP XGBoost (75%) | Split indices (`data/benchmark/mldspp_75_split_*.npz`) |
+| PromoterLCNN | Keras SavedModel weights (`tools/Promoters/weights/PromoterLCNN/`, ~8 MB) |
 
 ---
 
@@ -75,19 +76,14 @@ The runner expects 5 fold files: `12_fold_1.pth` … `12_fold_5.pth` (~343 MB ea
 
 ## PromoterLCNN
 
+**Weights are tracked in git** (`tools/Promoters/weights/PromoterLCNN/`, ~8 MB — SavedModel for the IsPromoter_fold_5 classifier used by the runner).
+
 **Source repo:** https://github.com/occasumlux/Promoters
 
-**Download URL (Google Drive):**
+**Note:** The original repo also distributes iPromoter-BnCNN weights (`*.h5`, ~113 MB) via Google Drive. These are **not** needed for this benchmark and are not tracked in git. If you want them:
 
 - Lightweight (PromoterLCNN only): https://drive.google.com/file/d/1D1XOIAUDMv04sZUIvgdfBAgL75lW8AgW/view
 - Full (LCNN + iPromoter-BnCNN + pcPromoter-CNN): https://drive.google.com/file/d/1awsszk6905sVzetdgcQe5kOVTv4n70up/view
-
-```bash
-mkdir -p tools/Promoters/weights
-cd tools/Promoters/weights
-# Download the zip from Google Drive, then unzip inside weights/
-# The runner expects: weights/PromoterLCNN/IsPromoter_fold_5/saved_model.pb
-```
 
 ---
 
@@ -106,7 +102,7 @@ ls -lh tools/iPro-MP/07-final/12_fold_{1..5}.pth
 # iPro-MP DNABERT-6 (expected: ~341 MB)
 ls -lh tools/iPro-MP/DNABERT-6/pytorch_model.bin
 
-# PromoterLCNN weights
+# PromoterLCNN weights (already in git, ~4 MB SavedModel)
 ls -lh tools/Promoters/weights/PromoterLCNN/IsPromoter_fold_5/saved_model.pb
 ```
 
