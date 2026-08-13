@@ -80,6 +80,21 @@ def collect_slurm(job_id: str, tool) -> dict:
 
 # ── helpers ──
 
+def _pss(pid: int) -> int:
+    """Proportional Set Size (KB) from /proc/pid/smaps.
+    PSS divides shared memory proportionally — no double-counting like RSS.
+    Falls back to RSS if /proc unavailable (non-Linux)."""
+    try:
+        with open(f"/proc/{pid}/smaps") as f:
+            return sum(int(l.split()[1]) for l in f if l.startswith("Pss:"))
+    except Exception:
+        try:
+            import psutil
+            return psutil.Process(pid).memory_info().rss // 1024
+        except Exception:
+            return 0
+
+
 def _parse_elapsed(elapsed_str: str) -> float:
     """Parse sacct Elapsed field: '00:12:34' or '1-02:34:56' → seconds."""
     if not elapsed_str:

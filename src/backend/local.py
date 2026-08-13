@@ -102,18 +102,33 @@ class LocalRunner(Runner):
         def _bg_sample():
             try:
                 import psutil
+                from src.utils.metrics import _pss
                 ps_proc = psutil.Process(proc.pid)
                 while not stop_sampler.is_set():
                     try:
                         procs = [ps_proc] + ps_proc.children(recursive=True)
-                        rss = sum(p.memory_info().rss for p in procs) / (1024 * 1024)
+                        pss_kb = sum(_pss(p.pid) for p in procs)
+                        ram_mb = pss_kb / 1024.0
                         cpu = sum(p.cpu_percent() for p in procs)
-                        samples.append((rss, cpu))
+                        samples.append((ram_mb, cpu))
                     except psutil.NoSuchProcess:
                         break
                     time.sleep(0.5)
             except Exception:
-                pass
+                try:
+                    import psutil
+                    ps_proc = psutil.Process(proc.pid)
+                    while not stop_sampler.is_set():
+                        try:
+                            procs = [ps_proc] + ps_proc.children(recursive=True)
+                            rss = sum(p.memory_info().rss for p in procs) / (1024 * 1024)
+                            cpu = sum(p.cpu_percent() for p in procs)
+                            samples.append((rss, cpu))
+                        except psutil.NoSuchProcess:
+                            break
+                        time.sleep(0.5)
+                except Exception:
+                    pass
 
         t = threading.Thread(target=_bg_sample, daemon=True)
         t.start()
