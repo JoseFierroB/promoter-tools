@@ -14,8 +14,10 @@ class Runner(ABC):
 
     @abstractmethod
     def run(self, tool: Tool) -> dict:
-        """Execute tool, return dict with keys: tool, time_s, ram_mb, vram_mb,
-        gpu_name, success, notes, n_sequences, throughput_seq_s."""
+        """Execute tool, return dict with keys: tool, category, wall_seconds,
+        time_s, peak_ram_mb, peak_vram_mb, mean_cpu_pct, gpu_name,
+        gpu_available, model_size_mb, intermediate_mb, n_sequences,
+        throughput_seq_s, success, notes."""
         ...
 
     def available(self) -> bool:

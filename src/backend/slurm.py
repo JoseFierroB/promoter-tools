@@ -1,5 +1,5 @@
 """Slurm runner: execute tools via sbatch + sacct on HPC clusters."""
-import os, sys, subprocess, time, json
+import os, sys, subprocess, time
 from pathlib import Path
 from typing import Optional
 
@@ -106,55 +106,9 @@ PYTHONPATH="{ROOT}" {python_bin} "{runner}" \\
             elapsed += poll_seconds
 
     def _collect_sacct(self, tool: Tool, job_id: str) -> dict:
-        """Parse sacct output into ResourceMetrics."""
-        fields = "JobID,State,CPUTimeRAW,MaxRSS,ReqTRES,AllocTRES%50"
-        result = subprocess.run(
-            ["sacct", "-j", job_id, f"--format={fields}", "--noheader", "-P"],
-            capture_output=True, text=True, timeout=10)
-
-        success = False
-        cpu_time = 0.0
-        max_rss = 0.0
-        gpu_name = ""
-        notes = ""
-
-        for line in result.stdout.strip().split("\n"):
-            if not line or ".bat+" in line or ".ext+" in line:
-                continue
-            parts = line.split("|")
-            if len(parts) < 4:
-                continue
-            state = parts[1]
-            cpu_time = float(parts[2]) if parts[2] else 0.0
-            max_rss_raw = parts[3]
-            max_rss = 0.0
-            if max_rss_raw and max_rss_raw.endswith("K"):
-                max_rss = float(max_rss_raw[:-1]) / 1024.0
-            elif max_rss_raw and max_rss_raw.endswith("M"):
-                max_rss = float(max_rss_raw[:-1])
-            elif max_rss_raw:
-                max_rss = float(max_rss_raw) / (1024 * 1024)
-
-            if state == "COMPLETED":
-                success = True
-
-        return {
-            "tool": tool.name,
-            "category": tool.category,
-            "wall_seconds": 0,  # sacct has CPUTime, not wall
-            "cpu_user_seconds": round(cpu_time, 1),
-            "peak_ram_mb": round(max_rss, 1),
-            "peak_vram_mb": 0,
-            "gpu_name": gpu_name,
-            "gpu_available": tool.gpu_capable,
-            "model_size_mb": tool.model_size_mb(),
-            "intermediate_mb": 0,
-            "n_sequences": tool.n_sequences,
-            "throughput_seq_s": round(tool.n_sequences / cpu_time, 1) if cpu_time > 0 else None,
-            "time_s": round(cpu_time, 1),
-            "success": success,
-            "notes": notes,
-        }
+        """Parse sacct output → unified metrics schema."""
+        from src.utils.metrics import collect_slurm
+        return collect_slurm(job_id, tool)
 
     def _failed(self, tool: Tool, reason: str) -> dict:
         return {

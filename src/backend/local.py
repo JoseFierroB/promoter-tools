@@ -90,52 +90,16 @@ class LocalRunner(Runner):
         run_env["PYTHONPATH"] = str(ROOT)
 
         t0 = time.perf_counter()
-        result = subprocess.run(cmd, capture_output=True, text=True,
-                                cwd=str(ROOT), timeout=1800, env=run_env)
-        wall = round(time.perf_counter() - t0, 3)
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE, text=True,
+                                cwd=str(ROOT), env=run_env)
+        stdout, stderr = proc.communicate(timeout=1800)
+        output = stdout.strip()
+        notes = stderr.strip()[-200:] if proc.returncode != 0 else ""
 
-        success = result.returncode == 0
-        output = result.stdout.strip()
-        notes = result.stderr.strip()[-200:] if not success else ""
+        from src.utils.metrics import collect_local
+        result = collect_local(proc, tool, output, t0)
+        result["notes"] = notes or output[:200]
+        return result
 
-        time_s, throughput = self._parse_time(output, tool)
-        ram_mb = self._get_child_ram()
-
-        return {
-            "tool": tool.name,
-            "category": tool.category,
-            "wall_seconds": wall,
-            "peak_ram_mb": round(ram_mb, 1),
-            "peak_vram_mb": 0,
-            "gpu_name": "",
-            "gpu_available": False,
-            "model_size_mb": tool.model_size_mb(),
-            "intermediate_mb": 0,
-            "n_sequences": tool.n_sequences,
-            "throughput_seq_s": throughput,
-            "time_s": time_s,
-            "success": success,
-            "notes": notes or output[:200],
-        }
-
-    def _get_child_ram(self) -> float:
-        """Get max RSS of completed child processes (MB)."""
-        try:
-            import resource
-            return resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss / 1024.0
-        except Exception:
-            return 0.0
-
-    def _parse_time(self, output: str, tool: Tool):
-        import re
-        m = re.search(r"(\d+)\s+seqs\s+in\s+([\d.]+)s", output)
-        if m:
-            n = int(m.group(1))
-            t = float(m.group(2))
-            return t, round(n / t, 1) if t > 0 else None
-        m = re.search(r"(\d+\.?\d*)ms/seq", output)
-        if m:
-            tp = round(1000 / float(m.group(1)), 1)
-            est = float(m.group(1)) * tool.n_sequences / 1000
-            return round(est, 1), tp
-        return None, None
+# _get_child_ram and _parse_time moved to src/utils/metrics.py
