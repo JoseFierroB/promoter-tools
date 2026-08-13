@@ -39,12 +39,11 @@ def cmd_run(args):
 
     import pandas as pd
     results = []
-    for tool in tools:
+    for i, tool in enumerate(tools):
+        print(f"[{i+1}/{len(tools)}]", end=" ", flush=True)
         m = runner.run(tool)
         results.append(m)
-        status = "OK" if m["success"] else "FAIL"
-        time_s = f"{m['time_s']:.1f}s" if m.get("time_s") else "N/A"
-        print(f"    [{status}] {time_s}")
+        status = "FAIL" if not m["success"] else ""
 
     df = pd.DataFrame(results)
     out_tsv = args.output or str(ROOT / "output/tables/resource_metrics.tsv")

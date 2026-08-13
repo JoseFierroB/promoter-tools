@@ -23,6 +23,7 @@ class LocalRunner(Runner):
 
     def run(self, tool: Tool) -> dict:
         """Execute tool n_runs times, return aggregate with mean ± SD."""
+        print(f"  [{tool.name}]", flush=True)
         runs = []
         for i in range(self.n_runs):
             if self.n_runs > 1:
@@ -91,12 +92,22 @@ class LocalRunner(Runner):
 
         t0 = time.perf_counter()
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                                stderr=subprocess.PIPE, text=True,
+                                stderr=subprocess.STDOUT, text=True,
                                 cwd=str(ROOT), env=run_env)
 
-        # Background psutil sampling while process runs
-        samples = []
         import threading
+        # ── Tee stdout: live terminal output + capture for regex ──
+        output_lines = []
+        def _tee_stdout():
+            for line in iter(proc.stdout.readline, ''):
+                print(f"     │ {line.rstrip()}", flush=True)
+                output_lines.append(line)
+
+        t_tee = threading.Thread(target=_tee_stdout, daemon=True)
+        t_tee.start()
+
+        # ── Background PSS sampling while process runs ──
+        samples = []
         stop_sampler = threading.Event()
 
         def _bg_sample():
@@ -116,32 +127,34 @@ class LocalRunner(Runner):
                     time.sleep(0.5)
             except Exception:
                 try:
-                    import psutil
-                    ps_proc = psutil.Process(proc.pid)
+                    import psutil as _psutil
+                    ps_proc = _psutil.Process(proc.pid)
                     while not stop_sampler.is_set():
                         try:
                             procs = [ps_proc] + ps_proc.children(recursive=True)
                             rss = sum(p.memory_info().rss for p in procs) / (1024 * 1024)
                             cpu = sum(p.cpu_percent() for p in procs)
                             samples.append((rss, cpu))
-                        except psutil.NoSuchProcess:
+                        except _psutil.NoSuchProcess:
                             break
                         time.sleep(0.5)
                 except Exception:
                     pass
 
-        t = threading.Thread(target=_bg_sample, daemon=True)
-        t.start()
+        t_sampler = threading.Thread(target=_bg_sample, daemon=True)
+        t_sampler.start()
 
-        stdout, stderr = proc.communicate(timeout=1800)
+        proc.wait(timeout=1800)
         stop_sampler.set()
-        t.join(timeout=2)
-        output = stdout.strip()
-        notes = stderr.strip()[-200:] if proc.returncode != 0 else ""
+        t_tee.join(timeout=2)
+        t_sampler.join(timeout=2)
+        output = ''.join(output_lines)
 
         from src.utils.metrics import collect_local
         result = collect_local(proc, tool, output, t0, samples=samples)
-        result["notes"] = notes or output[:200]
+        result["notes"] = output[-200:] if not result["success"] else ""
+        ram_str = f"  ({result['peak_ram_mb']:.0f}MB)" if result['peak_ram_mb'] > 0 else ""
+        print(f"    [{tool.name}] {result['wall_seconds']:.1f}s{ram_str}", flush=True)
         return result
 
 # _get_child_ram and _parse_time moved to src/utils/metrics.py
