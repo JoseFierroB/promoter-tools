@@ -11,7 +11,6 @@ These work immediately after `git clone` + `pixi install`:
 | Tool | What's in git |
 |------|---------------|
 | MEME (STREME+FIMO) | Motif databases (`tools/meme/motif_databases/`) |
-| FIMO + E. coli DB | `ecoli_combined.meme` (165 motifs) |
 | FIMO + Prokaryote DB | `unified_prokaryote.meme` (838 motifs) |
 | MLDSPP XGBoost (0%) | Training data (12 species, `tools/MLDSPP-Promoter-prediction/Sample Dataset/`) |
 | MLDSPP XGBoost (75%) | Split indices (`data/benchmark/mldspp_75_split_*.npz`) |
@@ -19,7 +18,7 @@ These work immediately after `git clone` + `pixi install`:
 
 ---
 
-## PromoTech (RF-HOT / RF-TETRA)
+## PromoTech (RF-HOT)
 
 **Source repo:** https://github.com/BioinformaticsLabAtMUN/Promotech
 
@@ -32,11 +31,9 @@ cd tools/Promotech/models
 # RF-HOT (959 MB compressed, ~3.5 GB uncompressed)
 wget http://www.cs.mun.ca/~lourdes/public/PromoTech_models/RF-HOT.zip
 unzip RF-HOT.zip && rm RF-HOT.zip
-
-# RF-TETRA (1.0 GB compressed, ~3.5 GB uncompressed)
-wget http://www.cs.mun.ca/~lourdes/public/PromoTech_models/RF-TETRA.zip
-unzip RF-TETRA.zip && rm RF-TETRA.zip
 ```
+
+Note: RF-TETRA is **not** used in the benchmark (excluded from the analysis) — no need to download it.
 
 ---
 
@@ -72,6 +69,10 @@ cd tools/iPro-MP/07-final
 
 The runner expects 5 fold files: `12_fold_1.pth` … `12_fold_5.pth` (~343 MB each).
 
+> **Environment note**: `pixi install` in `tools/iPro-MP/` installs `torch`
+> via pip (PyPI wheel bundles CUDA, ~2 GB). The conda `pytorch` channel
+> stops at 2.5.1, which lacks Blackwell (sm_120) support.
+
 ---
 
 ## PromoterLCNN
@@ -92,9 +93,8 @@ The runner expects 5 fold files: `12_fold_1.pth` … `12_fold_5.pth` (~343 MB ea
 After downloads, verify with:
 
 ```bash
-# PromoTech (expected: ~3.5 GB each)
+# PromoTech (expected: ~3.5 GB)
 ls -lh tools/Promotech/models/RF-HOT.model    # 3.6 GB
-ls -lh tools/Promotech/models/RF-TETRA.model  # 3.5 GB
 
 # iPro-MP folds (expected: ~343 MB each, ~1.7 GB total)
 ls -lh tools/iPro-MP/07-final/12_fold_{1..5}.pth
@@ -116,7 +116,6 @@ from pathlib import Path
 ROOT = Path('.')
 checks = [
     ('PromoTech HOT', ROOT/'tools/Promotech/models/RF-HOT.model'),
-    ('PromoTech TETRA', ROOT/'tools/Promotech/models/RF-TETRA.model'),
     ('iPro-MP fold 1', ROOT/'tools/iPro-MP/07-final/12_fold_1.pth'),
     ('DNABERT-6', ROOT/'tools/iPro-MP/DNABERT-6/pytorch_model.bin'),
     ('LCNN weights', ROOT/'tools/Promoters/weights/PromoterLCNN/IsPromoter_fold_5/saved_model.pb'),

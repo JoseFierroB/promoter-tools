@@ -15,11 +15,14 @@ class SlurmRunner(Runner):
 
     def __init__(self, partition: str = "production",
                  time_limit: str = "2:00:00",
-                 cpus: int = 4, mem_gb: int = 16):
+                 cpus: int = 4, mem_gb: int = 16,
+                 pos_fasta: Path = None, neg_fasta: Path = None):
         self.partition = partition
         self.time_limit = time_limit
         self.cpus = cpus
         self.mem_gb = mem_gb
+        self.pos_fasta = Path(pos_fasta) if pos_fasta else config.pos_fasta
+        self.neg_fasta = Path(neg_fasta) if neg_fasta else config.neg_fasta
 
     def available(self) -> bool:
         """Check if Slurm is available."""
@@ -31,6 +34,24 @@ class SlurmRunner(Runner):
 
     def run(self, tool: Tool) -> dict:
         print(f"  [{tool.name}] Submitting to Slurm...", flush=True)
+
+        if tool.short_name == "mldspp_75":
+            from src.backend.local import _pick_mldspp_split, _count_seqs
+            split = _pick_mldspp_split(self.pos_fasta)
+            if split is None:
+                return {
+                    "tool": tool.name, "category": tool.category,
+                    "success": False,
+                    "notes": (f"No mldspp_75 split for {_count_seqs(self.pos_fasta)} "
+                              f"positives — available: "
+                              f"{', '.join(s.name for s in (config.data_dir / 'benchmark').glob('mldspp_75_split_*.npz'))}"),
+                    "n_sequences": tool.n_sequences,
+                    "time_s": None, "throughput_seq_s": None,
+                    "wall_seconds": 0, "cpu_user_seconds": 0,
+                    "peak_ram_mb": 0, "peak_vram_mb": 0,
+                    "gpu_name": "", "gpu_available": False,
+                    "model_size_mb": tool.model_size_mb(), "intermediate_mb": 0,
+                }
 
         job_id = self._submit(tool)
         if not job_id:
@@ -78,6 +99,13 @@ class SlurmRunner(Runner):
         extra_args = ""
         if "ipromp" in tool.short_name:
             extra_args = f'  -m "{config.ipromp_model_dir}" -d "{config.dnabert_dir}"'
+        if tool.short_name == "mldspp_75":
+            from src.backend.local import _pick_mldspp_split, _count_seqs
+            split = _pick_mldspp_split(self.pos_fasta)
+            if split:
+                extra_args += f'  --split "{split}"'
+            else:
+                print(f"    WARNING: no mldspp_75 split for {self.pos_fasta.name} — job will be skipped")
 
         return f"""#!/bin/bash
 #SBATCH --output={config.temp_dir / f"{tool.short_name}_%j.out"}
@@ -86,7 +114,7 @@ class SlurmRunner(Runner):
 export PIXI_HOME="{os.environ.get('PIXI_HOME', os.path.expanduser('~/.pixi'))}"
 export PATH="$PIXI_HOME/bin:$PATH"
 PYTHONPATH="{ROOT}" {python_bin} "{runner}" \\
-  --pos "{config.pos_fasta}" --neg "{config.neg_fasta}" \\
+  --pos "{self.pos_fasta}" --neg "{self.neg_fasta}" \\
   -o "{ROOT / 'output/predictions'}"{extra_args}
 """
 

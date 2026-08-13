@@ -3,6 +3,7 @@
 Uses pre-built 75/25 splits from data/benchmark/mldspp_75_split_*.npz (seed=42).
 """
 import argparse
+import sys
 import time
 from pathlib import Path
 
@@ -59,6 +60,10 @@ def main():
     if args.split:
         split_data = np.load(SPLIT_DIR / args.split)
         train_idx = split_data["train_idx"]
+        if int(train_idx.max()) >= len(pos):
+            sys.exit(f"ERROR: split '{args.split}' indexes up to {train_idx.max()} "
+                     f"but positive FASTA has only {len(pos)} sequences. "
+                     f"Use the split matching this dataset (see data/benchmark/mldspp_75_split_*.npz).")
     else:
         n_spn = int(len(pos) * 0.75)
         idx = RNG.permutation(len(pos))

@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """
 Master ROC plot — S. pneumoniae D39V / TIGR4.
-iPro-MP, LCNN, PromoTech HOT/TETRA, MEME, FIMO (E.coli/Prok), MLDSPP 0%/75%.
+MLDSPP 0%/75%, LCNN, PromoTech HOT, iPro-MP, MEME, FIMO Prok.
 """
 import argparse
+import sys
 import numpy as np
 import pandas as pd
 import matplotlib; matplotlib.use("Agg")
@@ -12,6 +13,7 @@ from pathlib import Path
 from sklearn.metrics import roc_curve, auc
 
 ROOT = Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(ROOT))
 OUT_DIR = ROOT / "output" / "plots" / "benchmark"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 

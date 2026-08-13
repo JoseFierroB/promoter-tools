@@ -1,10 +1,10 @@
 # Promoter Prediction Benchmark — *S. pneumoniae* D39V & TIGR4
 
-Modular benchmark suite for bacterial promoter prediction. Extracts datasets from genomic annotations (GFF3 + FASTA), runs 9 prediction tools (deep learning, machine learning, and motif-based), and generates comparative metrics (AUC, F1, confusion matrix) with bootstrap confidence intervals.
+Modular benchmark suite for bacterial promoter prediction. Extracts datasets from genomic annotations (GFF3 + FASTA), runs 7 prediction tools (deep learning, machine learning, and motif-based), and generates comparative metrics (AUC, F1, confusion matrix) with bootstrap confidence intervals.
 
-**Tools:** iPro-MP (DNABERT-6), PromoterLCNN (CNN), PromoTech (Random Forest), MLDSPP (XGBoost), MEME Suite (STREME + FIMO), and FIMO zero-shot against *E. coli* and prokaryote motif databases.
+**Tools:** iPro-MP (DNABERT-6), PromoterLCNN (CNN), PromoTech RF-HOT (Random Forest), MLDSPP (XGBoost, 0% and 75% spn variants), MEME Suite (STREME + FIMO), and FIMO zero-shot against a unified prokaryote motif database.
 
-**Everything runs without admin rights** — isolated pixi environments using conda-forge (with pytorch channel for iPro-MP).
+**Everything runs without admin rights** — isolated pixi environments using conda-forge (CUDA-enabled torch for iPro-MP is installed via pip).
 
 ## Quick Start
 
@@ -18,11 +18,11 @@ pixi install && for d in tools/*/; do (cd "$d" && pixi install); done
 # Run a single tool
 pixi run python src/cli.py run mldspp
 
-# Run the full benchmark locally
-python submit/run_benchmark.py local all
+# Run the full 7-tool benchmark locally
+pixi run python src/cli.py run meme fimo_prok mldspp mldspp_75 lcnn promotech_hot ipromp_sp12
 
-# Run on Slurm cluster
-python submit/run_benchmark.py slurm all
+# Run on Slurm cluster (one job per tool)
+pixi run python src/cli.py run --slurm meme fimo_prok mldspp mldspp_75 lcnn promotech_hot ipromp_sp12
 ```
 
 ## Project Structure
@@ -65,7 +65,7 @@ output/                  # Generated outputs (gitignored)
 
 - **Pixi** (package manager) — `pixi.lock` ensures reproducible environments
 - **Python 3.10** via pixi environments
-- **GPU** optional — only iPro-MP and LCNN benefit from CUDA
+- **GPU** optional — iPro-MP and LCNN benefit from CUDA (see `docs/RUNNING.md` for GPU assignment)
 - For non-pixi users: `requirements.txt` lists core dependencies
 
 ## Citation

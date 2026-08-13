@@ -22,9 +22,9 @@ OUT_DIR.mkdir(parents=True, exist_ok=True)
 # ── Tool metadata ──
 TOOL_INFO = {
     "MLDSPP XGBoost":           {"color": "#942C76", "short": "MLDSPP\nXGBoost",       "method": "BDT"},
+    "MLDSPP XGBoost (75% spn)": {"color": "#B07AA1", "short": "MLDSPP 75%\nXGBoost",    "method": "BDT"},
     "PromoterLCNN":             {"color": "#228B22", "short": "Promoter\nLCNN",         "method": "CNN"},
     "PromoTech RF-HOT (PG Max)":{"color": "#E07614", "short": "PromoTech\nRF-HOT",      "method": "RF"},
-    "PromoTech RF-TETRA (PG Max)":{"color": "#D4940B", "short": "PromoTech\nRF-TETRA",    "method": "RF"},
     "iPro-MP (H. pylori)":      {"color": "#3D185A", "short": "iPro-MP\n(H. pylori)",   "method": "gLM"},
     "MEME Suite (STREME+FIMO)":  {"color": "#1E88E5", "short": "MEME\nSTREME+FIMO",     "method": "motif"},
     "FIMO + Prokaryote DB":     {"color": "#8E24AA", "short": "FIMO\nProk DB",          "method": "motif"},

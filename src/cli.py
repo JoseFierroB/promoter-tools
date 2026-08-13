@@ -4,6 +4,8 @@
 Usage:
     pixi run python src/cli.py run lcnn
     pixi run python src/cli.py run --slurm promotech_hot
+    pixi run python src/cli.py run lcnn --pos data/tigr4/positives_high_81bp.fasta \\
+        --neg data/tigr4/negatives_high_81bp.fasta --output-dir output/tigr4/predictions
     pixi run python src/cli.py results /path/to/output/
 """
 import argparse
@@ -28,10 +30,11 @@ def cmd_run(args):
 
     if args.slurm:
         from src.backend.slurm import SlurmRunner
-        runner = SlurmRunner()
+        runner = SlurmRunner(pos_fasta=args.pos, neg_fasta=args.neg)
     else:
         from src.backend.local import LocalRunner
-        runner = LocalRunner(n_runs=args.runs, output_dir=args.output_dir)
+        runner = LocalRunner(n_runs=args.runs, output_dir=args.output_dir,
+                             pos_fasta=args.pos, neg_fasta=args.neg)
 
     if not runner.available():
         print(f"Runner '{type(runner).__name__}' not available.")
@@ -47,6 +50,11 @@ def cmd_run(args):
 
     df = pd.DataFrame(results)
     out_tsv = args.output or str(ROOT / "output/tables/resource_metrics.tsv")
+    if not args.output and Path(out_tsv).exists():
+        prev = pd.read_csv(out_tsv, sep="\t")
+        if "tool" in prev.columns and set(prev["tool"]) != set(df["tool"]):
+            print(f"  WARNING: {out_tsv} contains {len(prev)} rows from a previous run "
+                  f"with different tools — it will be overwritten. Use -o to keep separate files.")
     Path(out_tsv).parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(out_tsv, sep="\t", index=False)
     print(f"\nMetrics saved: {out_tsv}")
@@ -71,6 +79,8 @@ def main():
     p_run.add_argument("-o", "--output", help="Output TSV path")
     p_run.add_argument("--output-dir", default=None,
                        help="Predictions output dir (default: output/predictions)")
+    p_run.add_argument("--pos", default=None, help="Positive FASTA (default: d39v confirmed)")
+    p_run.add_argument("--neg", default=None, help="Negative FASTA (default: d39v confirmed)")
 
     # results
     p_res = sub.add_parser("results", help="Process benchmark results directory")

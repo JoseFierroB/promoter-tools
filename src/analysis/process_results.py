@@ -12,6 +12,9 @@ from pathlib import Path
 from dataclasses import dataclass, asdict
 from typing import Optional
 
+ROOT = Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(ROOT))
+
 import pandas as pd
 import matplotlib
 matplotlib.use("Agg")

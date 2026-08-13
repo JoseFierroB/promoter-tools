@@ -15,6 +15,11 @@ pixi install
 (cd tools/iPro-MP                      && pixi install)
 ```
 
+> **iPro-MP note**: the iPro-MP environment installs `torch` via pip (the
+> `pytorch` conda channel stops at 2.5.1, which has no Blackwell/sm_120
+> support). The PyPI wheel bundles CUDA and is ~2 GB. GPU support requires
+> torch >= 2.9, so the lock file pins a recent version.
+
 **HPC cluster setup**: if pixi is not in your PATH, add it:
 
 ```bash
@@ -26,20 +31,20 @@ Then run the `pixi install` commands above. The lock file is committed — envir
 
 ## Individual Tools
 
-All tools can be run via the unified CLI:
+All tools are run via the unified CLI:
 
 ```bash
 # MEME: STREME + FIMO 2-fold CV (de novo discovery)
 pixi run python src/cli.py run meme
 
-# FIMO + E. coli DB (zero-shot)
-pixi run python src/cli.py run fimo_db
-
 # FIMO + Prokaryote DB (zero-shot, 838 motifs)
 pixi run python src/cli.py run fimo_prok
 
-# MLDSPP XGBoost (cross-species, trains on-the-fly)
+# MLDSPP XGBoost (0% spn — cross-species, no leakage)
 pixi run python src/cli.py run mldspp
+
+# MLDSPP XGBoost (75% spn — 75% of positives in training, reference only)
+pixi run python src/cli.py run mldspp_75
 
 # PromoterLCNN
 pixi run python src/cli.py run lcnn
@@ -47,11 +52,19 @@ pixi run python src/cli.py run lcnn
 # PromoTech RF-HOT (PG mode, sliding window)
 pixi run python src/cli.py run promotech_hot
 
-# PromoTech RF-TETRA (PG mode)
-pixi run python src/cli.py run promotech_tetra
-
-# iPro-MP sp12 (H. pylori, needs GPU for speed)
+# iPro-MP sp12 (H. pylori, DNABERT-6) — GPU strongly recommended
 pixi run python src/cli.py run ipromp_sp12
+```
+
+These 7 tools form the final benchmark. Two extra tools are registered but
+**excluded from the analysis** (kept for reference only):
+
+```bash
+# FIMO + E. coli DB (zero-shot) — excluded: no S. pneumoniae training data
+pixi run python src/cli.py run fimo_db
+
+# PromoTech RF-TETRA — excluded: RF-HOT performs better
+pixi run python src/cli.py run promotech_tetra
 ```
 
 Runners are at `src/runners/{tool}.py` and can also be executed standalone:
@@ -63,34 +76,49 @@ pixi run --manifest-path tools/meme/pixi.toml python src/runners/meme.py \
   -o output/predictions
 ```
 
+## Non-default Datasets (e.g. TIGR4)
+
+Pass `--pos` / `--neg` FASTA files and a separate output dir. The number of
+sequences in the metrics TSV is auto-detected from the FASTA files:
+
+```bash
+pixi run python src/cli.py run lcnn \
+  --pos data/tigr4/positives_high_81bp.fasta \
+  --neg data/tigr4/negatives_high_81bp.fasta \
+  --output-dir output/tigr4/predictions
+```
+
+> **mldspp_75 splits**: the runner uses pre-built 75/25 splits from
+> `data/benchmark/mldspp_75_split_*.npz`, matched to the FASTA by size.
+> If the positive FASTA has no matching split (e.g. SigA/SigX), the tool is
+> skipped with a message listing the available splits.
+
 ## Batch Benchmarks
 
 ```bash
-# Local — one or more tools
-python submit/run_benchmark.py local meme,mldspp,lcnn,fimo_db
+# The full 7-tool benchmark, locally
+pixi run python src/cli.py run meme fimo_prok mldspp mldspp_75 lcnn promotech_hot ipromp_sp12
 
-# Local — all tools
-python submit/run_benchmark.py local all
+# The full 7-tool benchmark on Slurm (one job per tool)
+pixi run python src/cli.py run --slurm meme fimo_prok mldspp mldspp_75 lcnn promotech_hot ipromp_sp12
 
-# Slurm — all tools in parallel
-python submit/run_benchmark.py slurm all
-
-# Slurm — single tool
-python submit/run_benchmark.py slurm meme
+# Single tool on Slurm
+pixi run python src/cli.py run --slurm lcnn
 ```
 
-## MEME Plots & Experiments
+## GPU Usage
 
-```bash
-# All MEME plots (logos, position, optimization, genome scan)
-pixi run --manifest-path tools/meme/pixi.toml python src/experiments/meme_all_plots.py
+| Tool | GPU | Why |
+|------|-----|-----|
+| `lcnn` (TF 2.6) | GPU 1 (`gpu_id="1"`) | TF 2.6 has no sm_120 kernels → must use an sm_86 card (e.g. RTX 3090) |
+| `ipromp_sp12` (torch) | GPU 0 (`gpu_id="0"`) | torch >= 2.9 supports sm_120 (e.g. RTX 5090) |
 
-# FIMO against all DBs individually
-pixi run --manifest-path tools/meme/pixi.toml python src/experiments/meme_fimo_all_dbs.py
-
-# De novo vs zero-shot ROC
-pixi run --manifest-path tools/meme/pixi.toml python src/experiments/meme_zero_shot_roc.py
-```
+- The local runner sets `CUDA_VISIBLE_DEVICES` and
+  `TF_FORCE_GPU_ALLOW_GROWTH=true` automatically per tool.
+- On a machine without the assigned GPU, the tool falls back to CPU
+  (iPro-MP ~200 s vs ~15 s on GPU).
+- Peak VRAM / GPU util are sampled during the run and reported in
+  `resource_metrics.tsv` (requires `nvidia-ml-py`, installed in the root env).
 
 ## Analysis
 
@@ -101,7 +129,10 @@ pixi run python src/analysis/generate_master_roc.py
 # Bootstrap CIs + DeLong pairwise tests
 pixi run python src/analysis/benchmark_statistics.py
 
-# Resource plots (compute time + peak RAM)
+# Confusion matrices (D39V + TIGR4)
+pixi run python src/analysis/benchmark_confusion.py
+
+# Resource plots (compute time + peak RAM + VRAM if available)
 pixi run python src/analysis/resource_plots.py
 
 # Process Slurm benchmark results
@@ -112,10 +143,11 @@ pixi run python src/analysis/process_results.py <results_dir>
 
 | File | Content |
 |------|---------|
-| `output/tables/resource_metrics.tsv` | Time, RAM per tool (auto-generated by CLI) |
+| `output/tables/resource_metrics.tsv` | Time, RAM, VRAM per tool (auto-generated by CLI) |
 | `output/tables/benchmark_statistics.tsv` | AUC + 95% CI + DeLong tests |
-| `output/plots/benchmark/master_benchmark_roc.{svg,png}` | 8-curve ROC |
+| `output/plots/benchmark/master_benchmark_roc.{svg,png}` | 7-curve ROC |
 | `output/plots/benchmark/compute_time.{svg,png}` | Resource bar chart |
 | `output/plots/benchmark/ram.{svg,png}` | RAM bar chart |
+| `output/plots/benchmark/vram.{svg,png}` | VRAM bar chart (GPU tools) |
 | `output/plots/meme/` | All MEME plots |
-| `output/predictions/` | Per-tool prediction CSVs |
+| `output/predictions/` | Per-tool prediction CSVs (incl. `ipromp/`, `promotech/`, `mldspp_75spn_*`) |

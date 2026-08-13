@@ -8,12 +8,14 @@ Output: output/tables/benchmark_confusion.tsv
 
 import csv
 import argparse
+import sys
 from pathlib import Path
 import numpy as np
 from sklearn.metrics import roc_curve, roc_auc_score, confusion_matrix
 
 
 ROOT = Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(ROOT))
 OUT = ROOT / "output" / "tables" / "benchmark_confusion.tsv"
 OUT.parent.mkdir(parents=True, exist_ok=True)
 
@@ -129,7 +131,6 @@ def main():
     # ---- D39V tools ----
     d39v_tools = [
         ("meme",          "output/predictions/meme_pos.csv",        "output/predictions/meme_neg.csv",        "simple"),
-        ("fimo_db",       "output/predictions/fimo_db_pos.csv",     "output/predictions/fimo_db_neg.csv",     "simple"),
         ("fimo_prok",     "output/predictions/fimo_prok_pos.csv",   "output/predictions/fimo_prok_neg.csv",   "simple"),
         ("mldspp",        "output/predictions/mldspp_pos.csv",      "output/predictions/mldspp_neg.csv",      "simple"),
         ("mldspp_75",     "output/predictions/mldspp_75spn_pos.csv","output/predictions/mldspp_75spn_neg.csv","simple"),
@@ -142,7 +143,6 @@ def main():
     # ---- TIGR4 tools ----
     tigr4_tools = [
         ("meme",          "output/tigr4/predictions/meme_pos.csv",        "output/tigr4/predictions/meme_neg.csv",        "simple"),
-        ("fimo_db",       "output/tigr4/predictions/fimo_db_pos.csv",     "output/tigr4/predictions/fimo_db_neg.csv",     "simple"),
         ("fimo_prok",     "output/tigr4/predictions/fimo_prok_pos.csv",   "output/tigr4/predictions/fimo_prok_neg.csv",   "simple"),
         ("mldspp",        "output/tigr4/predictions/mldspp_pos.csv",      "output/tigr4/predictions/mldspp_neg.csv",      "simple"),
         ("mldspp_75",     "output/tigr4/predictions/mldspp_75spn_pos.csv","output/tigr4/predictions/mldspp_75spn_neg.csv","simple"),

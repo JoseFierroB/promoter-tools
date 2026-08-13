@@ -2,7 +2,10 @@
 import os
 import subprocess
 import time
+from pathlib import Path
 from typing import Optional
+
+import numpy as np
 
 from src.backend.base import Runner
 from src.benchmark.tools import Tool
@@ -11,12 +14,49 @@ from src.config import config
 ROOT = config.root
 
 
+def _count_seqs(fasta: Path) -> int:
+    """Count FASTA headers. Returns 0 if file missing."""
+    n = 0
+    try:
+        with open(fasta) as f:
+            for line in f:
+                if line.startswith(">"):
+                    n += 1
+    except OSError:
+        return 0
+    return n
+
+
+def _pick_mldspp_split(pos_fasta: Path) -> Optional[str]:
+    """Pick the mldspp_75 split built for `pos_fasta` by matching sizes.
+
+    A split covers exactly n_pos positive sequences when len(train_idx) +
+    len(test_idx) == n_pos (the 2k split's train_idx ends at 1998, so
+    max-index matching is unreliable). Returns the filename, or None if no
+    (or ambiguous) split matches.
+    """
+    n_pos = _count_seqs(pos_fasta)
+    matches = []
+    for split in sorted((config.data_dir / "benchmark").glob("mldspp_75_split_*.npz")):
+        try:
+            d = np.load(split)
+            covered = len(d["train_idx"]) + len(d["test_idx"])
+        except Exception:
+            continue
+        if covered == n_pos:
+            matches.append(split.name)
+    return matches[0] if len(matches) == 1 else None
+
+
 class LocalRunner(Runner):
     """Run a tool locally using pixi env subprocess. Works on any machine."""
 
-    def __init__(self, n_runs: int = 1, output_dir: str = None):
+    def __init__(self, n_runs: int = 1, output_dir: str = None,
+                 pos_fasta: Path = None, neg_fasta: Path = None):
         self.n_runs = n_runs
         self.output_dir = output_dir or str(ROOT / "output/predictions")
+        self.pos_fasta = Path(pos_fasta) if pos_fasta else config.pos_fasta
+        self.neg_fasta = Path(neg_fasta) if neg_fasta else config.neg_fasta
 
     def available(self) -> bool:
         return True  # Always available (no Slurm needed)
@@ -46,6 +86,10 @@ class LocalRunner(Runner):
         python_bin = config.get_env_python(env_path, feature=env_name)
         env_bin = str(python_bin.parent)
 
+        n_seqs = _count_seqs(self.pos_fasta) + _count_seqs(self.neg_fasta)
+        if n_seqs > 0:
+            tool.n_sequences = n_seqs
+
         runner_script = ROOT / "src/runners" / f"{tool.short_name}.py"
         if not runner_script.exists():
             return {
@@ -60,8 +104,8 @@ class LocalRunner(Runner):
 
         cmd = [
             str(python_bin), str(runner_script),
-            "--pos", str(config.pos_fasta),
-            "--neg", str(config.neg_fasta),
+            "--pos", str(self.pos_fasta),
+            "--neg", str(self.neg_fasta),
             "-o", self.output_dir,
         ]
         if "ipromp" in tool.short_name:
@@ -70,21 +114,20 @@ class LocalRunner(Runner):
                 "-d", str(config.dnabert_dir),
             ]
         if tool.short_name == "mldspp_75":
-            pos_path = str(config.pos_fasta)
-            if "mixed_all" in pos_path:
-                split_file = "mldspp_75_split_mixed_all.npz"
-            elif "mixed" in pos_path:
-                split_file = "mldspp_75_split_mixed.npz"
-            elif "all_tss" in pos_path:
-                split_file = "mldspp_75_split_tigr4_all_tss.npz"
-            elif "extended_high" in pos_path:
-                split_file = "mldspp_75_split_tigr4_extended_high.npz"
-            elif "tigr4_extended" in pos_path or "tigr4_2k" in pos_path:
-                split_file = "mldspp_75_split_tigr4_2k.npz"
-            elif "tigr4" in pos_path:
-                split_file = "mldspp_75_split_tigr4_high.npz"
-            else:
-                split_file = "mldspp_75_split_d39v.npz"
+            split_file = _pick_mldspp_split(self.pos_fasta)
+            if split_file is None:
+                return {
+                    "tool": tool.name, "category": tool.category,
+                    "wall_seconds": 0, "peak_ram_mb": 0, "peak_vram_mb": 0,
+                    "gpu_name": "", "gpu_available": False,
+                    "model_size_mb": 0, "intermediate_mb": 0,
+                    "n_sequences": tool.n_sequences,
+                    "throughput_seq_s": None, "time_s": None,
+                    "success": False,
+                    "notes": (f"No mldspp_75 split for {_count_seqs(self.pos_fasta)} "
+                              f"positives — available: "
+                              f"{', '.join(s.name for s in (config.data_dir / 'benchmark').glob('mldspp_75_split_*.npz'))}"),
+                }
             cmd += ["--split", split_file]
         run_env = os.environ.copy()
         run_env["PATH"] = f"{env_bin}:{run_env['PATH']}"
