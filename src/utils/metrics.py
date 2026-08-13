@@ -26,25 +26,27 @@ def collect_local(proc, tool, output: str, wall_start: float) -> dict:
 
 def collect_slurm(job_id: str, tool) -> dict:
     """Parse sacct output into the same schema as collect_local."""
-    fields = "JobID,State,CPUTimeRAW,MaxRSS,ReqTRES,AllocTRES%50"
+    fields = "JobID,State,CPUTimeRAW,Elapsed,MaxRSS,AllocTRES%80"
     result = subprocess.run(
         ["sacct", "-j", job_id, f"--format={fields}", "--noheader", "-P"],
         capture_output=True, text=True, timeout=10)
 
     success = False
     cpu_time = 0.0
+    wall_seconds = 0.0
     max_rss = 0.0
-    notes = ""
+    gpu_available = False
 
     for line in result.stdout.strip().split("\n"):
         if not line or ".bat+" in line or ".ext+" in line:
             continue
         parts = line.split("|")
-        if len(parts) < 4:
+        if len(parts) < 5:
             continue
         state = parts[1]
         cpu_time = float(parts[2]) if parts[2] else 0.0
-        max_rss_raw = parts[3]
+        wall_seconds = _parse_elapsed(parts[3])
+        max_rss_raw = parts[4]
         max_rss = 0.0
         if max_rss_raw and max_rss_raw.endswith("K"):
             max_rss = float(max_rss_raw[:-1]) / 1024.0
@@ -52,15 +54,36 @@ def collect_slurm(job_id: str, tool) -> dict:
             max_rss = float(max_rss_raw[:-1])
         elif max_rss_raw:
             max_rss = float(max_rss_raw) / (1024 * 1024)
+        if "gres/gpu" in (parts[5] if len(parts) > 5 else ""):
+            gpu_available = True
         if state == "COMPLETED":
             success = True
 
+    # CPU%: CPUTimeRAW / (wall * allocated_cores)
+    cpu_pct = round(cpu_time / wall_seconds * 100, 1) if wall_seconds > 0 else 0.0
+    # VRAM: sacct doesn't report GPU mem usage, keep 0
+    vram_mb = 0.0
+
     throughput = round(tool.n_sequences / cpu_time, 1) if cpu_time > 0 else None
-    return _build_metrics(tool, cpu_time, cpu_time, max_rss, 0.0, 0.0,
-                          throughput, success=success, notes=notes)
+    return _build_metrics(tool, wall_seconds, cpu_time, max_rss, cpu_pct,
+                          vram_mb, throughput, success=success)
 
 
 # ── helpers ──
+
+def _parse_elapsed(elapsed_str: str) -> float:
+    """Parse sacct Elapsed field: '00:12:34' or '1-02:34:56' → seconds."""
+    if not elapsed_str:
+        return 0.0
+    try:
+        parts = elapsed_str.strip().split("-")
+        days = int(parts[0]) if len(parts) == 2 else 0
+        time_part = parts[-1]
+        h, m, s = map(int, time_part.split(":"))
+        return float(days * 86400 + h * 3600 + m * 60 + s)
+    except (ValueError, IndexError):
+        return 0.0
+
 
 def _parse_runner_output(output: str, tool):
     """Regex: '1988 seqs in 0.425s' → (time_s, throughput)."""
