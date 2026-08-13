@@ -93,12 +93,39 @@ class LocalRunner(Runner):
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE, text=True,
                                 cwd=str(ROOT), env=run_env)
+
+        # Background psutil sampling while process runs
+        samples = []
+        import threading
+        stop_sampler = threading.Event()
+
+        def _bg_sample():
+            try:
+                import psutil
+                ps_proc = psutil.Process(proc.pid)
+                while not stop_sampler.is_set():
+                    try:
+                        procs = [ps_proc] + ps_proc.children(recursive=True)
+                        rss = sum(p.memory_info().rss for p in procs) / (1024 * 1024)
+                        cpu = sum(p.cpu_percent() for p in procs)
+                        samples.append((rss, cpu))
+                    except psutil.NoSuchProcess:
+                        break
+                    time.sleep(0.5)
+            except Exception:
+                pass
+
+        t = threading.Thread(target=_bg_sample, daemon=True)
+        t.start()
+
         stdout, stderr = proc.communicate(timeout=1800)
+        stop_sampler.set()
+        t.join(timeout=2)
         output = stdout.strip()
         notes = stderr.strip()[-200:] if proc.returncode != 0 else ""
 
         from src.utils.metrics import collect_local
-        result = collect_local(proc, tool, output, t0)
+        result = collect_local(proc, tool, output, t0, samples=samples)
         result["notes"] = notes or output[:200]
         return result
 

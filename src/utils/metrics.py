@@ -14,11 +14,20 @@ import time
 from pathlib import Path
 
 
-def collect_local(proc, tool, output: str, wall_start: float) -> dict:
-    """Measure resources while a subprocess.Popen runs (psutil)."""
+def collect_local(proc, tool, output: str, wall_start: float,
+                  samples: list = None) -> dict:
+    """Measure resources while a subprocess.Popen runs.
+
+    If `samples` is provided (list of (rss_mb, cpu_pct) from background thread),
+    those are used directly. Otherwise falls back to psutil in-process sampling.
+    """
     wall = round(time.perf_counter() - wall_start, 3)
     time_s, throughput = _parse_runner_output(output, tool)
-    ram_mb, cpu_pct = _sample_psutil(proc)
+    if samples and len(samples) > 0:
+        ram_mb = round(max(s[0] for s in samples), 1)
+        cpu_pct = round(sum(s[1] for s in samples) / len(samples), 1)
+    else:
+        ram_mb, cpu_pct = _sample_psutil(proc)
     vram_mb = _query_vram()
     return _build_metrics(tool, wall, time_s, ram_mb, cpu_pct, vram_mb,
                           throughput, success=(proc.returncode == 0))
