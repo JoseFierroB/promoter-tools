@@ -54,17 +54,22 @@ def main():
     model.eval()
 
     t0 = time.perf_counter()
-    probs = []
+    batch_size = 128
+    inputs = []
     for s in seqs:
         kmers = [s[i:i+6] for i in range(len(s) - 5)]
         inp = tok(kmers, is_split_into_words=True, padding="max_length",
                    max_length=128, return_tensors="pt", truncation=True)
-        inp = {k: inp[k] for k in ["input_ids", "attention_mask"] if k in inp}
-        inp = {k: v.to(device) for k, v in inp.items()}
+        inputs.append({k: inp[k][0] for k in ["input_ids", "attention_mask"] if k in inp})
+
+    probs = []
+    for start in range(0, len(inputs), batch_size):
+        chunk = inputs[start:start + batch_size]
+        batch = {k: torch.stack([d[k] for d in chunk]).to(device)
+                 for k in ["input_ids", "attention_mask"]}
         with torch.no_grad():
-            output = model(**inp)
-            prob = torch.softmax(output, dim=1)[0, 1].item()
-            probs.append(prob)
+            output = model(**batch)
+            probs.extend(torch.softmax(output, dim=1)[:, 1].tolist())
     elapsed = time.perf_counter() - t0
 
     out_ipromp = out_base / "ipromp"

@@ -51,7 +51,8 @@ def _gpu_name(gpu_id: str) -> str:
         if nv is None:
             return ""
         handle = nv.nvmlDeviceGetHandleByIndex(int(gpu_id))
-        return nv.nvmlDeviceGetName(handle).decode()
+        name = nv.nvmlDeviceGetName(handle)
+        return name.decode() if isinstance(name, bytes) else name
     except Exception:
         return ""
 
