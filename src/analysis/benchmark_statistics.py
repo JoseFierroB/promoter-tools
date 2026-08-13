@@ -52,8 +52,9 @@ TOOLS = [
     ("iPro-MP (sp 12)", "DL", "ipromp/ipromp_12_predictions.csv", "ipromp/ipromp_12_predictions.csv"),
     ("PromoterLCNN", "DL", "lcnn/lcnn_pos.csv", "lcnn/lcnn_neg.csv"),
     ("PromoTech RF-HOT", "ML", "promotech/workdir/hot_pg_pos/sequences_predictions.csv", "promotech/workdir/hot_pg_neg/sequences_predictions.csv"),
-    ("PromoTech RF-TETRA", "ML", "promotech/workdir/tetra_pg_pos/sequences_predictions.csv", "promotech/workdir/tetra_pg_neg/sequences_predictions.csv"),
     ("MLDSPP (XGBoost)", "ML", "mldspp_pos.csv", "mldspp_neg.csv"),
+    ("MLDSPP (75% spn)", "ML", "mldspp_75spn_pos.csv", "mldspp_75spn_neg.csv"),
+    ("MEME Suite (STREME+FIMO)", "Other", "meme_pos.csv", "meme_neg.csv"),
     ("FIMO (Prok DB)", "Other", "fimo_prok_pos.csv", "fimo_prok_neg.csv"),
 ]
 

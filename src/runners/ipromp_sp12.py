@@ -45,10 +45,12 @@ def main():
                 seqs.append(line.upper())
 
     tok = BertTokenizer.from_pretrained(args.dnabert_dir)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = ip.DNABERTPromoterClassifier(dnabert_dir=args.dnabert_dir)
-    state_dict = torch.load(f"{args.model_dir}/12_fold_1.pth", map_location="cpu")
+    state_dict = torch.load(f"{args.model_dir}/12_fold_1.pth", map_location=device)
     state_dict = {k: v for k, v in state_dict.items() if "position_ids" not in k}
     model.load_state_dict(state_dict, strict=False)
+    model.to(device)
     model.eval()
 
     t0 = time.perf_counter()
@@ -58,15 +60,18 @@ def main():
         inp = tok(kmers, is_split_into_words=True, padding="max_length",
                    max_length=128, return_tensors="pt", truncation=True)
         inp = {k: inp[k] for k in ["input_ids", "attention_mask"] if k in inp}
+        inp = {k: v.to(device) for k, v in inp.items()}
         with torch.no_grad():
             output = model(**inp)
             prob = torch.softmax(output, dim=1)[0, 1].item()
             probs.append(prob)
     elapsed = time.perf_counter() - t0
 
+    out_ipromp = out_base / "ipromp"
+    out_ipromp.mkdir(parents=True, exist_ok=True)
     import pandas as pd
     pd.DataFrame({"PRED": probs}).to_csv(
-        out_base / "ipromp_sp12_predictions.csv", sep="\t", index=False)
+        out_ipromp / "ipromp_12_predictions.csv", sep="\t", index=False)
 
     combined_path.unlink(missing_ok=True)
     print(f"iPro-MP: {len(seqs)} seqs in {elapsed:.3f}s")

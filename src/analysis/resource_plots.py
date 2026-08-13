@@ -100,6 +100,13 @@ def main():
     # RAM
     bar_plot(df, "peak_ram_mb", "Peak RAM (MB)", "ram", fmt=".0f", unit=" MB")
 
+    # GPU VRAM (only if > 0)
+    if "peak_vram_mb" in df.columns and (df["peak_vram_mb"] > 0).any():
+        df_vram = df[df["peak_vram_mb"] > 0]
+        bar_plot(df_vram, "peak_vram_mb", "Peak VRAM (MB)", "vram", fmt=".0f", unit=" MB")
+        for _, row in df_vram.iterrows():
+            print(f"    GPU {row['gpu_name']}: {row['peak_vram_mb']:.0f} MB ({row['gpu_util_pct']:.0f}% util)")
+
     # Model size (only if > 0)
     if "model_size_mb" in df.columns and (df["model_size_mb"] > 0).any():
         df_model = df[df["model_size_mb"] > 0]

@@ -10,7 +10,7 @@ version = "0.1.0"
 [feature.ipro-mp.dependencies]
 python = "3.10.*"
 pip = ">=26.1.2,<27"
-pytorch = ">=2.0,<3"
+pytorch = { version = ">=2.9,<3", channel = "pytorch" }
 transformers = ">=4.29,<5"
 numpy = "*"
 biopython = "*"

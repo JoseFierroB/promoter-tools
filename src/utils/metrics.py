@@ -13,13 +13,56 @@ import subprocess
 import time
 from pathlib import Path
 
+_pynvml = None
+_nvml_initialized = False
+
+
+def _nvml():
+    """Lazy pynvml init. Returns module or None (no driver)."""
+    global _pynvml, _nvml_initialized
+    if not _nvml_initialized:
+        _nvml_initialized = True
+        try:
+            import pynvml
+            pynvml.nvmlInit()
+            _pynvml = pynvml
+        except Exception:
+            _pynvml = None
+    return _pynvml
+
+
+def _gpu_sample(gpu_id: str):
+    """Sample VRAM (MB) and GPU util% of device index `gpu_id`."""
+    try:
+        nv = _nvml()
+        if nv is None:
+            return 0.0, 0.0
+        handle = nv.nvmlDeviceGetHandleByIndex(int(gpu_id))
+        mem = nv.nvmlDeviceGetMemoryInfo(handle)
+        util = nv.nvmlDeviceGetUtilizationRates(handle)
+        return mem.used / (1024 * 1024), float(util.gpu)
+    except Exception:
+        return 0.0, 0.0
+
+
+def _gpu_name(gpu_id: str) -> str:
+    try:
+        nv = _nvml()
+        if nv is None:
+            return ""
+        handle = nv.nvmlDeviceGetHandleByIndex(int(gpu_id))
+        return nv.nvmlDeviceGetName(handle).decode()
+    except Exception:
+        return ""
+
 
 def collect_local(proc, tool, output: str, wall_start: float,
-                  samples: list = None) -> dict:
+                  samples: list = None, gpu_samples: list = None) -> dict:
     """Measure resources while a subprocess.Popen runs.
 
     If `samples` is provided (list of (rss_mb, cpu_pct) from background thread),
     those are used directly. Otherwise falls back to psutil in-process sampling.
+    `gpu_samples` is a list of (vram_mb, gpu_util_pct) sampled by the same thread.
     """
     wall = round(time.perf_counter() - wall_start, 3)
     time_s, throughput = _parse_runner_output(output, tool)
@@ -28,9 +71,16 @@ def collect_local(proc, tool, output: str, wall_start: float,
         cpu_pct = round(sum(s[1] for s in samples) / len(samples), 1)
     else:
         ram_mb, cpu_pct = _sample_psutil(proc)
-    vram_mb = _query_vram()
+    if gpu_samples and len(gpu_samples) > 0:
+        vram_mb = round(max(s[0] for s in gpu_samples), 1)
+        gpu_util = round(sum(s[1] for s in gpu_samples) / len(gpu_samples), 1)
+    else:
+        vram_mb = _query_vram()
+        gpu_util = 0.0
+    gpu_name = _gpu_name(tool.gpu_id) if tool.gpu_id else ""
     return _build_metrics(tool, wall, time_s, ram_mb, cpu_pct, vram_mb,
-                          throughput, success=(proc.returncode == 0))
+                          throughput, success=(proc.returncode == 0),
+                          gpu_name=gpu_name, gpu_util=gpu_util)
 
 
 def collect_slurm(job_id: str, tool) -> dict:
@@ -160,7 +210,7 @@ def _query_vram():
 
 def _build_metrics(tool, wall: float, time_s, ram_mb: float, cpu_pct: float,
                    vram_mb: float, throughput, success: bool = True,
-                   notes: str = ""):
+                   notes: str = "", gpu_name: str = "", gpu_util: float = 0.0):
     return {
         "tool": tool.name,
         "category": tool.category,
@@ -169,7 +219,8 @@ def _build_metrics(tool, wall: float, time_s, ram_mb: float, cpu_pct: float,
         "peak_ram_mb": round(ram_mb, 1),
         "peak_vram_mb": round(vram_mb, 1),
         "mean_cpu_pct": round(cpu_pct, 1),
-        "gpu_name": "",
+        "gpu_util_pct": round(gpu_util, 1),
+        "gpu_name": gpu_name,
         "gpu_available": tool.gpu_capable,
         "model_size_mb": tool.model_size_mb(),
         "intermediate_mb": 0,

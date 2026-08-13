@@ -89,6 +89,9 @@ class LocalRunner(Runner):
         run_env = os.environ.copy()
         run_env["PATH"] = f"{env_bin}:{run_env['PATH']}"
         run_env["PYTHONPATH"] = str(ROOT)
+        if tool.gpu_id:
+            run_env["CUDA_VISIBLE_DEVICES"] = tool.gpu_id
+            run_env["TF_FORCE_GPU_ALLOW_GROWTH"] = "true"
 
         t0 = time.perf_counter()
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
@@ -108,12 +111,13 @@ class LocalRunner(Runner):
 
         # ── Background PSS sampling while process runs ──
         samples = []
+        gpu_samples = []
         stop_sampler = threading.Event()
 
         def _bg_sample():
             try:
                 import psutil
-                from src.utils.metrics import _pss
+                from src.utils.metrics import _pss, _gpu_sample
                 ps_proc = psutil.Process(proc.pid)
                 while not stop_sampler.is_set():
                     try:
@@ -122,12 +126,15 @@ class LocalRunner(Runner):
                         ram_mb = pss_kb / 1024.0
                         cpu = sum(p.cpu_percent() for p in procs)
                         samples.append((ram_mb, cpu))
+                        if tool.gpu_id:
+                            gpu_samples.append(_gpu_sample(tool.gpu_id))
                     except psutil.NoSuchProcess:
                         break
                     time.sleep(0.5)
             except Exception:
                 try:
                     import psutil as _psutil
+                    from src.utils.metrics import _gpu_sample
                     ps_proc = _psutil.Process(proc.pid)
                     while not stop_sampler.is_set():
                         try:
@@ -135,6 +142,8 @@ class LocalRunner(Runner):
                             rss = sum(p.memory_info().rss for p in procs) / (1024 * 1024)
                             cpu = sum(p.cpu_percent() for p in procs)
                             samples.append((rss, cpu))
+                            if tool.gpu_id:
+                                gpu_samples.append(_gpu_sample(tool.gpu_id))
                         except _psutil.NoSuchProcess:
                             break
                         time.sleep(0.5)
@@ -151,10 +160,16 @@ class LocalRunner(Runner):
         output = ''.join(output_lines)
 
         from src.utils.metrics import collect_local
-        result = collect_local(proc, tool, output, t0, samples=samples)
+        result = collect_local(proc, tool, output, t0, samples=samples,
+                               gpu_samples=gpu_samples)
         result["notes"] = output[-200:] if not result["success"] else ""
-        ram_str = f"  ({result['peak_ram_mb']:.0f}MB)" if result['peak_ram_mb'] > 0 else ""
-        print(f"    [{tool.name}] {result['wall_seconds']:.1f}s{ram_str}", flush=True)
+        extra = []
+        if result['peak_ram_mb'] > 0:
+            extra.append(f"{result['peak_ram_mb']:.0f}MB")
+        if result['peak_vram_mb'] > 0:
+            extra.append(f"VRAM {result['peak_vram_mb']:.0f}MB")
+        suffix = f"  ({', '.join(extra)})" if extra else ""
+        print(f"    [{tool.name}] {result['wall_seconds']:.1f}s{suffix}", flush=True)
         return result
 
 # _get_child_ram and _parse_time moved to src/utils/metrics.py

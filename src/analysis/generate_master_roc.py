@@ -89,15 +89,7 @@ def main():
         curves.append(("PromoTech RF-HOT", fpr, tpr, a, "#E07614", "-", 2.0))
         print(f"PromoTech RF-HOT: AUC={a:.4f}")
 
-    # ── 3. PromoTech RF-TETRA ──
-    tetra_pos = pr_dir / "promotech/workdir/tetra_pg_pos/sequences_predictions.csv"
-    tetra_neg = pr_dir / "promotech/workdir/tetra_pg_neg/sequences_predictions.csv"
-    if tetra_pos.exists() and tetra_neg.exists():
-        fpr, tpr, a = auc_from_csv(tetra_pos, tetra_neg)
-        curves.append(("PromoTech RF-TETRA", fpr, tpr, a, "#C21700", "-", 2.0))
-        print(f"PromoTech RF-TETRA: AUC={a:.4f}")
-
-    # ── 4. PromoterLCNN ──
+    # ── 3. PromoterLCNN ──
     lcnn_pos = pr_dir / "lcnn/lcnn_pos.csv"
     lcnn_neg = pr_dir / "lcnn/lcnn_neg.csv"
     if lcnn_pos.exists() and lcnn_neg.exists():
@@ -105,13 +97,21 @@ def main():
         curves.append(("PromoterLCNN", fpr, tpr, a, "#228B22", "-", 2.0))
         print(f"PromoterLCNN: AUC={a:.4f}")
 
-    # ── 5. FIMO + Prokaryote DB (zero-shot) ──
+    # ── 4. FIMO + Prokaryote DB (zero-shot) ──
     fimo_prok_pos = pr_dir / "fimo_prok_pos.csv"
     fimo_prok_neg = pr_dir / "fimo_prok_neg.csv"
     if fimo_prok_pos.exists() and fimo_prok_neg.exists():
         fpr, tpr, a = auc_from_csv(fimo_prok_pos, fimo_prok_neg)
         curves.append(("FIMO (Prok DB, 838)", fpr, tpr, a, "#00BFC4", "-.", 1.5))
         print(f"FIMO_PROK: AUC={a:.4f}")
+
+    # ── 5. MEME Suite (STREME+FIMO) ──
+    meme_pos = pr_dir / "meme_pos.csv"
+    meme_neg = pr_dir / "meme_neg.csv"
+    if meme_pos.exists() and meme_neg.exists():
+        fpr, tpr, a = auc_from_csv(meme_pos, meme_neg)
+        curves.append(("MEME Suite (STREME+FIMO)", fpr, tpr, a, "#5A9BD5", "-", 1.8))
+        print(f"MEME: AUC={a:.4f}")
 
     # ── 6. MLDSPP 0% strepto (cross-species) ──
     if (pr_dir / "mldspp_pos.csv").exists():

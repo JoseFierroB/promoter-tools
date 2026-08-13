@@ -36,3 +36,4 @@ artemis = "*"
 
 [pypi-dependencies]
 tensorflow = ">=2.15,<3"
+nvidia-ml-py = "*"

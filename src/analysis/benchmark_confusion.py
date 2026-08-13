@@ -136,8 +136,6 @@ def main():
         ("lcnn",          "output/predictions/lcnn/lcnn_pos.csv",   "output/predictions/lcnn/lcnn_neg.csv",   "simple"),
         ("promotech_hot",  "output/predictions/promotech/workdir/hot_pg_pos/sequences_predictions.csv",
                            "output/predictions/promotech/workdir/hot_pg_neg/sequences_predictions.csv", "simple"),
-        ("promotech_tetra","output/predictions/promotech/workdir/tetra_pg_pos/sequences_predictions.csv",
-                           "output/predictions/promotech/workdir/tetra_pg_neg/sequences_predictions.csv", "simple"),
         ("ipromp_sp12",   "output/predictions/ipromp/ipromp_12_predictions.csv", "", "ipromp"),
     ]
 
@@ -151,9 +149,7 @@ def main():
         ("lcnn",          "output/tigr4/predictions/lcnn/lcnn_pos.csv",   "output/tigr4/predictions/lcnn/lcnn_neg.csv",   "simple"),
         ("promotech_hot",  "output/tigr4/predictions/promotech/workdir/hot_pg_pos/sequences_predictions.csv",
                            "output/tigr4/predictions/promotech/workdir/hot_pg_neg/sequences_predictions.csv", "simple"),
-        ("promotech_tetra","output/tigr4/predictions/promotech/workdir/tetra_pg_pos/sequences_predictions.csv",
-                           "output/tigr4/predictions/promotech/workdir/tetra_pg_neg/sequences_predictions.csv", "simple"),
-        ("ipromp_sp12",   "output/tigr4/predictions/ipromp_sp12_predictions.csv", "", "ipromp"),
+        ("ipromp_sp12",   "output/tigr4/predictions/ipromp/ipromp_12_predictions.csv", "", "ipromp"),
     ]
 
     all_results = []
