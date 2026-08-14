@@ -60,13 +60,6 @@ def cmd_run(args):
     print(f"\nMetrics saved: {out_tsv}")
 
 
-def cmd_results(args):
-    """Process benchmark results directory."""
-    from src.analysis.process_results import main as process
-    sys.argv = ["process_results.py", str(args.directory)]
-    process()
-
-
 def main():
     parser = argparse.ArgumentParser(description="Promoter Tools — Benchmark Pipeline")
     sub = parser.add_subparsers(dest="command")
@@ -81,10 +74,6 @@ def main():
                        help="Predictions output dir (default: output/predictions)")
     p_run.add_argument("--pos", default=None, help="Positive FASTA (default: d39v confirmed)")
     p_run.add_argument("--neg", default=None, help="Negative FASTA (default: d39v confirmed)")
-
-    # results
-    p_res = sub.add_parser("results", help="Process benchmark results directory")
-    p_res.add_argument("directory", help="Results directory path")
 
     args = parser.parse_args()
 

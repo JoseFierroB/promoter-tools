@@ -44,19 +44,6 @@ class Config:
     def neg_fasta(self) -> Path:
         return Path(os.environ.get("NEG_FASTA", str(ROOT / "data/benchmark/d39v/negatives_81bp.fasta")))
 
-    @property
-    def combined_fasta(self) -> Path:
-        """Auto-generate combined pos+neg if not exists."""
-        combined = self.output_dir / "predictions" / "combined_81bp.fa"
-        combined.parent.mkdir(parents=True, exist_ok=True)
-        if not combined.exists():
-            with open(self.pos_fasta) as f:
-                pos_content = f.read()
-            with open(self.neg_fasta) as f:
-                neg_content = f.read()
-            combined.write_text(pos_content.strip() + "\n" + neg_content.strip() + "\n")
-        return combined
-
     # ── Tool directories ──
     @property
     def promotech_dir(self) -> Path:
@@ -134,12 +121,6 @@ class Config:
                 return Path(candidate)
         return ROOT / "output" / "tmp"
 
-    # ── Pixi home (for Slurm) ──
-    @property
-    def pixi_home(self) -> Path:
-        p = os.environ.get("PIXI_HOME", os.path.expanduser("~/.pixi"))
-        return Path(p)
-
     # ── Convenience ──
     @property
     def n_positives(self) -> int:
@@ -177,7 +158,7 @@ class Config:
         """
         from pathlib import Path as _Path
         pixi_env_path = _Path(pixi_env_path)
-        cache_key = str(pixi_env_path)
+        cache_key = (str(pixi_env_path), feature)
 
         if cache_key in self._python_cache:
             return self._python_cache[cache_key]

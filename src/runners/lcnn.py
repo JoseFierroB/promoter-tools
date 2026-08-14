@@ -7,7 +7,6 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from Bio import SeqIO
-import tensorflow as tf
 
 MODEL_DIR = "tools/Promoters/weights/PromoterLCNN/IsPromoter_fold_5"
 

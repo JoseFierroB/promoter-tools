@@ -134,9 +134,6 @@ pixi run python src/analysis/benchmark_confusion.py
 
 # Resource plots (compute time + peak RAM + VRAM if available)
 pixi run python src/analysis/resource_plots.py
-
-# Process Slurm benchmark results
-pixi run python src/analysis/process_results.py <results_dir>
 ```
 
 ## Output Files

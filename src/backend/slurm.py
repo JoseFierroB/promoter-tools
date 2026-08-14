@@ -99,8 +99,11 @@ class SlurmRunner(Runner):
         extra_args = ""
         if "ipromp" in tool.short_name:
             extra_args = f'  -m "{config.ipromp_model_dir}" -d "{config.dnabert_dir}"'
+        if "promotech" in tool.short_name:
+            n_seqs = _count_seqs(self.pos_fasta) + _count_seqs(self.neg_fasta)
+            extra_args += f'  --timeout {_promotech_timeout(n_seqs)}'
         if tool.short_name == "mldspp_75":
-            from src.backend.local import _pick_mldspp_split, _count_seqs
+            from src.backend.local import _pick_mldspp_split, _count_seqs, _promotech_timeout
             split = _pick_mldspp_split(self.pos_fasta)
             if split:
                 extra_args += f'  --split "{split}"'

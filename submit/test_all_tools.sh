@@ -15,61 +15,68 @@ export PATH="$PIXI_HOME/bin:$PATH"
 cd "$(dirname "$0")/.."
 
 echo "============================================"
-echo " TEST 1/8: MEME (STREME + FIMO)"
+echo " TEST 1/9: MEME (STREME + FIMO)"
 echo "============================================"
 pixi run python src/cli.py run meme
 echo "=> MEME OK"
 
 echo ""
 echo "============================================"
-echo " TEST 2/8: MLDSPP (XGBoost)"
+echo " TEST 2/9: MLDSPP (XGBoost)"
 echo "============================================"
 pixi run python src/cli.py run mldspp
 echo "=> MLDSPP OK"
 
 echo ""
 echo "============================================"
-echo " TEST 3/8: PromoterLCNN"
+echo " TEST 3/9: MLDSPP (75% spn)"
+echo "============================================"
+pixi run python src/cli.py run mldspp_75
+echo "=> MLDSPP_75 OK"
+
+echo ""
+echo "============================================"
+echo " TEST 4/9: PromoterLCNN"
 echo "============================================"
 pixi run python src/cli.py run lcnn
 echo "=> LCNN OK"
 
 echo ""
 echo "============================================"
-echo " TEST 4/8: FIMO + E. coli DB"
+echo " TEST 5/9: FIMO + E. coli DB"
 echo "============================================"
 pixi run python src/cli.py run fimo_db
 echo "=> FIMO_DB OK"
 
 echo ""
 echo "============================================"
-echo " TEST 5/8: FIMO + Prokaryote DB"
+echo " TEST 6/9: FIMO + Prokaryote DB"
 echo "============================================"
 pixi run python src/cli.py run fimo_prok
 echo "=> FIMO_PROK OK"
 
 echo ""
 echo "============================================"
-echo " TEST 6/8: PromoTech RF-HOT"
+echo " TEST 7/9: PromoTech RF-HOT"
 echo "============================================"
 pixi run python src/cli.py run promotech_hot
 echo "=> PromoTech RF-HOT OK"
 
 echo ""
 echo "============================================"
-echo " TEST 7/8: PromoTech RF-TETRA"
+echo " TEST 8/9: PromoTech RF-TETRA"
 echo "============================================"
 pixi run python src/cli.py run promotech_tetra
 echo "=> PromoTech RF-TETRA OK"
 
 echo ""
 echo "============================================"
-echo " TEST 8/8: iPro-MP (sp 12, H. pylori)"
+echo " TEST 9/9: iPro-MP (sp 12, H. pylori)"
 echo "============================================"
 pixi run python src/cli.py run ipromp_sp12
 echo "=> iPro-MP OK"
 
 echo ""
 echo "============================================"
-echo " ALL 8 TOOLS TESTED SUCCESSFULLY"
+echo " ALL 9 TOOLS TESTED SUCCESSFULLY"
 echo "============================================"

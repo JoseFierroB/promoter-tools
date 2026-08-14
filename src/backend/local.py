@@ -48,6 +48,15 @@ def _pick_mldspp_split(pos_fasta: Path) -> Optional[str]:
     return matches[0] if len(matches) == 1 else None
 
 
+def _promotech_timeout(n_seqs: int) -> int:
+    """Per-step subprocess timeout for PromoTech (predict + scan).
+
+    RF-HOT runs single-core at ~20 seq/s; scale with n_seqs so large
+    dummy runs don't hit the default 600 s cap.
+    """
+    return max(600, int(n_seqs / 20.6 * 2.5))
+
+
 class LocalRunner(Runner):
     """Run a tool locally using pixi env subprocess. Works on any machine."""
 
@@ -113,6 +122,8 @@ class LocalRunner(Runner):
                 "-m", str(config.ipromp_model_dir),
                 "-d", str(config.dnabert_dir),
             ]
+        if "promotech" in tool.short_name:
+            cmd += ["--timeout", str(_promotech_timeout(n_seqs))]
         if tool.short_name == "mldspp_75":
             split_file = _pick_mldspp_split(self.pos_fasta)
             if split_file is None:

@@ -1,4 +1,6 @@
-"""SantaLucia dinucleotide stability parameters."""
+"""Shared helpers for tool runners (deduplicated)."""
+import numpy as np
+
 STABILITY_MAP = {
     "AA": -1.00, "TT": -1.00,
     "AT": -0.88, "TA": -0.58,
@@ -9,3 +11,20 @@ STABILITY_MAP = {
     "CC": -1.84, "GG": -1.84,
     "CG": -2.24, "GC": -2.27,
 }
+
+
+def extract_aligned(seq):
+    """SantaLucia dinucleotide stability: 80bp window (middle for long seqs,
+    start for short). 79 features."""
+    s = seq.upper()
+    if len(s) >= 100:
+        s = s[20:100]
+    else:
+        s = s[:80]
+    return np.array([STABILITY_MAP.get(s[i:i + 2], -1.35) for i in range(79)])
+
+
+def get_promotech_python(promotech_dir):
+    """Resolve the python binary from PromoTech's pixi environment."""
+    from src.config import config
+    return str(config.get_env_python(promotech_dir / "pixi.toml"))

@@ -41,17 +41,6 @@ def auc_from_csv(pos_file, neg_file):
     return fpr, tpr, auc(fpr, tpr)
 
 
-def auc_from_ipromp(csv_file, n_pos=988, n_neg=1000):
-    """iPro-MP format: Sequence,Prediction,Probability"""
-    df = pd.read_csv(csv_file)
-    if len(df) >= n_pos + n_neg:
-        y = np.hstack([np.ones(n_pos), np.zeros(n_neg)])
-        s = df["Probability"].values[:n_pos + n_neg]
-        fpr, tpr, _ = roc_curve(y, s)
-        return fpr, tpr, auc(fpr, tpr)
-    return None
-
-
 def main():
     args = parse_args()
     pr_dir = Path(args.predictions_dir) if args.predictions_dir else ROOT / "output" / "predictions"

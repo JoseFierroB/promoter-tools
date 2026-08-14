@@ -418,13 +418,4 @@ def extract_negatives(args: argparse.Namespace = None) -> None:
 
 if __name__ == '__main__':
     args = parse_arguments()
-    try:
-        from resource_monitor import ResourceMonitor
-    except ImportError:
-        class ResourceMonitor:
-            def __init__(self, task_name="Task"): pass
-            def __enter__(self): return self
-            def __exit__(self, exc_type, exc_val, exc_tb): pass
-
-    with ResourceMonitor("Master Pool Negative TSS Sequence Extraction"):
-        extract_negatives(args)
+    extract_negatives(args)

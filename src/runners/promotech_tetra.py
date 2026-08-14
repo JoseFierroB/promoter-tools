@@ -4,6 +4,7 @@ import argparse
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 import time
 from pathlib import Path
@@ -11,11 +12,11 @@ from pathlib import Path
 import pandas as pd
 
 PROMOTECH_DIR = Path(__file__).resolve().parent.parent.parent / "tools/Promotech"
+ROOT = Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(ROOT))
 
 
-def get_promotech_python():
-    from src.config import config
-    return str(config.get_env_python(PROMOTECH_DIR / "pixi.toml"))
+from src.runners._shared import get_promotech_python
 
 
 def main():
@@ -23,13 +24,15 @@ def main():
     p.add_argument("--pos", required=True, help="Positive test FASTA")
     p.add_argument("--neg", required=True, help="Negative test FASTA")
     p.add_argument("-o", "--output", default="output/predictions", help="Output dir")
+    p.add_argument("--timeout", type=int, default=600,
+                   help="Per-step subprocess timeout in seconds (predict and scan)")
     args = p.parse_args()
 
     pos_count = sum(1 for l in open(args.pos) if l.startswith(">"))
     neg_count = sum(1 for l in open(args.neg) if l.startswith(">"))
 
     tmpdir = Path(tempfile.mkdtemp(prefix="pt_tetra_"))
-    pt_python = get_promotech_python()
+    pt_python = get_promotech_python(PROMOTECH_DIR)
     pt_bin = str(PROMOTECH_DIR / ".pixi" / "envs" / "default" / "bin")
     run_env = {**os.environ, "PATH": f"{pt_bin}:{os.environ['PATH']}"}
 
@@ -41,12 +44,12 @@ def main():
         subprocess.run(
             [pt_python, "promotech.py", "-pg", "-m", "RF-TETRA", "-f", fasta_abs, "-o", str(od)],
             cwd=str(PROMOTECH_DIR), env=run_env,
-            capture_output=True, text=True, timeout=300, check=True)
+            capture_output=True, text=True, timeout=args.timeout, check=True)
         subprocess.run(
             [pt_python, "promotech.py", "-g", "-m", "RF-TETRA",
              "-t", "0.0", "-i", str(od), "-o", str(od)],
             cwd=str(PROMOTECH_DIR), env=run_env,
-            capture_output=True, text=True, timeout=600, check=True)
+            capture_output=True, text=True, timeout=args.timeout, check=True)
 
         df = pd.read_csv(od / "genome_predictions.csv", sep="\t")
         pd.DataFrame({"PRED": df["score"].values}).to_csv(

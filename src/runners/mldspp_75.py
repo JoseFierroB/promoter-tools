@@ -12,21 +12,14 @@ import pandas as pd
 from Bio import SeqIO
 from xgboost import XGBClassifier
 
-from src.runners._shared import STABILITY_MAP
-
 ROOT = Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(ROOT))
+
+from src.runners._shared import extract_aligned
+
 TRAIN_DIR = ROOT / "tools/MLDSPP-Promoter-prediction/Sample Dataset/Promoter Sequences"
 SPLIT_DIR = ROOT / "data/benchmark"
 RNG = np.random.RandomState(42)
-
-
-def extract_aligned(seq):
-    s = seq.upper()
-    if len(s) >= 100:
-        s = s[20:100]
-    else:
-        s = s[:80]
-    return np.array([STABILITY_MAP.get(s[i:i+2], -1.35) for i in range(79)])
 
 
 def load_external_training():
@@ -49,6 +42,7 @@ def main():
                    help="Pre-built split .npz from data/benchmark/ (seed=42, ratio=0.75)")
     args = p.parse_args()
 
+    t0 = time.perf_counter()
     X_ext = load_external_training()
 
     pos = list(SeqIO.parse(args.pos, "fasta"))
@@ -84,7 +78,6 @@ def main():
                           eval_metric="logloss", verbosity=0)
     model.fit(X_train, y_train)
 
-    t0 = time.perf_counter()
     probs = model.predict_proba(X_test)[:, 1]
     elapsed = time.perf_counter() - t0
 

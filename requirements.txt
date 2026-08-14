@@ -1,5 +1,5 @@
 # promoter-tools — Python dependencies
-# Generated from pixi.toml. For non-pixi users.
+# Reference for non-pixi users; the canonical environment is pixi (pixi.toml).
 # Core environment:
 numpy>=1.21
 pandas>=1.0
@@ -12,8 +12,9 @@ tqdm>=4.70.0
 psutil>=5.9.0
 progressbar2>=4.5.0
 xgboost>=3.2.0
+nvidia-ml-py>=11
 
 # Optional — tool-specific (install only what you need):
 # MEME/FIMO:    meme>=5.5.9
-# LCNN:         tensorflow==2.6.0
-# iPro-MP:      torch>=2.0, transformers>=4.29, tokenizers
+# LCNN:         tensorflow==2.6.0 (tools/Promoters env; root env uses tensorflow>=2.15)
+# iPro-MP:      torch>=2.9 (CUDA 12 bundles — sm_120/RTX 5090 support), transformers>=4.29, tokenizers

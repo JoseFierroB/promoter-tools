@@ -29,12 +29,11 @@ pixi run python src/cli.py run --slurm meme fimo_prok mldspp mldspp_75 lcnn prom
 
 ```
 src/
-├── cli.py              # Unified CLI (run, results, dataset)
+├── cli.py              # Unified CLI (run)
 ├── runners/             # 9 independent tool runners
 ├── benchmark/           # Tool registry + configuration
 ├── backend/             # Local + Slurm execution backends
 ├── analysis/            # Metrics, ROC, statistics, resource plots
-│   └── igr/             # IGR conservation clustering + sigma assignment
 └── dataset/             # TSS extraction from GFF3 + FASTA
 
 data/

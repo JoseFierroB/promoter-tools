@@ -15,8 +15,6 @@ class Tool:
     short_name: str
     category: str                      # "ML", "DL", "Other"
     pixi_env: Path                     # path to pixi.toml
-    input_fasta: Path = None           # single combined FASTA (pos+neg)
-    inputs: list[Path] = field(default_factory=list)  # deprecated, use input_fasta
     outputs: list[Path] = field(default_factory=list)
     model_paths: list[Path] = field(default_factory=list)
     gpu_capable: bool = False
@@ -24,10 +22,6 @@ class Tool:
     n_sequences: int = 1988
     enabled: bool = True
     notes: str = ""
-
-    def __post_init__(self):
-        if self.input_fasta is None:
-            self.input_fasta = config.combined_fasta
 
     def model_size_mb(self) -> float:
         total = 0
