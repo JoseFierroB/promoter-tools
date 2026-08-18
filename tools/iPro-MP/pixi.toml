@@ -19,10 +19,11 @@ matplotlib = "*"
 tokenizers = "*"
 
 # torch via pip: conda channels (conda-forge/pytorch) ship CPU-only builds
-# for >=2.9 (pytorch channel stops at 2.5.1). PyPI wheels bundle CUDA 12 —
-# required for sm_120 (RTX 5090) support, which needs torch >= 2.9.
+# for >=2.9 (pytorch channel stops at 2.5.1). The default PyPI wheel is also
+# CPU-only since 2.9 — CUDA wheels only on download.pytorch.org. cu128 wheels
+# bundle CUDA 12.8 (driver >=570, compatible with RTX 5090 sm_120).
 [feature.ipro-mp.pypi-dependencies]
-torch = ">=2.9,<3"
+torch = { version = ">=2.9,<2.12", index = "https://download.pytorch.org/whl/cu128" }
 
 [environments]
 ipro-mp = { features = ["ipro-mp"], no-default-feature = true }

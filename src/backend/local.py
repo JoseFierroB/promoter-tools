@@ -143,6 +143,7 @@ class LocalRunner(Runner):
         run_env = os.environ.copy()
         run_env["PATH"] = f"{env_bin}:{run_env['PATH']}"
         run_env["PYTHONPATH"] = str(ROOT)
+        run_env["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"  # CUDA index == nvidia-smi index
         if config.force_cpu:
             run_env["CUDA_VISIBLE_DEVICES"] = ""
         elif tool.gpu_id:

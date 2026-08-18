@@ -80,7 +80,7 @@ PROMOTER_TOOLS = {
         ],
         model_paths=[config.promoters_dir / "weights/PromoterLCNN/IsPromoter_fold_5"],
         gpu_capable=True,
-        gpu_id="1",                      # RTX 3090: TF 2.6 no soporta Blackwell (sm_120)
+        gpu_id="0",                      # GPU 0 = RTX 3090 (PCI_BUS_ID): TF 2.6 kernels nativos
     ),
     "mldspp": Tool(
         name="MLDSPP XGBoost",
@@ -116,7 +116,7 @@ PROMOTER_TOOLS = {
         outputs=[ROOT / "output/predictions/ipromp/ipromp_12_predictions.csv"],
         model_paths=[config.ipromp_model_dir, config.dnabert_dir],
         gpu_capable=True,
-        gpu_id="0",                      # RTX 5090: torch >=2.9 soporta sm_120
+        gpu_id="1",                      # GPU 1 = RTX 5090 (PCI_BUS_ID): torch >=2.9 soporta sm_120
         notes="DNABERT-6 transformer. Heavy on CPU, fast on GPU.",
     ),
 }
