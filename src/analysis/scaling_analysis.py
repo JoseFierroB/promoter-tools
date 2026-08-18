@@ -43,13 +43,23 @@ ITERATIONS = sorted(d.name for d in SCALE_DB.iterdir()
 SMOKE_TSV = ROOT / "output" / "tables" / "resource_metrics.tsv"
 OUT_TSV = ROOT / "output" / "tables" / "scaling_dataset.tsv"
 EXTRAP_TSV = ROOT / "output" / "tables" / "extrapolation.tsv"
-PLOT_DIR = ROOT / "output" / "plots" / "scaling"
+PLOT_DIR = Path("/home/fierro/Desktop/scale_db_4tools/plots")
 PLOT_DIR.mkdir(parents=True, exist_ok=True)
 
 GPU_TOOLS = {"PromoterLCNN", "iPro-MP (H. pylori)"}
 TOOL_ORDER = ["PromoTech RF-HOT (PG Max)", "PromoterLCNN", "MLDSPP XGBoost",
               "MLDSPP XGBoost (75% spn)", "iPro-MP (H. pylori)",
               "FIMO + Prokaryote DB", "MEME Suite (STREME+FIMO)"]
+TOOL_INFO = {
+    "MLDSPP XGBoost":            {"short": "MLDSPP XGBoost",        "method": "BDT",    "color": "#942C76"},
+    "MLDSPP XGBoost (75% spn)":  {"short": "MLDSPP 75% XGBoost",    "method": "BDT",    "color": "#B07AA1"},
+    "PromoterLCNN":              {"short": "Promoter LCNN",         "method": "CNN",    "color": "#228B22"},
+    "PromoTech RF-HOT (PG Max)": {"short": "PromoTech RF-HOT",      "method": "RF",     "color": "#E07614"},
+    "iPro-MP (H. pylori)":       {"short": "iPro-MP",               "method": "gLM",    "color": "#3D185A"},
+    "MEME Suite (STREME+FIMO)":  {"short": "MEME (STREME+FIMO)",    "method": "motif",  "color": "#1E88E5"},
+    "FIMO + Prokaryote DB":      {"short": "FIMO Prok DB",          "method": "motif",  "color": "#8E24AA"},
+}
+TOOL_COLORS = {t: v["color"] for t, v in TOOL_INFO.items()}
 TARGETS = [10_000, 25_000, 50_000, 100_000, 150_000, 200_000]
 MAX_TARGET = TARGETS[-1]
 
@@ -144,6 +154,46 @@ def fit_group(group):
     }
 
 
+def plot_single(df, fits, col, ylabel, out_name, machine="ws"):
+    """One chart: all tools as time(n)/RAM(n) curves (points + fit to 200K)."""
+    fig, ax = plt.subplots(figsize=(9, 5.6), dpi=200)
+    n_obs = df[df["machine"] == machine]
+    for tool in TOOL_ORDER:
+        sub = n_obs[n_obs["tool"] == tool]
+        cls = "gpu-3090" if tool in GPU_TOOLS else "cpu-1thread"
+        key = (tool, cls, machine)
+        if len(sub) == 0 or key not in fits:
+            continue
+        f = fits[key]
+        color = TOOL_COLORS.get(tool, "#555")
+        x = sub["n_sequences"].values
+        y = sub[col].values
+        ax.scatter(x, y, s=30, color=color, zorder=5, edgecolor="white", linewidth=0.5)
+        n_fit = np.linspace(x.min(), MAX_TARGET, 200)
+        y_fit = f["fn_t"](n_fit, *f["popt_t"]) if col == "time_s" \
+            else f["popt_r"][0] * n_fit + f["popt_r"][1]
+        ax.plot(n_fit, y_fit, color=color, lw=1.8, zorder=4,
+                label=f"{TOOL_INFO[tool]['short']} ({TOOL_INFO[tool]['method']})")
+        y_end = y_fit[-1]
+        ax.annotate(f"{y_end:,.0f}", xy=(MAX_TARGET, y_end),
+                    xytext=(MAX_TARGET * 1.012, y_end), fontsize=8,
+                    fontweight="bold", color=color, va="center")
+    ax.set_xlabel("n seqs (pos+neg)", fontsize=10)
+    ax.set_ylabel(ylabel, fontsize=10)
+    ax.set_xlim(0, MAX_TARGET * 1.07)
+    ax.set_ylim(0, None)
+    ax.grid(alpha=0.3, ls="--", lw=0.4)
+    ax.spines[["top", "right"]].set_visible(False)
+    ax.legend(fontsize=8, framealpha=0.9)
+    ax.set_title(f"Scaling — {ylabel}; points = observed ({machine}, 1 thread), "
+                 f"curves = fit to 200K", fontsize=10)
+    fig.tight_layout()
+    for ext in ["png", "svg"]:
+        fig.savefig(PLOT_DIR / f"{out_name}.{ext}", dpi=200, bbox_inches="tight")
+    plt.close(fig)
+    print(f"Plots -> {PLOT_DIR}/{out_name}.{{png,svg}}")
+
+
 def main():
     df = load_all()
     OUT_TSV.parent.mkdir(parents=True, exist_ok=True)
@@ -200,57 +250,8 @@ def main():
         print(f"  {row['resource_class']:<12} {row['tool']:<32} {row['time_s_pred']:>14,.1f} s{ram}")
     print(f"\nExtrapolation -> {EXTRAP_TSV}")
 
-    n_plot = 2
-    fig, axes = plt.subplots(2, len(TOOL_ORDER), figsize=(3.2 * len(TOOL_ORDER), 7))
-    fit_lookup = {}
-    for (tool, cls, machine), f in fits.items():
-        key = (tool, cls)
-        if key not in fit_lookup or (fit_lookup[key][0] != "ws" and machine == "ws"):
-            fit_lookup[key] = (machine, f)
-    for j, tool in enumerate(TOOL_ORDER):
-        for i, (col, ylabel) in enumerate([("time_s", "seconds"),
-                                           ("peak_ram_mb", "peak RAM (MB)")]):
-            ax = axes[i, j]
-            sub = df[df["tool"] == tool]
-            if sub.empty:
-                ax.set_visible(False)
-                continue
-            x_obs = sub["n_sequences"].values
-            y_obs = sub[col].values
-            for _, row in sub.iterrows():
-                ax.scatter(row["n_sequences"], row[col], s=28,
-                           label=row["machine"], marker="o" if row["machine"] == "ws" else "x")
-            cls = "gpu-3090" if tool in GPU_TOOLS else "cpu-1thread"
-            entry = fit_lookup.get((tool, cls))
-            if entry:
-                machine, f = entry
-                n_fit = np.linspace(x_obs.min(), x_obs.max(), 100)
-                pred_fit = f["fn_t"](n_fit, *f["popt_t"]) if col == "time_s" \
-                    else f["popt_r"][0] * n_fit + f["popt_r"][1]
-                ax.plot(n_fit, pred_fit, color="#1f77b4", lw=1.5)
-                t_target = f["fn_t"](TARGETS[-1], *f["popt_t"])
-                r_target = f["popt_r"][0] * TARGETS[-1] + f["popt_r"][1]
-                target = t_target if col == "time_s" else r_target
-                ax.annotate(f"200K -> {target:,.0f}", xy=(0.97, 0.97),
-                            xycoords="axes fraction", ha="right", va="top",
-                            fontsize=7, color="#c62828")
-                fit_tag = f"{f['model']} R2={f['r2_t']:.2f}" if f['r2_t'] is not None else "no fit"
-            else:
-                fit_tag = "no fit"
-            ax.set_title(f"{tool}\n({cls}, {fit_tag})", fontsize=8)
-            ax.set_xlabel("n seqs (pos+neg)", fontsize=7)
-            ax.set_ylabel(ylabel, fontsize=7)
-            ax.set_xlim(0, x_obs.max() * 1.12)
-            ax.set_ylim(0, y_obs.max() * 1.25)
-            ax.grid(alpha=0.3, ls="--", lw=0.4)
-            ax.tick_params(labelsize=6)
-            if i == 0 and j == 0:
-                ax.legend(fontsize=6)
-    fig.suptitle(f"Scaling: time(n) and RAM(n) — linear axes, red = projected at {MAX_TARGET:,} seqs (81bp)", fontsize=10)
-    fig.tight_layout()
-    for ext in ["png", "svg"]:
-        fig.savefig(PLOT_DIR / f"scaling.{ext}", dpi=200, bbox_inches="tight")
-    print(f"Plots -> {PLOT_DIR}/scaling.{{png,svg}}")
+    plot_single(df, fits, "time_s", "Compute time (s)", "scaling_time")
+    plot_single(df, fits, "peak_ram_mb", "Peak RAM (MB)", "scaling_ram")
 
 
 if __name__ == "__main__":

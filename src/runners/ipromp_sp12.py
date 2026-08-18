@@ -1,11 +1,28 @@
 #!/usr/bin/env python3
 """iPro-MP sp12 (H. pylori) runner — DNABERT-6 inference."""
 import argparse
+import os
 import sys
 import time
+from concurrent.futures import ProcessPoolExecutor
+from functools import partial
 from pathlib import Path
 
 TOOLS_DIR = Path(__file__).resolve().parent.parent.parent / "tools"
+
+_TOK_CACHE = {}
+
+
+def _tokenize_seq(s: str, dnabert_dir: str) -> dict:
+    """Tokenize one sequence into k-mers -> BERT input. Runs in a worker process."""
+    if dnabert_dir not in _TOK_CACHE:
+        from transformers import BertTokenizer
+        _TOK_CACHE[dnabert_dir] = BertTokenizer.from_pretrained(dnabert_dir)
+    tok = _TOK_CACHE[dnabert_dir]
+    kmers = [s[i:i+6] for i in range(len(s) - 5)]
+    inp = tok(kmers, is_split_into_words=True, padding="max_length",
+              max_length=128, return_tensors="np", truncation=True)
+    return {k: inp[k][0] for k in ["input_ids", "attention_mask"] if k in inp}
 
 
 def main():
@@ -35,7 +52,6 @@ def main():
     ip = spec.loader.load_module()
 
     import torch
-    from transformers import BertTokenizer
 
     seqs = []
     with open(combined_path) as f:
@@ -44,7 +60,6 @@ def main():
             if line and not line.startswith(">"):
                 seqs.append(line.upper())
 
-    tok = BertTokenizer.from_pretrained(args.dnabert_dir)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = ip.DNABERTPromoterClassifier(dnabert_dir=args.dnabert_dir)
     state_dict = torch.load(f"{args.model_dir}/12_fold_1.pth", map_location=device)
@@ -55,17 +70,17 @@ def main():
 
     t0 = time.perf_counter()
     batch_size = 128
-    inputs = []
-    for s in seqs:
-        kmers = [s[i:i+6] for i in range(len(s) - 5)]
-        inp = tok(kmers, is_split_into_words=True, padding="max_length",
-                   max_length=128, return_tensors="pt", truncation=True)
-        inputs.append({k: inp[k][0] for k in ["input_ids", "attention_mask"] if k in inp})
+    n_workers = int(os.environ.get("OMP_NUM_THREADS", "1") or 1)
+    if n_workers > 1:
+        with ProcessPoolExecutor(max_workers=n_workers) as ex:
+            inputs = list(ex.map(partial(_tokenize_seq, dnabert_dir=args.dnabert_dir), seqs))
+    else:
+        inputs = [_tokenize_seq(s, args.dnabert_dir) for s in seqs]
 
     probs = []
     for start in range(0, len(inputs), batch_size):
         chunk = inputs[start:start + batch_size]
-        batch = {k: torch.stack([d[k] for d in chunk]).to(device)
+        batch = {k: torch.stack([torch.from_numpy(d[k]) for d in chunk]).to(device)
                  for k in ["input_ids", "attention_mask"]}
         with torch.no_grad():
             output = model(**batch)

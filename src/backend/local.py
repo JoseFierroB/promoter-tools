@@ -193,7 +193,7 @@ class LocalRunner(Runner):
                             gpu_samples.append(_gpu_sample(tool.gpu_id))
                     except psutil.NoSuchProcess:
                         break
-                    time.sleep(0.5)
+                    time.sleep(0.2)
             except Exception:
                 try:
                     import psutil as _psutil
@@ -209,7 +209,7 @@ class LocalRunner(Runner):
                                 gpu_samples.append(_gpu_sample(tool.gpu_id))
                         except _psutil.NoSuchProcess:
                             break
-                        time.sleep(0.5)
+                        time.sleep(0.2)
                 except Exception:
                     pass
 

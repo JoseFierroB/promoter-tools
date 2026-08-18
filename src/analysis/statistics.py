@@ -155,6 +155,7 @@ def aggregate_runs(runs: list[dict], metric_keys: list[str] = None) -> dict:
     # Success rate
     successes = [r.get("success", False) for r in runs]
     result["success_rate"] = round(np.mean(successes), 2)
+    result["success"] = result["success_rate"] == 1.0
 
     # Pick best run's other fields
     for key in ["tool", "category", "n_sequences", "peak_ram_mb", "model_size_mb"]:

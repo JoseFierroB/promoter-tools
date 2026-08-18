@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """MLDSPP XGBoost — dinucleotide stability + cross-species training."""
 import argparse
+import os
 import sys
 import time
 from pathlib import Path
@@ -50,7 +51,8 @@ def main():
     X_test = np.vstack([X_pos, X_neg])
 
     model = XGBClassifier(n_estimators=100, max_depth=6, random_state=42,
-                          eval_metric="logloss", verbosity=0, n_jobs=1)
+                          eval_metric="logloss", verbosity=0,
+                          n_jobs=int(os.environ.get("OMP_NUM_THREADS", "1") or 1))
     model.fit(X_train, y_train)
 
     probs = model.predict_proba(X_test)[:, 1]
