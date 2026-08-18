@@ -221,10 +221,17 @@ class LocalRunner(Runner):
             wait_timeout = max(900, int(n_seqs / 40.0 * 3)) * 2 + 300
         elif "meme" in tool.short_name:
             wait_timeout = max(300, int(n_seqs / 40.0 * 3)) * 2 + 300
-        else:
-            wait_timeout = 1800
+        elif "ipromp" in tool.short_name:
+            wait_timeout = max(600, int(n_seqs / 3.6 * 2)) + 300
+        elif "lcnn" in tool.short_name:
+            wait_timeout = max(300, int(n_seqs / 2000 * 2)) + 300
+        else:  # mldspp
+            wait_timeout = max(300, int(n_seqs / 4000 * 2)) + 300
         try:
-            proc.wait(timeout=wait_timeout)
+            if config.no_timeout:
+                proc.wait()
+            else:
+                proc.wait(timeout=wait_timeout)
         except subprocess.TimeoutExpired:
             proc.kill()
             proc.wait(timeout=10)
@@ -242,7 +249,6 @@ class LocalRunner(Runner):
             }
 
         stop_sampler.set()
-        stop_heartbeat.set()
         t_tee.join(timeout=2)
         t_sampler.join(timeout=2)
         output = ''.join(output_lines)

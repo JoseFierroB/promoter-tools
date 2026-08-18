@@ -27,6 +27,8 @@ def cmd_run(args):
         os.environ["PROMOTER_TOOLS_CPU_ONLY"] = "1"
     if args.threads:
         os.environ["PROMOTER_TOOLS_THREADS"] = str(args.threads)
+    if args.no_timeout:
+        os.environ["PROMOTER_TOOLS_NO_TIMEOUT"] = "1"
 
     tools = get_enabled_tools()
     if not tools:
@@ -83,6 +85,8 @@ def main():
                        help="Force CPU for all tools (no GPU detection)")
     p_run.add_argument("--threads", type=int, default=None,
                        help="Max threads per tool (sets OMP/MKL/OPENBLAS threads)")
+    p_run.add_argument("--no-timeout", action="store_true",
+                       help="Disable per-tool timeouts (run until completion)")
 
     args = parser.parse_args()
 

@@ -131,6 +131,10 @@ class Config:
         return int(os.environ.get("PROMOTER_TOOLS_THREADS", "0") or 0)
 
     @property
+    def no_timeout(self) -> bool:
+        return os.environ.get("PROMOTER_TOOLS_NO_TIMEOUT", "0").lower() in ("1", "true", "yes")
+
+    @property
     def n_positives(self) -> int:
         if self.pos_fasta.exists():
             return sum(1 for l in open(self.pos_fasta) if l.startswith(">"))
