@@ -13,6 +13,7 @@ output/tables/scaling_dataset.tsv, fits linear/power/quadratic models per
 Usage:
     pixi run python src/analysis/scaling_analysis.py
 """
+import argparse
 import sys
 from pathlib import Path
 
@@ -25,8 +26,20 @@ from scipy.optimize import curve_fit
 ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(ROOT))
 
-SCALE_DB = Path("/home/fierro/Desktop/scale_db")
-ITERATIONS = ["988", "1976", "4940", "9880"]
+_parser = argparse.ArgumentParser(description="Scaling analysis")
+_parser.add_argument("--scale-db", default="/home/fierro/Desktop/scale_db",
+                     help="Root with <iter>/predictions/resource_metrics*.tsv folders")
+_parser.add_argument("--metrics-name", default="resource_metrics.tsv",
+                     help="Metrics filename to read per iteration")
+_parser.add_argument("--local-suffix", default="mldspp75_local",
+                     help="Suffix of local-only metrics files (e.g. _mldspp75_local)")
+_args = _parser.parse_args()
+
+SCALE_DB = Path(_args.scale_db)
+METRICS_NAME = _args.metrics_name
+LOCAL_SUFFIX = _args.local_suffix
+ITERATIONS = sorted(d.name for d in SCALE_DB.iterdir()
+                    if d.is_dir() and (d / "predictions").is_dir())
 SMOKE_TSV = ROOT / "output" / "tables" / "resource_metrics.tsv"
 OUT_TSV = ROOT / "output" / "tables" / "scaling_dataset.tsv"
 EXTRAP_TSV = ROOT / "output" / "tables" / "extrapolation.tsv"
@@ -55,13 +68,13 @@ P0 = {
 def load_all() -> pd.DataFrame:
     frames = []
     for it in ITERATIONS:
-        path = SCALE_DB / it / "predictions" / "resource_metrics.tsv"
+        path = SCALE_DB / it / "predictions" / METRICS_NAME
         if path.exists():
             df = pd.read_csv(path, sep="\t")
             df["machine"] = "ws"
             df["iteration"] = it
             frames.append(df)
-        local = SCALE_DB / it / "predictions" / "resource_metrics_mldspp75_local.tsv"
+        local = SCALE_DB / it / "predictions" / f"resource_metrics_{LOCAL_SUFFIX}.tsv"
         if local.exists():
             df = pd.read_csv(local, sep="\t")
             df["machine"] = "local"
