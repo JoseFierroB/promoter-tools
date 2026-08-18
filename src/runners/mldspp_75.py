@@ -75,7 +75,7 @@ def main():
 
     X_test = np.vstack([X_pos_all, X_neg_all])
     model = XGBClassifier(n_estimators=100, max_depth=6, random_state=42,
-                          eval_metric="logloss", verbosity=0)
+                          eval_metric="logloss", verbosity=0, n_jobs=1)
     model.fit(X_train, y_train)
 
     probs = model.predict_proba(X_test)[:, 1]

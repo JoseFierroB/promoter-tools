@@ -12,6 +12,17 @@ import os
 import sys
 from pathlib import Path
 
+_THREAD_CAPS = {
+    "OMP_NUM_THREADS": "1",
+    "MKL_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "NUMEXPR_NUM_THREADS": "1",
+    "TF_NUM_INTRAOP_THREADS": "1",
+    "TF_NUM_INTEROP_THREADS": "1",
+}
+for _k, _v in _THREAD_CAPS.items():
+    os.environ.setdefault(_k, _v)
+
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
