@@ -62,7 +62,8 @@ def main():
         res = subprocess.run(
             ["streme", "-oc", str(tmpdir / "streme"), "-dna", "-minw", "10", "-maxw", "20",
              "-p", str(train_pf), "-n", str(train_nf)],
-            capture_output=True, text=True, timeout=300)
+            capture_output=True, text=True,
+            timeout=max(300, int((len(train_pos) + len(train_neg)) / 40.0 * 3)))
         if res.returncode != 0:
             shutil.rmtree(tmpdir, ignore_errors=True)
             continue
@@ -70,7 +71,8 @@ def main():
         res = subprocess.run(
             ["fimo", "--text", "--skip-matched-sequence",
              str(tmpdir / "streme" / "streme.txt"), str(test_fa)],
-            capture_output=True, text=True, timeout=300)
+            capture_output=True, text=True,
+            timeout=max(300, int(len(test_pos) + len(test_neg)) / 40.0 * 3))
 
         for row in csv.DictReader(res.stdout.splitlines(), delimiter="\t"):
             try:

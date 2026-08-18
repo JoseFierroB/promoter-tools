@@ -123,6 +123,14 @@ class Config:
 
     # ── Convenience ──
     @property
+    def force_cpu(self) -> bool:
+        return os.environ.get("PROMOTER_TOOLS_CPU_ONLY", "0").lower() in ("1", "true", "yes")
+
+    @property
+    def threads(self) -> int:
+        return int(os.environ.get("PROMOTER_TOOLS_THREADS", "0") or 0)
+
+    @property
     def n_positives(self) -> int:
         if self.pos_fasta.exists():
             return sum(1 for l in open(self.pos_fasta) if l.startswith(">"))
@@ -166,7 +174,7 @@ class Config:
         # Try pixi info (works with detached-environments)
         try:
             info = subprocess.run(
-                ["pixi", "info", "--manifest-path", cache_key, "--json"],
+                ["pixi", "info", "--manifest-path", str(pixi_env_path), "--json"],
                 capture_output=True, text=True, timeout=10, check=True)
             for env_info in json.loads(info.stdout).get("environments_info", []):
                 prefix = env_info.get("prefix", "")

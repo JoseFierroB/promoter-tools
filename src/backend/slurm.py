@@ -74,7 +74,7 @@ class SlurmRunner(Runner):
         script_path.write_text(script)
         script_path.chmod(0o755)
 
-        gpu_flag = "--gres=gpu:1" if tool.gpu_capable else ""
+        gpu_flag = "--gres=gpu:1" if tool.gpu_capable and not config.force_cpu else ""
         cmd = ["sbatch", "--parsable",
                "-t", self.time_limit, "-c", str(self.cpus),
                f"--mem={self.mem_gb}G", "-p", self.partition] + \

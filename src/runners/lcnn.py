@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""PromoterLCNN runner — one-hot encode + TF predict."""
+"""PromoterLCNN runner — one-hot encode + TF predict (batched)."""
 import argparse
 import time
 from pathlib import Path
@@ -9,6 +9,17 @@ import pandas as pd
 from Bio import SeqIO
 
 MODEL_DIR = "tools/Promoters/weights/PromoterLCNN/IsPromoter_fold_5"
+DEFAULT_BATCH = 10000
+_TBL = np.zeros(256, dtype=np.uint8)
+_TBL[[ord(c) for c in "ATCG"]] = [0, 1, 2, 3]  # A,T,C,G -> rows of eye(4)
+_EYE = np.eye(4, dtype=np.float32)
+
+
+def onehot(seqs):
+    out = np.zeros((len(seqs), 81, 4), dtype=np.float32)
+    for i, s in enumerate(seqs):
+        out[i] = _EYE[_TBL[np.frombuffer(s.encode("ascii"), dtype=np.uint8)]]
+    return out
 
 
 def main():
@@ -17,32 +28,34 @@ def main():
     p.add_argument("--neg", required=True, help="Negative test FASTA")
     p.add_argument("-o", "--output", default="output/predictions", help="Output dir")
     p.add_argument("-m", "--model", default=MODEL_DIR, help="Model directory")
+    p.add_argument("--batch-size", type=int, default=DEFAULT_BATCH, help="Inference batch size")
     args = p.parse_args()
 
     pos = list(SeqIO.parse(args.pos, "fasta"))
     neg = list(SeqIO.parse(args.neg, "fasta"))
     seqs = [str(r.seq).upper() for r in pos + neg]
 
-    m = {"A": [1, 0, 0, 0], "T": [0, 1, 0, 0], "C": [0, 0, 1, 0], "G": [0, 0, 0, 1]}
-    X = np.array([[m[c] for c in s] for s in seqs], dtype=np.float32)
-
     import tensorflow.compat.v1 as tf
     tf.disable_eager_execution()
 
     t0 = time.perf_counter()
+    probs = np.empty(len(seqs), dtype=np.float32)
     with tf.Session() as sess:
         meta_graph_def = tf.saved_model.loader.load(sess, [tf.saved_model.tag_constants.SERVING], args.model)
         signature = meta_graph_def.signature_def["serving_default"]
         in_tensor_name = signature.inputs[list(signature.inputs.keys())[0]].name
         out_tensor_name = signature.outputs[list(signature.outputs.keys())[0]].name
-        
+
         in_tensor = sess.graph.get_tensor_by_name(in_tensor_name)
         out_tensor = sess.graph.get_tensor_by_name(out_tensor_name)
-        
-        probs = sess.run(out_tensor, feed_dict={in_tensor: X})
+
+        for start in range(0, len(seqs), args.batch_size):
+            X = onehot(seqs[start:start + args.batch_size])
+            preds = sess.run(out_tensor, feed_dict={in_tensor: X})
+            probs[start:start + args.batch_size] = (
+                preds[:, 1] if preds.ndim == 2 and preds.shape[1] >= 2 else preds.ravel())
 
     elapsed = time.perf_counter() - t0
-    probs = probs[:, 1] if probs.ndim == 2 and probs.shape[1] >= 2 else probs.ravel()
 
     out_dir = Path(args.output) / "lcnn"
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -51,7 +64,7 @@ def main():
     pd.DataFrame({"PRED": probs[len(pos):]}).to_csv(
         out_dir / "lcnn_neg.csv", sep="\t", index=False)
 
-    print(f"LCNN: {len(seqs)} seqs in {elapsed:.3f}s")
+    print(f"LCNN: {len(seqs)} seqs in {elapsed:.3f}s (batch={args.batch_size})")
 
 
 if __name__ == "__main__":

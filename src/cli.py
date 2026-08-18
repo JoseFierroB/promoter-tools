@@ -6,9 +6,9 @@ Usage:
     pixi run python src/cli.py run --slurm promotech_hot
     pixi run python src/cli.py run lcnn --pos data/tigr4/positives_high_81bp.fasta \\
         --neg data/tigr4/negatives_high_81bp.fasta --output-dir output/tigr4/predictions
-    pixi run python src/cli.py results /path/to/output/
 """
 import argparse
+import os
 import sys
 from pathlib import Path
 
@@ -22,6 +22,11 @@ def cmd_run(args):
 
     if args.tools:
         enable(args.tools)
+
+    if args.cpu_only:
+        os.environ["PROMOTER_TOOLS_CPU_ONLY"] = "1"
+    if args.threads:
+        os.environ["PROMOTER_TOOLS_THREADS"] = str(args.threads)
 
     tools = get_enabled_tools()
     if not tools:
@@ -74,13 +79,15 @@ def main():
                        help="Predictions output dir (default: output/predictions)")
     p_run.add_argument("--pos", default=None, help="Positive FASTA (default: d39v confirmed)")
     p_run.add_argument("--neg", default=None, help="Negative FASTA (default: d39v confirmed)")
+    p_run.add_argument("--cpu-only", action="store_true",
+                       help="Force CPU for all tools (no GPU detection)")
+    p_run.add_argument("--threads", type=int, default=None,
+                       help="Max threads per tool (sets OMP/MKL/OPENBLAS threads)")
 
     args = parser.parse_args()
 
     if args.command == "run":
         cmd_run(args)
-    elif args.command == "results":
-        cmd_results(args)
     else:
         parser.print_help()
 

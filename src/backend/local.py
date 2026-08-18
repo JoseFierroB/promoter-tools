@@ -143,9 +143,17 @@ class LocalRunner(Runner):
         run_env = os.environ.copy()
         run_env["PATH"] = f"{env_bin}:{run_env['PATH']}"
         run_env["PYTHONPATH"] = str(ROOT)
-        if tool.gpu_id:
+        if config.force_cpu:
+            run_env["CUDA_VISIBLE_DEVICES"] = ""
+        elif tool.gpu_id:
             run_env["CUDA_VISIBLE_DEVICES"] = tool.gpu_id
             run_env["TF_FORCE_GPU_ALLOW_GROWTH"] = "true"
+        if config.threads > 0:
+            run_env["OMP_NUM_THREADS"] = str(config.threads)
+            run_env["MKL_NUM_THREADS"] = str(config.threads)
+            run_env["OPENBLAS_NUM_THREADS"] = str(config.threads)
+            run_env["TF_NUM_INTRAOP_THREADS"] = str(config.threads)
+            run_env["TF_NUM_INTEROP_THREADS"] = str(config.threads)
 
         t0 = time.perf_counter()
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
@@ -207,8 +215,34 @@ class LocalRunner(Runner):
         t_sampler = threading.Thread(target=_bg_sample, daemon=True)
         t_sampler.start()
 
-        proc.wait(timeout=1800)
+        if "promotech" in tool.short_name:
+            wait_timeout = _promotech_timeout(n_seqs) * 2 + 300
+        elif "fimo" in tool.short_name:
+            wait_timeout = max(900, int(n_seqs / 40.0 * 3)) * 2 + 300
+        elif "meme" in tool.short_name:
+            wait_timeout = max(300, int(n_seqs / 40.0 * 3)) * 2 + 300
+        else:
+            wait_timeout = 1800
+        try:
+            proc.wait(timeout=wait_timeout)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait(timeout=10)
+            stop_sampler.set()
+            t_tee.join(timeout=2)
+            t_sampler.join(timeout=2)
+            return {
+                "tool": tool.name, "category": tool.category,
+                "wall_seconds": wait_timeout, "peak_ram_mb": 0, "peak_vram_mb": 0,
+                "gpu_name": "", "gpu_available": False, "model_size_mb": 0,
+                "intermediate_mb": 0, "n_sequences": tool.n_sequences,
+                "throughput_seq_s": None, "time_s": None,
+                "success": False,
+                "notes": f"Timeout after {wait_timeout}s",
+            }
+
         stop_sampler.set()
+        stop_heartbeat.set()
         t_tee.join(timeout=2)
         t_sampler.join(timeout=2)
         output = ''.join(output_lines)

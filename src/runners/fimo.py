@@ -46,9 +46,11 @@ def main():
             SeqIO.write(r, f, "fasta")
 
     t0 = time.perf_counter()
+    n_total = len(pos) + len(neg)
+    fimo_timeout = max(900, int(n_total / 40.0 * 3))
     res = subprocess.run(
         ["fimo", "--text", "--skip-matched-sequence", args.db, str(combined)],
-        capture_output=True, text=True, timeout=900)
+        capture_output=True, text=True, timeout=fimo_timeout)
 
     scores = {}
     for row in csv.DictReader(res.stdout.splitlines(), delimiter="\t"):
