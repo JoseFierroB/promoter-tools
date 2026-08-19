@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """PromoterLCNN runner — one-hot encode + TF predict (batched)."""
 import argparse
+import os
 import time
 from pathlib import Path
 
@@ -28,8 +29,17 @@ def main():
     p.add_argument("--neg", required=True, help="Negative test FASTA")
     p.add_argument("-o", "--output", default="output/predictions", help="Output dir")
     p.add_argument("-m", "--model", default=MODEL_DIR, help="Model directory")
-    p.add_argument("--batch-size", type=int, default=DEFAULT_BATCH, help="Inference batch size")
+    p.add_argument("--batch-size", type=int, default=DEFAULT_BATCH, help="Inference batch size (0 = all sequences in one batch)")
     args = p.parse_args()
+
+    batch_size = args.batch_size
+    if batch_size == 0:
+        batch_size = None  # resolved after counting sequences
+    env_batch = os.environ.get("PROMOTER_TOOLS_LCNN_BATCH", "")
+    if env_batch not in ("", None):
+        batch_size = int(env_batch)
+        if batch_size == 0:
+            batch_size = None
 
     pos = list(SeqIO.parse(args.pos, "fasta"))
     neg = list(SeqIO.parse(args.neg, "fasta"))
@@ -49,7 +59,7 @@ def main():
         in_tensor = sess.graph.get_tensor_by_name(in_tensor_name)
         out_tensor = sess.graph.get_tensor_by_name(out_tensor_name)
 
-        for start in range(0, len(seqs), args.batch_size):
+        for start in range(0, len(seqs), batch_size or len(seqs)):
             X = onehot(seqs[start:start + args.batch_size])
             preds = sess.run(out_tensor, feed_dict={in_tensor: X})
             probs[start:start + args.batch_size] = (
@@ -64,7 +74,7 @@ def main():
     pd.DataFrame({"PRED": probs[len(pos):]}).to_csv(
         out_dir / "lcnn_neg.csv", sep="\t", index=False)
 
-    print(f"LCNN: {len(seqs)} seqs in {elapsed:.3f}s (batch={args.batch_size})")
+    print(f"LCNN: {len(seqs)} seqs in {elapsed:.3f}s (batch={batch_size or len(seqs)})")
 
 
 if __name__ == "__main__":

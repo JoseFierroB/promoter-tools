@@ -124,6 +124,8 @@ class LocalRunner(Runner):
             ]
         if "promotech" in tool.short_name:
             cmd += ["--timeout", str(_promotech_timeout(n_seqs))]
+        if tool.short_name == "lcnn" and os.environ.get("PROMOTER_TOOLS_LCNN_BATCH", ""):
+            cmd += ["--batch-size", os.environ["PROMOTER_TOOLS_LCNN_BATCH"]]
         if tool.short_name == "mldspp_75":
             split_file = _pick_mldspp_split(self.pos_fasta)
             if split_file is None:
