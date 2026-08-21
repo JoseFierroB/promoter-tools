@@ -16,6 +16,7 @@ Usage:
   pixi run python src/analysis/generate_master_plots.py -o /home/fierro/Desktop/my_plots
 """
 
+import os
 import argparse
 import sys
 import numpy as np
@@ -28,7 +29,7 @@ from sklearn.metrics import roc_curve, auc
 ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(ROOT))
 DEFAULT_OUT = ROOT / "output" / "plots" / "organized"
-DEFAULT_DATA_DIR = Path("/home/fierro/Desktop")
+DEFAULT_DATA_DIR = Path(os.environ.get("PROMOTER_DATA_DIR", "/home/fierro/Desktop"))
 TABLES_DIR = ROOT / "output" / "tables"
 PRED_DIR = ROOT / "output" / "predictions"
 

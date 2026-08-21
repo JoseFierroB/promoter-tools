@@ -13,6 +13,7 @@ motif) and its value on top.
 Usage:
     pixi run python src/analysis/resource_plots.py [--iter 9880]
 """
+import os
 import argparse
 from pathlib import Path
 
@@ -22,7 +23,7 @@ import numpy as np
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parent.parent.parent
-DEFAULT_DATA_DIR = Path("/home/fierro/Desktop")
+DEFAULT_DATA_DIR = Path(os.environ.get("PROMOTER_DATA_DIR", "/home/fierro/Desktop"))
 DEFAULT_OUT_DIR = DEFAULT_DATA_DIR / "scale_db_4tools" / "plots"
 OUT_DIR = DEFAULT_OUT_DIR
 OUT_DIR.mkdir(parents=True, exist_ok=True)

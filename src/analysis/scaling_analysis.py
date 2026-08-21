@@ -18,6 +18,7 @@ Usage:
     pixi run python src/analysis/scaling_analysis.py [--scale-db <dir>]
 """
 
+import os
 import argparse
 import sys
 from pathlib import Path
@@ -31,8 +32,9 @@ from scipy.optimize import curve_fit
 ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(ROOT))
 
+_DATA_DIR = Path(os.environ.get("PROMOTER_DATA_DIR", "/home/fierro/Desktop"))
 _parser = argparse.ArgumentParser(description="Scaling analysis")
-_parser.add_argument("--scale-db", default="/home/fierro/Desktop/scale_db_16cpu",
+_parser.add_argument("--scale-db", default=str(_DATA_DIR / "scale_db_16cpu"),
                      help="Root with <iter>/predictions/resource_metrics*.tsv folders")
 _parser.add_argument("--metrics-name", default="resource_metrics.tsv",
                      help="Metrics filename to read per iteration")
@@ -42,7 +44,7 @@ _args = _parser.parse_args()
 
 SCALE_DB = Path(_args.scale_db)
 if not SCALE_DB.exists():
-    SCALE_DB = Path("/home/fierro/Desktop/scale_db")
+    SCALE_DB = _DATA_DIR / "scale_db"
 
 METRICS_NAME = _args.metrics_name
 LOCAL_SUFFIX = _args.local_suffix

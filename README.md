@@ -75,3 +75,15 @@ If you use this in your research, please cite the original tools:
 - **PromoTech**: Londoño et al. (2023)
 - **MLDSPP**: Dinucleotide stability + XGBoost
 - **MEME Suite**: Bailey et al. (2009)
+
+## Dependencies note
+
+- `pygenometracks` (Circos-style plotting, not used by the prediction pipeline) declares `matplotlib==3.1.1`; the environment pins `matplotlib>=3.10.9` — `pip check` reports this conflict. Safe: no pipeline code imports pygenometracks.
+- `scikit-bio` declares `numpy>=2.0`; the environment pins `numpy 1.26` for TensorFlow 2.6 compatibility. Works with warnings.
+- Analysis scripts default data dir via `PROMOTER_DATA_DIR` env (fallback `~/Desktop`).
+
+## Tests
+
+```bash
+pixi run python tests/smoke_benchmark.py   # integration smoke: lcnn + mldspp on d39v
+```
