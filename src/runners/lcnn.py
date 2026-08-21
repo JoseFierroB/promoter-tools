@@ -59,10 +59,11 @@ def main():
         in_tensor = sess.graph.get_tensor_by_name(in_tensor_name)
         out_tensor = sess.graph.get_tensor_by_name(out_tensor_name)
 
-        for start in range(0, len(seqs), batch_size or len(seqs)):
-            X = onehot(seqs[start:start + args.batch_size])
+        eff_batch = batch_size or len(seqs)
+        for start in range(0, len(seqs), eff_batch):
+            X = onehot(seqs[start:start + eff_batch])
             preds = sess.run(out_tensor, feed_dict={in_tensor: X})
-            probs[start:start + args.batch_size] = (
+            probs[start:start + eff_batch] = (
                 preds[:, 1] if preds.ndim == 2 and preds.shape[1] >= 2 else preds.ravel())
 
     elapsed = time.perf_counter() - t0

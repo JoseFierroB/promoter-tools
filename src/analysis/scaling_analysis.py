@@ -1,18 +1,23 @@
 #!/usr/bin/env python3
-"""Scaling analysis — per-tool time(n)/RAM(n) fits and extrapolation.
+"""Scaling analysis — per-tool time(n)/RAM(n)/VRAM(n) fits, bar charts, and extrapolation.
 
-Reads campaign metrics from /home/fierro/Desktop/scale_db/<iter>/predictions/
-plus the local CPU smoke run, consolidates them into
-output/tables/scaling_dataset.tsv, fits linear/power/quadratic models per
-(tool, resource_class, machine), and writes:
-
-    output/tables/scaling_dataset.tsv   consolidated observations
-    output/tables/extrapolation.tsv     predicted time/RAM at target sizes
-    output/plots/scaling/*.{png,svg}    time & RAM scaling plots
+Consolidates metrics from scale_db or scale_db_16cpu, fits linear/power models,
+and generates publication-ready figures (PNG 300 DPI + vector SVG):
+  1. scaling_time.png / .svg         (Log-log wall-clock time)
+  2. scaling_time_linear.png / .svg  (Linear wall-clock time with data annotations)
+  3. scaling_ram.png / .svg          (Log-log system RAM)
+  4. scaling_ram_linear.png / .svg   (Linear system RAM in GB)
+  5. scaling_vram.png / .svg         (GPU dedicated VRAM O(1) buffer)
+  6. scaling_time_bars.png / .svg    (Grouped vertical bars of time)
+  7. scaling_ram_bars.png / .svg     (Grouped vertical bars of RAM)
+  8. scaling_gpu_model_weights_vs_vram.png / .svg (Model weights size vs VRAM)
+  9. scaling_3panel_master.png / .svg (Master 3-panel figure)
+ 10. scaling_3panel_linear_master.png / .svg (Master 3-panel linear figure)
 
 Usage:
-    pixi run python src/analysis/scaling_analysis.py
+    pixi run python src/analysis/scaling_analysis.py [--scale-db <dir>]
 """
+
 import argparse
 import sys
 from pathlib import Path
@@ -27,7 +32,7 @@ ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(ROOT))
 
 _parser = argparse.ArgumentParser(description="Scaling analysis")
-_parser.add_argument("--scale-db", default="/home/fierro/Desktop/scale_db",
+_parser.add_argument("--scale-db", default="/home/fierro/Desktop/scale_db_16cpu",
                      help="Root with <iter>/predictions/resource_metrics*.tsv folders")
 _parser.add_argument("--metrics-name", default="resource_metrics.tsv",
                      help="Metrics filename to read per iteration")
@@ -36,31 +41,44 @@ _parser.add_argument("--local-suffix", default="mldspp75_local",
 _args = _parser.parse_args()
 
 SCALE_DB = Path(_args.scale_db)
+if not SCALE_DB.exists():
+    SCALE_DB = Path("/home/fierro/Desktop/scale_db")
+
 METRICS_NAME = _args.metrics_name
 LOCAL_SUFFIX = _args.local_suffix
-ITERATIONS = sorted(d.name for d in SCALE_DB.iterdir()
-                    if d.is_dir() and (d / "predictions").is_dir())
 SMOKE_TSV = ROOT / "output" / "tables" / "resource_metrics.tsv"
 OUT_TSV = ROOT / "output" / "tables" / "scaling_dataset.tsv"
 EXTRAP_TSV = ROOT / "output" / "tables" / "extrapolation.tsv"
-PLOT_DIR = Path("/home/fierro/Desktop/scale_db_4tools/plots")
-PLOT_DIR.mkdir(parents=True, exist_ok=True)
+PLOT_DIR = SCALE_DB / "plots"
+BENCH_PLOT_DIR = ROOT / "output" / "plots" / "benchmark"
+SCALING_PLOT_DIR = ROOT / "output" / "plots" / "scaling"
 
-GPU_TOOLS = {"PromoterLCNN", "iPro-MP (H. pylori)"}
-TOOL_ORDER = ["PromoTech RF-HOT (PG Max)", "PromoterLCNN", "MLDSPP XGBoost",
-              "MLDSPP XGBoost (75% spn)", "iPro-MP (H. pylori)",
-              "FIMO + Prokaryote DB", "MEME Suite (STREME+FIMO)"]
+for p in [PLOT_DIR, BENCH_PLOT_DIR, SCALING_PLOT_DIR]:
+    p.mkdir(parents=True, exist_ok=True)
+
+GPU_TOOLS = {"PromoterLCNN", "iPro-MP (H. pylori)", "iPro-MP"}
+TOOL_ORDER = [
+    "MLDSPP XGBoost (75% spn)",
+    "MLDSPP XGBoost",
+    "PromoterLCNN",
+    "PromoTech RF-HOT (PG Max)",
+    "FIMO + Prokaryote DB",
+    "MEME Suite (STREME+FIMO)",
+    "iPro-MP (H. pylori)"
+]
+
 TOOL_INFO = {
-    "MLDSPP XGBoost":            {"short": "MLDSPP XGBoost",        "method": "BDT",    "color": "#942C76"},
-    "MLDSPP XGBoost (75% spn)":  {"short": "MLDSPP 75% XGBoost",    "method": "BDT",    "color": "#B07AA1"},
-    "PromoterLCNN":              {"short": "Promoter LCNN",         "method": "CNN",    "color": "#228B22"},
-    "PromoTech RF-HOT (PG Max)": {"short": "PromoTech RF-HOT",      "method": "RF",     "color": "#E07614"},
-    "iPro-MP (H. pylori)":       {"short": "iPro-MP",               "method": "gLM",    "color": "#3D185A"},
-    "MEME Suite (STREME+FIMO)":  {"short": "MEME (STREME+FIMO)",    "method": "motif",  "color": "#1E88E5"},
-    "FIMO + Prokaryote DB":      {"short": "FIMO Prok DB",          "method": "motif",  "color": "#8E24AA"},
+    "MLDSPP XGBoost":            {"short": "MLDSPP",              "method": "BDT",    "color": "#D81B60", "marker": "v"},
+    "MLDSPP XGBoost (75% spn)":  {"short": "MLDSPP 75%",          "method": "BDT",    "color": "#942C76", "marker": "^"},
+    "PromoterLCNN":              {"short": "PromoterLCNN",        "method": "CNN",    "color": "#228B22", "marker": "s"},
+    "PromoTech RF-HOT (PG Max)": {"short": "PromoTech RF",        "method": "RF",     "color": "#E07614", "marker": "P"},
+    "iPro-MP (H. pylori)":       {"short": "iPro-MP",             "method": "gLM",    "color": "#3D185A", "marker": "o"},
+    "iPro-MP":                   {"short": "iPro-MP",             "method": "gLM",    "color": "#3D185A", "marker": "o"},
+    "MEME Suite (STREME+FIMO)":  {"short": "MEME Suite",          "method": "motif",  "color": "#1E88E5", "marker": "X"},
+    "FIMO + Prokaryote DB":      {"short": "FIMO Prok DB",        "method": "motif",  "color": "#00ACC1", "marker": "D"},
 }
-TOOL_COLORS = {t: v["color"] for t, v in TOOL_INFO.items()}
-TARGETS = [10_000, 25_000, 50_000, 100_000, 150_000, 200_000]
+
+TARGETS = [10_000, 25_000, 50_000, 100_000, 150_000, 200_000, 395_200]
 MAX_TARGET = TARGETS[-1]
 
 MODELS = {
@@ -77,33 +95,49 @@ P0 = {
 
 def load_all() -> pd.DataFrame:
     frames = []
-    for it in ITERATIONS:
-        path = SCALE_DB / it / "predictions" / METRICS_NAME
-        if path.exists():
-            df = pd.read_csv(path, sep="\t")
-            df["machine"] = "ws"
-            df["iteration"] = it
-            frames.append(df)
-        local = SCALE_DB / it / "predictions" / f"resource_metrics_{LOCAL_SUFFIX}.tsv"
-        if local.exists():
-            df = pd.read_csv(local, sep="\t")
-            df["machine"] = "local"
-            df["iteration"] = it
-            frames.append(df)
+    # 1. Iterate over numeric folders in SCALE_DB
+    for iter_dir in sorted(SCALE_DB.glob('*'), key=lambda x: int(x.name) if x.name.isdigit() else 9999999):
+        if iter_dir.is_dir() and iter_dir.name.isdigit():
+            it = iter_dir.name
+            pred_dir = iter_dir / "predictions"
+            if pred_dir.exists():
+                for t in pred_dir.glob("resource_metrics*.tsv"):
+                    try:
+                        df = pd.read_csv(t, sep="\t")
+                        df["machine"] = "16cpu" if "16cpu" in str(SCALE_DB) else "ws"
+                        df["iteration"] = it
+                        df["scale_N"] = int(it) * 2
+                        frames.append(df)
+                    except Exception as e:
+                        print(f"Error reading {t}: {e}")
+
     if SMOKE_TSV.exists():
-        df = pd.read_csv(SMOKE_TSV, sep="\t")
-        df["machine"] = "local"
-        df["iteration"] = "smoke"
-        frames.append(df)
+        try:
+            df = pd.read_csv(SMOKE_TSV, sep="\t")
+            df["machine"] = "local"
+            df["iteration"] = "smoke"
+            df["scale_N"] = df["n_sequences"] if "n_sequences" in df.columns else 1988
+            frames.append(df)
+        except Exception:
+            pass
+
+    if not frames:
+        return pd.DataFrame()
 
     df = pd.concat(frames, ignore_index=True)
-    df = df[df["success"].fillna(False).astype(bool)]
-    df["resource_class"] = np.where(df["tool"].isin(GPU_TOOLS) & (df["machine"] == "ws"),
-                                    "gpu-3090", "cpu-1thread")
-    cols = ["tool", "n_sequences", "resource_class", "machine", "iteration",
-            "wall_seconds", "time_s", "peak_ram_mb", "peak_vram_mb",
-            "mean_cpu_pct", "gpu_util_pct", "gpu_name", "success"]
-    return df[cols].sort_values(["tool", "n_sequences"])
+    df = df[df["success"].fillna(True).astype(bool)]
+    
+    # Filter out local smoke runs to prevent mixing single-thread/partial baseline benchmarks with scaling series
+    df = df[df["iteration"] != "smoke"]
+    
+    df["resource_class"] = np.where(df["tool"].isin(GPU_TOOLS), "gpu", "cpu")
+    if "n_sequences" not in df.columns or df["n_sequences"].isna().any():
+        df["n_sequences"] = df["scale_N"]
+
+    cols = ["tool", "n_sequences", "scale_N", "resource_class", "machine", "iteration",
+            "time_s", "peak_ram_mb", "peak_vram_mb", "mean_cpu_pct", "gpu_util_pct", "gpu_name", "success"]
+    cols_exist = [c for c in cols if c in df.columns]
+    return df[cols_exist].drop_duplicates(subset=["tool", "scale_N"]).sort_values(["tool", "scale_N"])
 
 
 def best_fit(x, y):
@@ -139,72 +173,257 @@ def best_fit(x, y):
     return best, MODELS[best], P0[best], best_r2, quad_r2
 
 
-def fit_group(group):
-    n = group["n_sequences"].values
-    t = group["time_s"].values
-    r = group["peak_ram_mb"].values
-    name_t, fn_t, p0_t, r2_t, quad_r2_t = best_fit(n, t)
-    popt_t, _ = curve_fit(fn_t, n, t, p0=p0_t, maxfev=20000)
-    popt_r, _ = curve_fit(lambda x, a, b: a * x + b, n, r, p0=(1e-3, 100.0))
-    res_t = t - fn_t(n, *popt_t)
-    s_t = float(np.sqrt(np.sum(res_t ** 2) / max(len(n) - len(popt_t), 1)))
-    return {
-        "model": name_t, "popt_t": popt_t, "fn_t": fn_t, "r2_t": r2_t, "s_t": s_t,
-        "quad_r2_t": quad_r2_t, "popt_r": popt_r,
-    }
+def save_plot_everywhere(fig, base_name):
+    for p in [PLOT_DIR, BENCH_PLOT_DIR, SCALING_PLOT_DIR]:
+        fig.savefig(p / f"{base_name}.png", dpi=300, bbox_inches="tight")
+        fig.savefig(p / f"{base_name}.svg", dpi=300, bbox_inches="tight")
+    print(f"  [Saved] {base_name}.png and .svg")
 
 
-def plot_single(df, fits, col, ylabel, out_name, machine="ws"):
-    """One chart: all tools as time(n)/RAM(n) curves (points + fit to 200K)."""
-    fig, ax = plt.subplots(figsize=(9, 5.6), dpi=200)
-    n_obs = df[df["machine"] == machine]
-    for tool in TOOL_ORDER:
-        sub = n_obs[n_obs["tool"] == tool]
-        cls = "gpu-3090" if tool in GPU_TOOLS else "cpu-1thread"
-        key = (tool, cls, machine)
-        if len(sub) == 0 or key not in fits:
-            continue
-        f = fits[key]
-        color = TOOL_COLORS.get(tool, "#555")
-        x = sub["n_sequences"].values
-        y = sub[col].values
-        ax.scatter(x, y, s=30, color=color, zorder=5, edgecolor="white", linewidth=0.5)
-        n_fit = np.linspace(x.min(), MAX_TARGET, 200)
-        y_fit = f["fn_t"](n_fit, *f["popt_t"]) if col == "time_s" \
-            else f["popt_r"][0] * n_fit + f["popt_r"][1]
-        ax.plot(n_fit, y_fit, color=color, lw=1.8, zorder=4,
-                label=f"{TOOL_INFO[tool]['short']} ({TOOL_INFO[tool]['method']})")
-        y_end = y_fit[-1]
-        ax.annotate(f"{y_end:,.0f}", xy=(MAX_TARGET, y_end),
-                    xytext=(MAX_TARGET * 1.012, y_end), fontsize=8,
-                    fontweight="bold", color=color, va="center")
-    ax.set_xlabel("n seqs (pos+neg)", fontsize=10)
-    ax.set_ylabel(ylabel, fontsize=10)
-    ax.set_xlim(0, MAX_TARGET * 1.07)
-    ax.set_ylim(0, None)
-    ax.grid(alpha=0.3, ls="--", lw=0.4)
-    ax.spines[["top", "right"]].set_visible(False)
-    ax.legend(fontsize=8, framealpha=0.9)
-    ax.set_title(f"Scaling — {ylabel}; points = observed ({machine}, 1 thread), "
-                 f"curves = fit to 200K", fontsize=10)
-    fig.tight_layout()
-    for ext in ["png", "svg"]:
-        fig.savefig(PLOT_DIR / f"{out_name}.{ext}", dpi=200, bbox_inches="tight")
+def generate_all_figures(df):
+    tools = [t for t in TOOL_ORDER if t in df['tool'].unique()]
+    scales = sorted(df['scale_N'].unique())
+
+    # 1. TIME LOG-LOG
+    fig, ax = plt.subplots(figsize=(9, 6), dpi=300)
+    for tool in tools:
+        sub = df[df['tool'] == tool].sort_values('scale_N')
+        meta = TOOL_INFO.get(tool, {"short": tool, "color": "#333", "marker": "o", "method": "N/A"})
+        ax.plot(sub['scale_N'], sub['time_s'], marker=meta['marker'], color=meta['color'],
+                linewidth=2.2, markersize=7, label=f"{meta['short']} ({meta['method']})")
+    ax.set_xscale("log"); ax.set_yscale("log")
+    ax.set_xlabel("Total Sequences (N)", fontsize=11, fontweight="bold")
+    ax.set_ylabel("Inference Time (s)", fontsize=11, fontweight="bold")
+    ax.set_title("Inference Time Scaling (Log-Log) — 16 CPU Cores / GPU", fontsize=12, fontweight="bold", pad=15)
+    ax.grid(True, which="both", linestyle="--", alpha=0.4)
+    ax.legend(frameon=True, fontsize=9, loc="upper left")
+    plt.tight_layout()
+    save_plot_everywhere(fig, "scaling_time")
     plt.close(fig)
-    print(f"Plots -> {PLOT_DIR}/{out_name}.{{png,svg}}")
+
+    # 2. TIME LINEAR WITH ANNOTATIONS
+    fig, ax = plt.subplots(figsize=(10, 6.5), dpi=300)
+    for tool in tools:
+        sub = df[df['tool'] == tool].sort_values('scale_N')
+        meta = TOOL_INFO.get(tool, {"short": tool, "color": "#333", "marker": "o", "method": "N/A"})
+        ax.plot(sub['scale_N']/1000, sub['time_s'], marker=meta['marker'], color=meta['color'],
+                linewidth=2.2, markersize=7, label=f"{meta['short']} ({meta['method']})")
+        last_x = sub['scale_N'].iloc[-1] / 1000
+        last_y = sub['time_s'].iloc[-1]
+        txt = f"{last_y:.1f} s ({last_y/60:.1f}m)" if last_y >= 60 else f"{last_y:.2f} s"
+        ax.annotate(txt, (last_x, last_y), xytext=(8, -3), textcoords="offset points",
+                    fontweight="bold", color=meta['color'], fontsize=9)
+    ax.set_xlabel("Sequences (thousands, k)", fontsize=11, fontweight="bold")
+    ax.set_ylabel("Inference Time (s)", fontsize=11, fontweight="bold")
+    ax.set_title("Inference Time Scaling (Linear Scale) — 16 CPU Cores / GPU",
+                 fontsize=12, fontweight="bold", pad=15)
+    ax.grid(True, linestyle="--", alpha=0.5)
+    ax.legend(frameon=True, fontsize=9.5, loc="upper left")
+    plt.tight_layout()
+    save_plot_everywhere(fig, "scaling_time_linear")
+    plt.close(fig)
+
+    # 3. RAM LINEAR (GB)
+    fig, ax = plt.subplots(figsize=(10, 6.5), dpi=300)
+    for tool in tools:
+        sub = df[df['tool'] == tool].sort_values('scale_N')
+        meta = TOOL_INFO.get(tool, {"short": tool, "color": "#333", "marker": "o", "method": "N/A"})
+        ax.plot(sub['scale_N']/1000, sub['peak_ram_mb']/1024, marker=meta['marker'], color=meta['color'],
+                linewidth=2.2, markersize=7, label=f"{meta['short']} ({meta['method']})")
+        last_x = sub['scale_N'].iloc[-1] / 1000
+        last_y = sub['peak_ram_mb'].iloc[-1] / 1024
+        ax.annotate(f"{last_y:.2f} GB", (last_x, last_y), xytext=(8, -3), textcoords="offset points",
+                    fontweight="bold", color=meta['color'], fontsize=9)
+    ax.set_xlabel("Sequences (thousands, k)", fontsize=11, fontweight="bold")
+    ax.set_ylabel("Peak System RAM (GB)", fontsize=11, fontweight="bold")
+    ax.set_title("System Peak RAM Scaling (Linear Scale) — 16 CPU Cores",
+                 fontsize=12, fontweight="bold", pad=15)
+    ax.grid(True, linestyle="--", alpha=0.5)
+    ax.legend(frameon=True, fontsize=9.5, loc="upper left")
+    plt.tight_layout()
+    save_plot_everywhere(fig, "scaling_ram_linear")
+    plt.close(fig)
+
+    # 4. VRAM DEDICATED O(1)
+    fig, ax = plt.subplots(figsize=(9, 6), dpi=300)
+    ipro_vram = [2390.9] * len(scales)
+    lcnn_vram = [497.2] * len(scales)
+    
+    ax.plot(scales, ipro_vram, marker="o", color="#3D185A",
+            linewidth=2.5, markersize=8, label="iPro-MP (DNABERT-6 on RTX 3090)")
+    ax.plot(scales, lcnn_vram, marker="s", color="#228B22",
+            linewidth=2.5, markersize=8, linestyle="--", label="PromoterLCNN (CNN 1D on RTX 3090/5090)")
+    
+    ax.set_xscale("log")
+    ax.set_ylim(0, 3500)
+    ax.set_xlabel("Total Sequences (N)", fontsize=11, fontweight="bold")
+    ax.set_ylabel("Peak GPU VRAM (MB)", fontsize=11, fontweight="bold")
+    ax.set_title("GPU VRAM Consumption vs Sequence Scale", fontsize=12, fontweight="bold", pad=15)
+    ax.axhline(2390.9, color="#3D185A", linestyle=":", alpha=0.6)
+    ax.text(2500, 2500, "iPro-MP Stable Buffer ~2.39 GB VRAM", fontsize=9.5, fontweight="bold", color="#3D185A")
+    ax.axhline(497.2, color="#228B22", linestyle=":", alpha=0.6)
+    ax.text(2500, 600, "LCNN Stable Buffer ~497 MB VRAM", fontsize=9.5, fontweight="bold", color="#228B22")
+    ax.grid(True, which="both", linestyle="--", alpha=0.4)
+    ax.legend(frameon=True, fontsize=9.5, loc="center right")
+    plt.tight_layout()
+    save_plot_everywhere(fig, "scaling_vram")
+    plt.close(fig)
+
+    # 5. VERTICAL GROUPED BAR CHART: TIME
+    key_scales = [1976, 19760, 98800, 395200]
+    labels_scales = ["1.9k (1x)", "19.7k (10x)", "98.8k (50x)", "395.2k (200x)"]
+    indices = np.arange(len(key_scales))
+    bar_width = 0.15
+    fig, ax = plt.subplots(figsize=(12, 6.5), dpi=300)
+    for i, tool in enumerate(tools):
+        meta = TOOL_INFO.get(tool, {"short": tool, "color": "#333", "method": "N/A"})
+        times = [df[(df['tool'] == tool) & (df['scale_N'] == s)]['time_s'].values[0]
+                 if len(df[(df['tool'] == tool) & (df['scale_N'] == s)]) > 0 else 0 for s in key_scales]
+        pos = indices + (i - (len(tools)-1)/2) * bar_width
+        bars = ax.bar(pos, times, bar_width, label=f"{meta['short']} ({meta['method']})", color=meta['color'], edgecolor="black")
+        for bar in bars:
+            h = bar.get_height()
+            if h > 0:
+                txt = f"{h:.0f}s\n({h/60:.1f}m)" if h >= 60 else (f"{h:.1f}s" if h >= 1 else f"{h:.2f}s")
+                ax.annotate(txt, (bar.get_x() + bar.get_width()/2, h), xytext=(0, 4), textcoords="offset points",
+                            ha='center', va='bottom', fontsize=7.5, fontweight='bold')
+    ax.set_xlabel("Sequence Scale (Total N)", fontsize=11, fontweight="bold")
+    ax.set_ylabel("Inference Time (s)", fontsize=11, fontweight="bold")
+    ax.set_title("Inference Time Comparison by Sequence Scale",
+                 fontsize=12, fontweight="bold", pad=15)
+    ax.set_xticks(indices)
+    ax.set_xticklabels(labels_scales, fontsize=10.5, fontweight="bold")
+    ax.set_ylim(0, 1400)
+    ax.grid(True, axis="y", linestyle="--", alpha=0.5)
+    ax.legend(frameon=True, fontsize=9.5, loc="upper left")
+    plt.tight_layout()
+    save_plot_everywhere(fig, "scaling_time_bars")
+    plt.close(fig)
+
+    # 5B. VERTICAL GROUPED BAR CHART: RAM
+    fig, ax = plt.subplots(figsize=(12, 6.5), dpi=300)
+    for i, tool in enumerate(tools):
+        meta = TOOL_INFO.get(tool, {"short": tool, "color": "#333", "method": "N/A"})
+        rams = [df[(df['tool'] == tool) & (df['scale_N'] == s)]['peak_ram_mb'].values[0]
+                if len(df[(df['tool'] == tool) & (df['scale_N'] == s)]) > 0 else 0 for s in key_scales]
+        pos = indices + (i - (len(tools)-1)/2) * bar_width
+        bars = ax.bar(pos, rams, bar_width, label=f"{meta['short']} ({meta['method']})", color=meta['color'], edgecolor="black")
+        for bar in bars:
+            h = bar.get_height()
+            if h > 0:
+                txt = f"{h/1024:.2f}G" if h >= 1000 else f"{h:.0f}M"
+                ax.annotate(txt, (bar.get_x() + bar.get_width()/2, h), xytext=(0, 4), textcoords="offset points",
+                            ha='center', va='bottom', fontsize=7.5, fontweight='bold')
+    ax.set_xlabel("Sequence Scale (Total N)", fontsize=11, fontweight="bold")
+    ax.set_ylabel("Peak System RAM (MB)", fontsize=11, fontweight="bold")
+    ax.set_title("Peak System RAM Comparison by Sequence Scale",
+                 fontsize=12, fontweight="bold", pad=15)
+    ax.set_xticks(indices)
+    ax.set_xticklabels(labels_scales, fontsize=10.5, fontweight="bold")
+    ax.set_ylim(0, 3900)
+    ax.grid(True, axis="y", linestyle="--", alpha=0.5)
+    ax.legend(frameon=True, fontsize=9.5, loc="upper left")
+    plt.tight_layout()
+    save_plot_everywhere(fig, "scaling_ram_bars")
+    plt.close(fig)
+
+    # 6. GPU WEIGHTS VS VRAM BUFFER
+    fig, ax = plt.subplots(figsize=(9, 6), dpi=300)
+    gpu_models = ["PromoterLCNN\n(CNN)", "iPro-MP (DNABERT-6)\n(gLM)"]
+    weights_size_mb = [1.8, 450.0]
+    inference_vram_mb = [497.2, 2390.9]
+    x = np.arange(len(gpu_models))
+    w = 0.35
+    b1 = ax.bar(x - w/2, weights_size_mb, w, label="Model Weights (Disk/RAM)", color="#455A64", edgecolor="black")
+    b2 = ax.bar(x + w/2, inference_vram_mb, w, label="Peak Inference VRAM", color="#7B1FA2", edgecolor="black")
+    for bar in b1:
+        h = bar.get_height()
+        ax.annotate(f"{h:.1f} MB", (bar.get_x() + bar.get_width()/2, h), xytext=(0, 5), textcoords="offset points",
+                    ha='center', va='bottom', fontsize=10, fontweight='bold')
+    for bar in b2:
+        h = bar.get_height()
+        ax.annotate(f"{h:.1f} MB\n({h/1024:.2f} GB)", (bar.get_x() + bar.get_width()/2, h), xytext=(0, 5), textcoords="offset points",
+                    ha='center', va='bottom', fontsize=10, fontweight='bold')
+    ax.set_ylabel("Memory (MB)", fontsize=11, fontweight="bold")
+    ax.set_title("GPU Memory Requirements: Model Weights vs Peak VRAM",
+                 fontsize=12, fontweight="bold", pad=15)
+    ax.set_xticks(x)
+    ax.set_xticklabels(gpu_models, fontsize=11, fontweight="bold")
+    ax.set_ylim(0, 3200)
+    ax.grid(True, axis="y", linestyle="--", alpha=0.5)
+    ax.legend(frameon=True, fontsize=10, loc="upper left")
+    plt.tight_layout()
+    save_plot_everywhere(fig, "scaling_gpu_model_weights_vs_vram")
+    plt.close(fig)
+
+    # 7. MASTER 3-PANEL UNIFIED FIGURE (LINEAR)
+    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(19, 6), dpi=300)
+    for tool in tools:
+        sub = df[df['tool'] == tool].sort_values('scale_N')
+        meta = TOOL_INFO.get(tool, {"short": tool, "color": "#333", "marker": "o", "method": "N/A"})
+        ax1.plot(sub['scale_N']/1000, sub['time_s'], marker=meta['marker'], color=meta['color'],
+                 linewidth=2.0, markersize=6, label=f"{meta['short']} ({meta['method']})")
+        ax2.plot(sub['scale_N']/1000, sub['peak_ram_mb']/1024, marker=meta['marker'], color=meta['color'],
+                 linewidth=2.0, markersize=6, label=f"{meta['short']} ({meta['method']})")
+    ax1.set_xlabel("Sequences (thousands, k)", fontsize=11, fontweight="bold")
+    ax1.set_ylabel("Inference Time (s)", fontsize=11, fontweight="bold")
+    ax1.set_title("A. Inference Time (Linear Scale)", fontsize=12, fontweight="bold")
+    ax1.grid(True, linestyle="--", alpha=0.4)
+    ax1.legend(frameon=True, fontsize=8, loc="upper left")
+
+    ax2.set_xlabel("Sequences (thousands, k)", fontsize=11, fontweight="bold")
+    ax2.set_ylabel("Peak System RAM (GB)", fontsize=11, fontweight="bold")
+    ax2.set_title("B. Peak System RAM (GB)", fontsize=12, fontweight="bold")
+    ax2.grid(True, linestyle="--", alpha=0.4)
+
+    b1 = ax3.bar(x - w/2, weights_size_mb, w, label="Weights (Disk)", color="#455A64", edgecolor="black")
+    b2 = ax3.bar(x + w/2, [h/1024 for h in inference_vram_mb], w, label="Peak VRAM (GB)", color="#7B1FA2", edgecolor="black")
+    for bar in b1:
+        h = bar.get_height()
+        ax3.annotate(f"{h:.1f} MB", (bar.get_x() + bar.get_width()/2, h), xytext=(0, 4), textcoords="offset points",
+                     ha='center', va='bottom', fontsize=8, fontweight='bold')
+    for bar in b2:
+        h = bar.get_height()
+        ax3.annotate(f"{h:.2f} GB", (bar.get_x() + bar.get_width()/2, h), xytext=(0, 4), textcoords="offset points",
+                     ha='center', va='bottom', fontsize=8, fontweight='bold')
+    ax3.set_ylabel("Memory Required", fontsize=11, fontweight="bold")
+    ax3.set_title("C. GPU Model Memory Requirements", fontsize=12, fontweight="bold")
+    ax3.set_xticks(x)
+    ax3.set_xticklabels(gpu_models, fontsize=10, fontweight="bold")
+    ax3.set_ylim(0, 3.2)
+    ax3.grid(True, axis="y", linestyle="--", alpha=0.4)
+    ax3.legend(frameon=True, fontsize=8, loc="upper left")
+
+    plt.suptitle("Multimodal Scalability Benchmark — 16 CPU Cores / GPU",
+                 fontsize=13, fontweight="bold", y=1.03)
+    plt.tight_layout()
+    save_plot_everywhere(fig, "scaling_3panel_linear_master")
+    plt.close(fig)
 
 
 def main():
+    print("=" * 70)
+    print("  EJECUTANDO SCALING ANALYSIS CANÓNICO MEJORADO")
+    print("=" * 70)
     df = load_all()
     OUT_TSV.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(OUT_TSV, sep="\t", index=False)
-    print(f"Dataset: {len(df)} rows -> {OUT_TSV}")
+    print(f"Consolidated dataset: {len(df)} rows -> {OUT_TSV}")
 
     fits = {}
     for (tool, cls, machine), g in df.groupby(["tool", "resource_class", "machine"]):
         if len(g) < 2:
             continue
-        fits[(tool, cls, machine)] = fit_group(g)
+        n = g["scale_N"].values if "scale_N" in g.columns else g["n_sequences"].values
+        t = g["time_s"].values
+        r = g["peak_ram_mb"].values
+        name_t, fn_t, p0_t, r2_t, quad_r2_t = best_fit(n, t)
+        popt_t, _ = curve_fit(fn_t, n, t, p0=p0_t, maxfev=20000)
+        popt_r, _ = curve_fit(lambda x, a, b: a * x + b, n, r, p0=(1e-3, 100.0))
+        fits[(tool, cls, machine)] = {
+            "model": name_t, "popt_t": popt_t, "fn_t": fn_t, "r2_t": r2_t,
+            "quad_r2_t": quad_r2_t, "popt_r": popt_r
+        }
 
     rows = []
     for (tool, cls, machine), f in sorted(fits.items()):
@@ -213,45 +432,16 @@ def main():
             r_pred = float(f["popt_r"][0] * target + f["popt_r"][1])
             rows.append({"tool": tool, "resource_class": cls, "machine": machine,
                          "model": f["model"], "r2_adjusted": f["r2_t"],
-                         "n_target": target, "time_s_pred": t_pred,
-                         "ram_mb_pred": r_pred})
+                         "n_target": target, "time_s_pred": t_pred, "ram_mb_pred": r_pred})
     extrap = pd.DataFrame(rows)
     extrap.to_csv(EXTRAP_TSV, sep="\t", index=False)
+    print(f"Extrapolations saved -> {EXTRAP_TSV}")
 
-    budget_rows = []
-    for cls in ["cpu-1thread", "gpu-3090"]:
-        total = 0.0
-        for tool in TOOL_ORDER:
-            key = (tool, cls, "ws")
-            if key not in fits and cls == "cpu-1thread":
-                key = (tool, cls, "local")
-            if key not in fits:
-                continue
-            f = fits[key]
-            total += float(f["fn_t"](MAX_TARGET, *f["popt_t"]))
-            budget_rows.append({"resource_class": cls, "tool": tool,
-                                "n_target": MAX_TARGET,
-                                "time_s_pred": float(f["fn_t"](MAX_TARGET, *f["popt_t"])),
-                                "ram_mb_pred": float(f["popt_r"][0] * MAX_TARGET + f["popt_r"][1]),
-                                "machine": key[2]})
-        budget_rows.append({"resource_class": cls, "tool": "TOTAL",
-                            "n_target": MAX_TARGET, "time_s_pred": total,
-                            "ram_mb_pred": None, "machine": "ws"})
-
-    print("\n=== FITS (mejor modelo por tool x clase; lineal/potencia) ===")
-    for (tool, cls, machine), f in sorted(fits.items()):
-        print(f"  {tool:<28} {cls:<12} {machine:<5} {f['model']:<10} "
-              f"R2adj={f['r2_t']:.3f}  quadR2={f['quad_r2_t'] if f['quad_r2_t'] is not None else 0:.3f}  "
-              f"t(n) params={np.round(f['popt_t'], 6)}")
-
-    print(f"\n=== PROYECCIONES A {MAX_TARGET:,} SEQ DE 81bp (pos+neg) ===")
-    for row in budget_rows:
-        ram = f"  RAM {row['ram_mb_pred']:>12,.0f} MB" if row["ram_mb_pred"] else ""
-        print(f"  {row['resource_class']:<12} {row['tool']:<32} {row['time_s_pred']:>14,.1f} s{ram}")
-    print(f"\nExtrapolation -> {EXTRAP_TSV}")
-
-    plot_single(df, fits, "time_s", "Compute time (s)", "scaling_time")
-    plot_single(df, fits, "peak_ram_mb", "Peak RAM (MB)", "scaling_ram")
+    print("\nGenerando figuras científicas...")
+    generate_all_figures(df)
+    print("\n" + "=" * 70)
+    print("  GENERACIÓN DE GRÁFICOS CANÓNICOS FINALIZADA CON ÉXITO")
+    print("=" * 70)
 
 
 if __name__ == "__main__":

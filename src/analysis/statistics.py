@@ -158,7 +158,8 @@ def aggregate_runs(runs: list[dict], metric_keys: list[str] = None) -> dict:
     result["success"] = result["success_rate"] == 1.0
 
     # Pick best run's other fields
-    for key in ["tool", "category", "n_sequences", "peak_ram_mb", "model_size_mb"]:
+    for key in ["tool", "category", "n_sequences", "peak_ram_mb", "peak_vram_mb",
+                "model_size_mb", "mean_cpu_pct", "gpu_util_pct", "wall_seconds"]:
         for r in runs:
             if key in r and r[key] is not None:
                 result[key] = r[key]
