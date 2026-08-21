@@ -61,12 +61,15 @@ def main():
                 seqs.append(line.upper())
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = ip.DNABERTPromoterClassifier(dnabert_dir=args.dnabert_dir)
-    state_dict = torch.load(f"{args.model_dir}/12_fold_1.pth", map_location=device)
-    state_dict = {k: v for k, v in state_dict.items() if "position_ids" not in k}
-    model.load_state_dict(state_dict, strict=False)
-    model.to(device)
-    model.eval()
+    models = []
+    for fold in range(1, 6):
+        model = ip.DNABERTPromoterClassifier(dnabert_dir=args.dnabert_dir)
+        state_dict = torch.load(f"{args.model_dir}/12_fold_{fold}.pth", map_location=device)
+        state_dict = {k: v for k, v in state_dict.items() if "position_ids" not in k}
+        model.load_state_dict(state_dict, strict=False)
+        model.to(device)
+        model.eval()
+        models.append(model)
 
     t0 = time.perf_counter()
     batch_size = 128
@@ -83,8 +86,8 @@ def main():
         batch = {k: torch.stack([torch.from_numpy(d[k]) for d in chunk]).to(device)
                  for k in ["input_ids", "attention_mask"]}
         with torch.no_grad():
-            output = model(**batch)
-            probs.extend(torch.softmax(output, dim=1)[:, 1].tolist())
+            fold_probs = torch.stack([torch.softmax(m(**batch), dim=1)[:, 1] for m in models])
+            probs.extend(fold_probs.mean(dim=0).tolist())
     elapsed = time.perf_counter() - t0
 
     out_ipromp = out_base / "ipromp"

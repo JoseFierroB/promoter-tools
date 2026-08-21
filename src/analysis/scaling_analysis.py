@@ -401,6 +401,28 @@ def generate_all_figures(df):
     plt.close(fig)
 
 
+def bootstrap_pred_ci(fn, x, y, p0, targets, n_boot=500, seed=42):
+    x, y = np.asarray(x, float), np.asarray(y, float)
+    targets = np.asarray(targets, float)
+    try:
+        popt, _ = curve_fit(fn, x, y, p0=p0, maxfev=20000)
+    except Exception:
+        return np.full(len(targets), np.nan), np.full(len(targets), np.nan)
+    resid = y - fn(x, *popt)
+    rng = np.random.RandomState(seed)
+    preds = np.zeros((n_boot, len(targets)))
+    for b in range(n_boot):
+        yb = fn(x, *popt) + rng.choice(resid, size=len(x), replace=True)
+        try:
+            pb, _ = curve_fit(fn, x, yb, p0=popt, maxfev=20000)
+            preds[b] = fn(targets, *pb)
+        except Exception:
+            preds[b] = np.nan
+    lo = np.nanpercentile(preds, 2.5, axis=0)
+    hi = np.nanpercentile(preds, 97.5, axis=0)
+    return lo, hi
+
+
 def main():
     print("=" * 70)
     print("  EJECUTANDO SCALING ANALYSIS CANÓNICO MEJORADO")
@@ -419,20 +441,22 @@ def main():
         r = g["peak_ram_mb"].values
         name_t, fn_t, p0_t, r2_t, quad_r2_t = best_fit(n, t)
         popt_t, _ = curve_fit(fn_t, n, t, p0=p0_t, maxfev=20000)
+        lo_t, hi_t = bootstrap_pred_ci(fn_t, n, t, p0_t, TARGETS)
         popt_r, _ = curve_fit(lambda x, a, b: a * x + b, n, r, p0=(1e-3, 100.0))
         fits[(tool, cls, machine)] = {
             "model": name_t, "popt_t": popt_t, "fn_t": fn_t, "r2_t": r2_t,
-            "quad_r2_t": quad_r2_t, "popt_r": popt_r
+            "quad_r2_t": quad_r2_t, "popt_r": popt_r, "ci_lo": lo_t, "ci_hi": hi_t
         }
 
     rows = []
     for (tool, cls, machine), f in sorted(fits.items()):
-        for target in TARGETS:
+        for i, target in enumerate(TARGETS):
             t_pred = float(f["fn_t"](target, *f["popt_t"]))
             r_pred = float(f["popt_r"][0] * target + f["popt_r"][1])
             rows.append({"tool": tool, "resource_class": cls, "machine": machine,
                          "model": f["model"], "r2_adjusted": f["r2_t"],
-                         "n_target": target, "time_s_pred": t_pred, "ram_mb_pred": r_pred})
+                         "n_target": target, "time_s_pred": t_pred, "ram_mb_pred": r_pred,
+                         "time_s_ci_low": float(f["ci_lo"][i]), "time_s_ci_high": float(f["ci_hi"][i])})
     extrap = pd.DataFrame(rows)
     extrap.to_csv(EXTRAP_TSV, sep="\t", index=False)
     print(f"Extrapolations saved -> {EXTRAP_TSV}")

@@ -103,6 +103,23 @@ def parse_arguments() -> argparse.Namespace:
         default=42,
         help="Random seed for sampling reproducibility (default: 42).",
     )
+    parser.add_argument(
+        "--target-gc",
+        type=float,
+        default=None,
+        help="Target GC content percentage to match the positive promoter collection.",
+    )
+    parser.add_argument(
+        "--gc-tolerance",
+        type=float,
+        default=5.0,
+        help="GC content tolerance percentage when --target-gc is specified (default: 5.0).",
+    )
+    parser.add_argument(
+        "--dedup-rc",
+        action="store_true",
+        help="Deduplicate reverse complements of extracted windows as well.",
+    )
 
     return parser.parse_args()
 
@@ -182,6 +199,9 @@ def build_master_pool(
     step_size: int,
     edge_margin: int,
     tss_margin: int,
+    target_gc: float = None,
+    gc_tolerance: float = 5.0,
+    dedup_rc: bool = False,
 ) -> Tuple[List[Dict], Dict[str, int]]:
     seq_str = str(genome_seq).upper()
     seq_len = len(seq_str)
@@ -192,6 +212,7 @@ def build_master_pool(
         "skipped_short_cds": 0,
         "skipped_tss_proximity": 0,
         "skipped_invalid_n": 0,
+        "skipped_gc_bias": 0,
     }
 
     seen_seqs = set()
@@ -257,9 +278,18 @@ def build_master_pool(
 
             if raw_seq in seen_seqs:
                 continue
+            if dedup_rc:
+                raw_rc = raw_seq.translate(_RC_TRANS)[::-1]
+                if raw_rc in seen_seqs:
+                    continue
 
             gc_count = raw_seq.count("G") + raw_seq.count("C")
             gc_content = (gc_count / window_size) * 100.0
+
+            if target_gc is not None:
+                if not (target_gc - gc_tolerance <= gc_content <= target_gc + gc_tolerance):
+                    exclusion_stats["skipped_gc_bias"] += 1
+                    continue
 
             clean_locus = str(locus).replace(" ", "_")
             s_tag = "f" if strand == "+" else "r"
@@ -370,6 +400,9 @@ def report_summary(
     print(f" • TSS Proximity Exclusions (<200 bp): {exclusion_stats.get('skipped_tss_proximity', 0):,}")
     print(f" • Short CDS Edge Exclusions (<20 bp):  {exclusion_stats.get('skipped_short_cds', 0):,}")
     print(f" • Skipped Invalid 'N' Bases:            {exclusion_stats.get('skipped_invalid_n', 0):,}")
+    gc_skipped = exclusion_stats.get("skipped_gc_bias", 0)
+    if gc_skipped:
+        print(f" • GC Composition Exclusions:          {gc_skipped:,}")
     print("─" * 65)
     print("DATASET COMPOSITION & BIAS:")
     print(f" • Strand Distribution:     + strand: {n_pos:,} | - strand: {n_neg:,}")
@@ -404,6 +437,9 @@ def main():
         step_size=args.step,
         edge_margin=args.margin,
         tss_margin=args.tss_margin,
+        target_gc=args.target_gc,
+        gc_tolerance=args.gc_tolerance,
+        dedup_rc=args.dedup_rc,
     )
 
     sampled_records = sample_negative_dataset(master_pool, sample_limit, args.seed)

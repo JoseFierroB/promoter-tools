@@ -93,7 +93,7 @@ def main():
     fimo_prok_neg = pr_dir / "fimo_prok_neg.csv"
     if fimo_prok_pos.exists() and fimo_prok_neg.exists():
         fpr, tpr, a = auc_from_csv(fimo_prok_pos, fimo_prok_neg)
-        curves.append(("FIMO (Prok DB, 838)", fpr, tpr, a, "#00BFC4", "-.", 1.5))
+        curves.append(("FIMO (Prok DB)", fpr, tpr, a, "#00BFC4", "-.", 1.5))
         print(f"FIMO_PROK: AUC={a:.4f}")
 
     # ── 5. MEME Suite (STREME+FIMO) ──

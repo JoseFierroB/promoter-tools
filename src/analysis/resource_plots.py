@@ -22,7 +22,9 @@ import numpy as np
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parent.parent.parent
-OUT_DIR = Path("/home/fierro/Desktop/scale_db_4tools/plots")
+DEFAULT_DATA_DIR = Path("/home/fierro/Desktop")
+DEFAULT_OUT_DIR = DEFAULT_DATA_DIR / "scale_db_4tools" / "plots"
+OUT_DIR = DEFAULT_OUT_DIR
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # ── Tool metadata ──
@@ -42,10 +44,11 @@ METHOD_COLORS = {
 }
 
 
-def load(iter_name: str) -> pd.DataFrame:
+def load(iter_name: str, data_dir: Path = None) -> pd.DataFrame:
     """One row per tool at the same n (iteration), WS campaigns 1 + 2."""
-    c1 = Path("/home/fierro/Desktop/scale_db") / iter_name / "predictions" / "resource_metrics.tsv"
-    c2 = Path("/home/fierro/Desktop/scale_db_4tools") / iter_name / "predictions" / "resource_metrics.tsv"
+    data_dir = data_dir or DEFAULT_DATA_DIR
+    c1 = data_dir / "scale_db" / iter_name / "predictions" / "resource_metrics.tsv"
+    c2 = data_dir / "scale_db_4tools" / iter_name / "predictions" / "resource_metrics.tsv"
     rows = []
     if c1.exists():
         rows.append(pd.read_csv(c1, sep="\t"))
@@ -110,11 +113,12 @@ def one_chart(df, col, ylabel, out_name, fmt=".1f", unit="", title=None, ymax_mu
     print(f"  {out_name}.{{svg,png}}")
 
 
-def load_all_by_iter() -> pd.DataFrame:
+def load_all_by_iter(data_dir: Path = None) -> pd.DataFrame:
     """All iterations x tools from WS campaigns 1 + 2 (one row per tool/iter)."""
+    data_dir = data_dir or DEFAULT_DATA_DIR
     rows = []
-    for root in [Path("/home/fierro/Desktop/scale_db"),
-                 Path("/home/fierro/Desktop/scale_db_4tools")]:
+    for root in [data_dir / "scale_db",
+                 data_dir / "scale_db_4tools"]:
         if not root.is_dir():
             continue
         for it in sorted(p.name for p in root.iterdir()
@@ -171,9 +175,15 @@ def main():
     p.add_argument("--iter", default="9880", help="Iteration (n/2 positives) to plot")
     p.add_argument("--by-iter", action="store_true",
                    help="Plot per-iteration grouped bars instead of single-size charts")
+    p.add_argument("--data-dir", default=str(DEFAULT_DATA_DIR), help="Base dir with scale_db campaign folders")
+    p.add_argument("--out-dir", default=str(DEFAULT_OUT_DIR), help="Output dir for figures")
     args = p.parse_args()
+    global OUT_DIR
+    OUT_DIR = Path(args.out_dir)
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    data_dir = Path(args.data_dir)
     if args.by_iter:
-        df = load_all_by_iter()
+        df = load_all_by_iter(data_dir)
         print("Resource plots by iteration:")
         by_iter_chart(df, "time_s", "Compute time (s)", "resources_byiter_time", fmt=".1f", unit=" s")
         by_iter_chart(df, "peak_ram_mb", "Peak RAM (MB)", "resources_byiter_ram", fmt=".0f", unit=" MB")
@@ -181,7 +191,7 @@ def main():
         if not vram.empty:
             by_iter_chart(vram, "peak_vram_mb", "Peak VRAM (MB)", "resources_byiter_vram", fmt=".0f", unit=" MB")
         return
-    df = load(args.iter)
+    df = load(args.iter, data_dir)
     n = int(df["n_sequences"].iloc[0])
     header = f"n = {n:,} seqs (pos+neg), 1 thread, linear"
 

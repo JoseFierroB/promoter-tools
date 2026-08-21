@@ -91,6 +91,7 @@ class SlurmRunner(Runner):
 
     def _build_script(self, tool: Tool) -> str:
         """Build Slurm batch script from tool definition."""
+        from src.backend.local import _count_seqs, _promotech_timeout
         runner = ROOT / "src/runners" / f"{tool.short_name}.py"
         env_path = tool.pixi_env
         env_name = "ipro-mp" if "ipromp" in tool.short_name else "default"

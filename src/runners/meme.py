@@ -61,7 +61,7 @@ def main():
 
         res = subprocess.run(
             ["streme", "-oc", str(tmpdir / "streme"), "-dna", "-minw", "10", "-maxw", "20",
-             "-p", str(train_pf), "-n", str(train_nf)],
+             "-seed", "42", "-p", str(train_pf), "-n", str(train_nf)],
             capture_output=True, text=True,
             timeout=max(300, int((len(train_pos) + len(train_neg)) / 40.0 * 3)))
         if res.returncode != 0:
