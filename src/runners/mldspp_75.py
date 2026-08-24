@@ -79,7 +79,9 @@ def main():
                           eval_metric="logloss", verbosity=0,
                           n_jobs=int(os.environ.get("OMP_NUM_THREADS", "1") or 1))
     model.fit(X_train, y_train)
+    train_s = time.perf_counter() - t0
 
+    t0 = time.perf_counter()
     probs = model.predict_proba(X_test)[:, 1]
     elapsed = time.perf_counter() - t0
 
@@ -90,7 +92,7 @@ def main():
     pd.DataFrame({"PRED": probs[len(pos):]}).to_csv(
         out_dir / "mldspp_75spn_neg.csv", sep="\t", index=False)
 
-    print(f"MLDSPP_75: {len(pos) + len(neg)} seqs in {elapsed:.4f}s")
+    print(f"MLDSPP_75: {len(pos) + len(neg)} seqs in {elapsed:.4f}s (train {train_s:.3f}s)")
 
 
 if __name__ == "__main__":

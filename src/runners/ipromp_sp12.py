@@ -34,6 +34,8 @@ def main():
                     help="Model directory")
     p.add_argument("-d", "--dnabert-dir", default="tools/iPro-MP/DNABERT-6",
                     help="DNABERT-6 directory")
+    p.add_argument("-s", "--species", type=int, default=12,
+                   help="iPro-MP species ID (default 12 = H. pylori; 23 = B. subtilis)")
     args = p.parse_args()
 
     out_base = Path(args.output)
@@ -64,7 +66,7 @@ def main():
     models = []
     for fold in range(1, 6):
         model = ip.DNABERTPromoterClassifier(dnabert_dir=args.dnabert_dir)
-        state_dict = torch.load(f"{args.model_dir}/12_fold_{fold}.pth", map_location=device)
+        state_dict = torch.load(f"{args.model_dir}/{args.species}_fold_{fold}.pth", map_location=device)
         state_dict = {k: v for k, v in state_dict.items() if "position_ids" not in k}
         model.load_state_dict(state_dict, strict=False)
         model.to(device)

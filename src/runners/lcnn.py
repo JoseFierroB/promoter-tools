@@ -59,6 +59,7 @@ def main():
         in_tensor = sess.graph.get_tensor_by_name(in_tensor_name)
         out_tensor = sess.graph.get_tensor_by_name(out_tensor_name)
 
+        t0 = time.perf_counter()
         eff_batch = batch_size or len(seqs)
         for start in range(0, len(seqs), eff_batch):
             X = onehot(seqs[start:start + eff_batch])
