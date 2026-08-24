@@ -57,24 +57,25 @@ output/                  # Generated outputs (gitignored)
 
 ## Documentation
 
+- `docs/WORKFLOW.md` — step-by-step pipeline diagram with commands (quick start)
 - `docs/RUNNING.md` — detailed CLI usage, batch benchmarks, analysis scripts
 - `docs/DOWNLOADS.md` — model download instructions + verification
 
 ## Requirements
 
-- **Pixi** (package manager) — `pixi.lock` ensures reproducible environments
-- **Python 3.10** via pixi environments
+- **Pixi** (package manager) — committed `pixi.lock` files ensure reproducible environments
+- **Python** per environment via pixi (root 3.10; tool envs 3.9-3.12 — e.g. PromoterLCNN needs 3.9 for TF 2.6)
 - **GPU** optional — iPro-MP and LCNN benefit from CUDA (see `docs/RUNNING.md` for GPU assignment)
 - For non-pixi users: `requirements.txt` lists core dependencies
 
 ## Citation
 
 If you use this in your research, please cite the original tools:
-- **iPro-MP**: Lin et al. (2024)
-- **LCNN**: PromoterLCNN
-- **PromoTech**: Londoño et al. (2023)
-- **MLDSPP**: Dinucleotide stability + XGBoost
-- **MEME Suite**: Bailey et al. (2009)
+- **iPro-MP**: Su et al., *Genome Biology* (2025) — doi:10.1186/s13059-025-03819-9
+- **PromoterLCNN**: Hernández et al., *Genes* (2022) — doi:10.3390/genes13071126
+- **PromoTech**: Chevez-Guardado & Peña-Castillo, *Genome Biology* (2021) — doi:10.1186/s13059-021-02514-9
+- **MLDSPP**: Paul et al., *J. Chem. Inf. Model.* (2024) — doi:10.1021/acs.jcim.3c02017
+- **MEME Suite**: Bailey et al., *Nucleic Acids Research* (2009)
 
 ## Dependencies note
 

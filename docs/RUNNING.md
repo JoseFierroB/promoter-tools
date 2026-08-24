@@ -103,20 +103,6 @@ pixi run python src/dataset/negatives_tss_d39v.py \
   -o data/benchmark/d39v/negatives_81bp
 ```
 
-GC-matched variants (composition confounder control):
-
-```bash
-# GC 30% ± 5 (matches positive mean)
-pixi run python src/dataset/negatives_tss_d39v.py \
-  --gff-cds data/reference/D39V.gff3 --fasta data/reference/D39V.fna \
-  --gff-tss data/reference/D39V_annotation_TSS_Victor.gff \
-  --dedup-rc --limit 1000 --target-gc 30 --gc-tolerance 5 \
-  -o data/benchmark/d39v_gc/negatives_81bp_gc30
-# GC 33% ± 5
-pixi run python src/dataset/negatives_tss_d39v.py ... --target-gc 33 ... \
-  -o data/benchmark/d39v_gc/negatives_81bp_gc33
-```
-
 ### TIGR4 high-confidence (738/738)
 
 ```bash
@@ -128,13 +114,6 @@ pixi run python src/dataset/negatives_tss_tigr4.py \
   --xlsx data/tigr4/S1_TSS.xlsx --fasta data/reference/NC_003028.fasta \
   --tier high_conf_primary --limit 738 --dedup-rc \
   -o data/tigr4/negatives_high_81bp
-
-# GC-matched (31% ± 5 = TIGR4 positive mean)
-pixi run python src/dataset/negatives_tss_tigr4.py \
-  --xlsx data/tigr4/S1_TSS.xlsx --fasta data/reference/NC_003028.fasta \
-  --tier high_conf_primary --limit 738 --dedup-rc \
-  --target-gc 31 --gc-tolerance 5 \
-  -o data/tigr4_gc/negatives_high_81bp_gc31
 ```
 
 ### MLDSPP 75% splits (stage 4)
@@ -160,14 +139,13 @@ the tool is skipped with a message listing the available splits.
 # 5. Benchmark: pixi run python src/cli.py run <tools> [--threads N] [--runs N]
 # 6. Analysis: benchmark_statistics / benchmark_confusion / generate_master_roc /
 #              resource_plots / scaling_analysis / generate_master_plots
-# 7. Experiments (GC / consensus / features): src/analysis/experiments/*.py
+# 7. Experiments (consensus / features): src/analysis/experiments/*.py
 ```
 
 An orchestrator for stages 2-6 lives in `pipeline/run_pipeline.sh` (separate
 folder, does not touch canonical source).
 
 ## Non-default Datasets (e.g. TIGR4)
-
 
 Pass `--pos` / `--neg` FASTA files and a separate output dir. The number of
 sequences in the metrics TSV is auto-detected from the FASTA files:
@@ -197,6 +175,36 @@ pixi run python src/cli.py run --slurm meme fimo_prok mldspp mldspp_75 lcnn prom
 pixi run python src/cli.py run --slurm lcnn
 ```
 
+## Common flags (CPU / GPU / runs)
+
+```bash
+pixi run python src/cli.py run <tools> [flags]
+```
+
+| Flag | Effect |
+|------|--------|
+| `--threads N` | Number of CPU threads: sets `OMP_NUM_THREADS`, `MKL_NUM_THREADS`, `OPENBLAS_NUM_THREADS`, `TF_NUM_INTRAOP_THREADS`, `TF_NUM_INTEROP_THREADS` to N. |
+| *(default)* | GPU used automatically for GPU-capable tools (`lcnn`, `ipromp_sp12` → `gpu_id="0"`). |
+| `--cpu-only` | Force CPU for all tools (`CUDA_VISIBLE_DEVICES=""`); LCNN/iPro-MP fall back to CPU. |
+| `--runs N` | Independent runs; N≥3 recommended (reports mean ± SD). N=1 returns the raw run. |
+| `--pos / --neg` | Custom FASTA pair (default: d39v confirmed positives/negatives). |
+| `--output-dir` | Where per-tool prediction CSVs are written. |
+| `-o` | Path of the metrics TSV (time, RAM, VRAM, CPU%, GPU%). |
+| `--no-timeout` | Disable per-tool timeouts. |
+
+Environment extras:
+
+```bash
+PROMOTER_TOOLS_LCNN_BATCH=0|1 pixi run python src/cli.py run lcnn ...   # LCNN inference batch (default 10000; 0 = all at once, 1 = one by one)
+IPROMP_SPECIES=23             pixi run python src/cli.py run ipromp_sp12 ...   # iPro-MP species (default 12 = H. pylori; 23 = B. subtilis)
+PROMOTER_DATA_DIR=/path       pixi run python src/analysis/*.py ...      # base dir for analysis campaign folders
+```
+
+> **`time_s` semantics**: runners report *pure compute time* — model loading,
+> session init and (for MLDSPP) training are excluded. MLDSPP prints the
+> training time separately (`... in Xs (train Ys)`). `wall_seconds` in the
+> metrics TSV is the full process wall time (load + compute).
+
 ## GPU Usage
 
 | Tool | GPU | Why |
@@ -225,6 +233,13 @@ pixi run python src/analysis/benchmark_confusion.py
 
 # Resource plots (compute time + peak RAM + VRAM if available)
 pixi run python src/analysis/resource_plots.py
+
+# Canonical publication figure suite — 119 figures (time/RAM) across hardware
+# regimes (1_cpu, 16_cpu, gpu_vram, combined, by_scale x 9) in PNG/SVG/PDF
+pixi run python src/analysis/generate_benchmark_plots.py
+
+# ROC/AUC curves for N = 1,976 and N = 59,280 (PNG/SVG/PDF)
+pixi run python src/analysis/generate_auc_plots.py
 ```
 
 ## Output Files
@@ -239,6 +254,7 @@ pixi run python src/analysis/resource_plots.py
 | `output/plots/benchmark/vram.{svg,png}` | VRAM bar chart (GPU tools) |
 | `output/plots/meme/` | All MEME plots |
 | `output/predictions/` | Per-tool prediction CSVs (incl. `ipromp/`, `promotech/`, `mldspp_75spn_*`) |
+>
 > **Legacy scripts** (unused, kept for reference): `pipeline/legacy/`
 > (`make_scale_fastas.sh` — scale-db FASTA generation by duplication;
 > `test_all_tools.sh` — early smoke loop). Superseded by the unified CLI
