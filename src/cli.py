@@ -31,8 +31,16 @@ def cmd_run(args):
     """Execute benchmark tool(s)."""
     from src.benchmark.tools import PROMOTER_TOOLS, get_enabled_tools, enable
 
-    if args.tools:
-        enable(args.tools)
+    valid = sorted(PROMOTER_TOOLS)
+    if not args.tools:
+        print("ERROR: specify at least one tool key.\nAvailable tools:\n  " + "\n  ".join(valid))
+        sys.exit(2)
+    unknown = [t for t in args.tools if t not in PROMOTER_TOOLS]
+    if unknown:
+        print("ERROR: unknown tool key(s): " + ", ".join(unknown) + "\nAvailable tools:\n  " + "\n  ".join(valid))
+        sys.exit(2)
+
+    enable(args.tools)
 
     if args.cpu_only:
         os.environ["PROMOTER_TOOLS_CPU_ONLY"] = "1"

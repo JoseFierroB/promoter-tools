@@ -22,7 +22,18 @@ def run_tool(tool: str, out_dir: Path):
     return pd.read_csv(m, sep="\t").iloc[0]
 
 
+def test_cli_guardrails():
+    r1 = subprocess.run([PY, "src/cli.py", "run", "tool_inexistente"], cwd=ROOT,
+                        capture_output=True, text=True)
+    assert r1.returncode == 2, f"tool inválida debe salir 2 (got {r1.returncode})"
+    assert "unknown tool" in r1.stdout.lower(), "mensaje de tool inválida"
+    r2 = subprocess.run([PY, "src/cli.py", "run"], cwd=ROOT, capture_output=True, text=True)
+    assert r2.returncode == 2, f"sin args debe salir 2 (got {r2.returncode})"
+    print("OK CLI guardrails (exit 2 + lista de tools)")
+
+
 def main():
+    test_cli_guardrails()
     out = ROOT / "output/smoke_test"
     out.mkdir(parents=True, exist_ok=True)
     for tool, pos_csv, neg_csv in [

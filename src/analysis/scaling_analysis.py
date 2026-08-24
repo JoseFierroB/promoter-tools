@@ -33,30 +33,19 @@ ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(ROOT))
 
 _DATA_DIR = Path(os.environ.get("PROMOTER_DATA_DIR", "/home/fierro/Desktop"))
-_parser = argparse.ArgumentParser(description="Scaling analysis")
-_parser.add_argument("--scale-db", default=str(_DATA_DIR / "scale_db_16cpu"),
+_PARSER = argparse.ArgumentParser(description="Scaling analysis")
+_PARSER.add_argument("--scale-db", default=str(_DATA_DIR / "scale_db_16cpu"),
                      help="Root with <iter>/predictions/resource_metrics*.tsv folders")
-_parser.add_argument("--metrics-name", default="resource_metrics.tsv",
+_PARSER.add_argument("--metrics-name", default="resource_metrics.tsv",
                      help="Metrics filename to read per iteration")
-_parser.add_argument("--local-suffix", default="mldspp75_local",
+_PARSER.add_argument("--local-suffix", default="mldspp75_local",
                      help="Suffix of local-only metrics files (e.g. _mldspp75_local)")
-_args = _parser.parse_args()
 
-SCALE_DB = Path(_args.scale_db)
-if not SCALE_DB.exists():
-    SCALE_DB = _DATA_DIR / "scale_db"
-
-METRICS_NAME = _args.metrics_name
-LOCAL_SUFFIX = _args.local_suffix
 SMOKE_TSV = ROOT / "output" / "tables" / "resource_metrics.tsv"
 OUT_TSV = ROOT / "output" / "tables" / "scaling_dataset.tsv"
 EXTRAP_TSV = ROOT / "output" / "tables" / "extrapolation.tsv"
-PLOT_DIR = SCALE_DB / "plots"
 BENCH_PLOT_DIR = ROOT / "output" / "plots" / "benchmark"
 SCALING_PLOT_DIR = ROOT / "output" / "plots" / "scaling"
-
-for p in [PLOT_DIR, BENCH_PLOT_DIR, SCALING_PLOT_DIR]:
-    p.mkdir(parents=True, exist_ok=True)
 
 GPU_TOOLS = {"PromoterLCNN", "iPro-MP (H. pylori)", "iPro-MP"}
 TOOL_ORDER = [
@@ -426,6 +415,17 @@ def bootstrap_pred_ci(fn, x, y, p0, targets, n_boot=500, seed=42):
 
 
 def main():
+    global SCALE_DB, METRICS_NAME, LOCAL_SUFFIX, PLOT_DIR
+    _args = _PARSER.parse_args()
+    SCALE_DB = Path(_args.scale_db)
+    if not SCALE_DB.exists():
+        SCALE_DB = _DATA_DIR / "scale_db"
+    METRICS_NAME = _args.metrics_name
+    LOCAL_SUFFIX = _args.local_suffix
+    PLOT_DIR = SCALE_DB / "plots"
+    for p in [PLOT_DIR, BENCH_PLOT_DIR, SCALING_PLOT_DIR]:
+        p.mkdir(parents=True, exist_ok=True)
+
     print("=" * 70)
     print("  EJECUTANDO SCALING ANALYSIS CANÓNICO MEJORADO")
     print("=" * 70)

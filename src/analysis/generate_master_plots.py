@@ -13,7 +13,7 @@ Usage:
   pixi run python src/analysis/generate_master_plots.py
   pixi run python src/analysis/generate_master_plots.py --mode baseline
   pixi run python src/analysis/generate_master_plots.py --mode scaling
-  pixi run python src/analysis/generate_master_plots.py -o /home/fierro/Desktop/my_plots
+  pixi run python src/analysis/generate_master_plots.py -o output/plots/my_plots
 """
 
 import os

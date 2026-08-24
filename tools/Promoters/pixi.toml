@@ -8,6 +8,7 @@ version = "0.1.0"
 [tasks]
 
 [dependencies]
+python = "3.9.*"
 tensorflow = "==2.6.0"
 pandas = ">=1.4.4,<2"
 scikit-learn = ">=1.6.1,<2"
