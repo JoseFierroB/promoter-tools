@@ -1,0 +1,41 @@
+tool	n_sequences	scale_N	resource_class	machine	iteration	time_s	peak_ram_mb	peak_vram_mb	mean_cpu_pct	gpu_util_pct	gpu_name	success
+FIMO + Prokaryote DB	988	988	cpu	ws	494	14.846	82.3	0.0	2.1	0.0		True
+FIMO + Prokaryote DB	1976	1976	cpu	ws	988	31.844	87.2	0.0	1.6	0.0		True
+FIMO + Prokaryote DB	2964	2964	cpu	ws	1482	36.858	86.1	0.0	0.9	0.0		True
+FIMO + Prokaryote DB	3952	3952	cpu	ws	1976	65.095	91.2	0.0	0.7	0.0		True
+FIMO + Prokaryote DB	9880	9880	cpu	ws	4940	162.528	128.3	0.0	0.7	0.0		True
+FIMO + Prokaryote DB	19760	19760	cpu	ws	9880	308.206	184.5	0.0	0.6	0.0		True
+MEME Suite (STREME+FIMO)	988	988	cpu	ws	494	6.509	108.6	0.0	4.2	0.0		True
+MEME Suite (STREME+FIMO)	1976	1976	cpu	ws	988	12.277	116.3	0.0	3.1	0.0		True
+MEME Suite (STREME+FIMO)	2964	2964	cpu	ws	1482	13.909	134.8	0.0	2.4	0.0		True
+MEME Suite (STREME+FIMO)	3952	3952	cpu	ws	1976	24.045	154.1	0.0	1.8	0.0		True
+MEME Suite (STREME+FIMO)	9880	9880	cpu	ws	4940	66.942	235.6	0.0	0.9	0.0		True
+MEME Suite (STREME+FIMO)	19760	19760	cpu	ws	9880	199.573	299.2	0.0	0.5	0.0		True
+MLDSPP XGBoost	988	988	cpu	ws	494	0.432	181.2	0.0	74.4	0.0		True
+MLDSPP XGBoost	1976	1976	cpu	ws	988	0.427	149.0	0.0	74.7	0.0		True
+MLDSPP XGBoost	2964	2964	cpu	ws	1482	0.446	158.0	0.0	74.4	0.0		True
+MLDSPP XGBoost	3952	3952	cpu	ws	1976	0.546	163.9	0.0	74.6	0.0		True
+MLDSPP XGBoost	9880	9880	cpu	ws	4940	0.586	201.9	0.0	74.5	0.0		True
+MLDSPP XGBoost	19760	19760	cpu	ws	9880	0.769	220.0	0.0	74.5	0.0		True
+MLDSPP XGBoost (75% spn)	1976	1976	cpu	ws	988	0.449	150.7	0.0	74.8	0.0		True
+MLDSPP XGBoost (75% spn)	3952	3952	cpu	ws	1976	0.469	159.2	0.0	74.9	0.0		True
+MLDSPP XGBoost (75% spn)	9880	9880	cpu	ws	4940	0.668	192.3	0.0	74.8	0.0		True
+MLDSPP XGBoost (75% spn)	19760	19760	cpu	ws	9880	0.995	253.1	0.0	79.8	0.0		True
+PromoTech RF-HOT (PG Max)	988	988	cpu	ws	494	54.8	7298.3	0.0	0.5	0.0		True
+PromoTech RF-HOT (PG Max)	1976	1976	cpu	ws	988	106.0	6827.2	0.0	0.4	0.0		True
+PromoTech RF-HOT (PG Max)	2964	2964	cpu	ws	1482	137.5	7296.2	0.0	0.3	0.0		True
+PromoTech RF-HOT (PG Max)	3952	3952	cpu	ws	1976	188.2	7228.7	0.0	0.3	0.0		True
+PromoTech RF-HOT (PG Max)	9880	9880	cpu	ws	4940	450.6	7292.5	0.0	0.2	0.0		True
+PromoTech RF-HOT (PG Max)	19760	19760	cpu	ws	9880	886.1	7282.0	0.0	0.2	0.0		True
+PromoterLCNN	988	988	gpu	ws	494	0.541	370.3	0.0	66.8	0.0		True
+PromoterLCNN	1976	1976	gpu	ws	988	1.856	1839.9	2072.9	84.1	13.4	NVIDIA GeForce RTX 3090	True
+PromoterLCNN	2964	2964	gpu	ws	1482	1.134	556.3	0.0	80.0	0.0		True
+PromoterLCNN	3952	3952	gpu	ws	1976	1.98	1864.4	2088.9	84.9	14.5	NVIDIA GeForce RTX 3090	True
+PromoterLCNN	9880	9880	gpu	ws	4940	2.543	1990.5	5168.9	86.0	12.7	NVIDIA GeForce RTX 3090	True
+PromoterLCNN	19760	19760	gpu	ws	9880	3.14	1982.6	5168.9	88.8	25.5	NVIDIA GeForce RTX 3090	True
+iPro-MP (H. pylori)	988	988	gpu	ws	494	531.015	1978.6	0.0	99.4	0.0		True
+iPro-MP (H. pylori)	1976	1976	gpu	ws	988	6.866	1302.6	2390.9	95.4	22.7	NVIDIA GeForce RTX 3090	True
+iPro-MP (H. pylori)	2964	2964	gpu	ws	1482	1595.975	2011.5	0.0	99.6	0.0		True
+iPro-MP (H. pylori)	3952	3952	gpu	ws	1976	14.474	1291.2	2390.9	97.0	26.5	NVIDIA GeForce RTX 3090	True
+iPro-MP (H. pylori)	9880	9880	gpu	ws	4940	34.09	1421.3	2390.9	98.4	33.6	NVIDIA GeForce RTX 3090	True
+iPro-MP (H. pylori)	19760	19760	gpu	ws	9880	68.435	1328.6	2390.9	98.9	37.4	NVIDIA GeForce RTX 3090	True
