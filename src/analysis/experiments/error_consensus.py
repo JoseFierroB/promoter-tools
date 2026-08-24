@@ -1,18 +1,21 @@
 #!/usr/bin/env python3
 """Error analysis + consensus across the 7 tools, per dataset (canonical + GC-matched)."""
+import os
 import sys
+from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 import numpy as np
-from pathlib import Path
 import pandas as pd
-from pathlib import Path
 from sklearn.metrics import roc_auc_score, roc_curve
 from sklearn.isotonic import IsotonicRegression
 import matplotlib; matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
+from src.utils.pred_io import load_preds
+
 ROOT = Path(__file__).resolve().parents[3]
-BASE = Path("/home/fierro/Desktop")
+BASE = Path(os.environ.get("PROMOTER_DATA_DIR", "/home/fierro/Desktop"))
 OUT = ROOT / "output/gc_analysis"
 OUT.mkdir(parents=True, exist_ok=True)
 
@@ -20,22 +23,6 @@ TOOLS = [("lcnn","LCNN"),("ipromp","iPro-MP"),("mldspp","MLDSPP"),("mldspp_75","
          ("promotech","PromoTech"),("fimo","FIMO"),("meme","MEME")]
 SETS = [("d39v","cds"),("d39v","gc30"),("d39v","gc33"),("tigr4","cds"),("tigr4","gc31")]
 NPOS = {"d39v": 988, "tigr4": 738}
-
-def load_preds(root, key, npos):
-    pats = {"lcnn": ("lcnn/lcnn_pos.csv","lcnn/lcnn_neg.csv"),
-            "ipromp": ("ipromp/ipromp_12_predictions.csv",),
-            "mldspp": ("mldspp_pos.csv","mldspp_neg.csv"),
-            "mldspp_75": ("mldspp_75spn_pos.csv","mldspp_75spn_neg.csv"),
-            "promotech": ("promotech/workdir/hot_pg_pos/sequences_predictions.csv","promotech/workdir/hot_pg_neg/sequences_predictions.csv"),
-            "fimo": ("fimo_prok_pos.csv","fimo_prok_neg.csv"),
-            "meme": ("meme_pos.csv","meme_neg.csv")}
-    p = Path(root)
-    if key == "ipromp":
-        df = pd.read_csv(p/pats[key][0], sep="\t")
-        col = "PRED" if "PRED" in df.columns else "Probability"
-        return df[col].values[:npos], df[col].values[npos:]
-    a, b = pats[key]
-    return pd.read_csv(p/a, sep="\t")["PRED"].values, pd.read_csv(p/b, sep="\t")["PRED"].values
 
 def youden_threshold(y, s):
     fpr, tpr, th = roc_curve(y, s)

@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 """MEME runner — STREME de novo discovery + FIMO 2-fold CV."""
 import argparse
-import csv
-import math
 import os
 import random
 import shutil
@@ -15,7 +13,12 @@ from Bio import SeqIO
 import pandas as pd
 
 # Ensure streme/fimo binaries are in PATH
-_ENV_BIN = str(Path(__file__).resolve().parent.parent.parent / "tools/meme/.pixi/envs/default/bin")
+_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(_ROOT) not in os.environ.get("PYTHONPATH", ""):
+    import sys as _sys
+    _sys.path.insert(0, str(_ROOT))
+
+_ENV_BIN = str(_ROOT / "tools/meme/.pixi/envs/default/bin")
 if _ENV_BIN not in os.environ.get("PATH", ""):
     os.environ["PATH"] = f"{_ENV_BIN}:{os.environ.get('PATH', '')}"
 
@@ -74,13 +77,8 @@ def main():
             capture_output=True, text=True,
             timeout=max(300, int(len(test_pos) + len(test_neg)) / 40.0 * 3))
 
-        for row in csv.DictReader(res.stdout.splitlines(), delimiter="\t"):
-            try:
-                pval = float(row["p-value"])
-            except (ValueError, KeyError, TypeError):
-                continue
-            nl = 999.0 if pval <= 0 else -math.log10(pval)
-            s = row["sequence_name"]
+        from src.runners._shared import fimo_score_merge
+        for s, nl in fimo_score_merge(res.stdout).items():
             if s not in all_scores or nl > all_scores[s]:
                 all_scores[s] = nl
 

@@ -117,10 +117,12 @@ def delong_test(y_true: np.ndarray, scores_a: np.ndarray,
         from scipy.stats import norm
         p_value = 2 * (1 - norm.cdf(abs(z)))
 
+    se = np.sqrt(var_diff) if var_diff > 0 else np.nan
     return {
         "auc_a": round(float(auc_a), 4),
         "auc_b": round(float(auc_b), 4),
         "delta_auc": round(float(auc_a - auc_b), 4),
+        "delta_auc_se": round(float(se), 4) if se == se else None,
         "p_value": round(float(p_value), 4),
         "significant": bool(p_value < 0.05),
     }

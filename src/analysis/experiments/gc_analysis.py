@@ -1,12 +1,18 @@
 #!/usr/bin/env python3
 """GC experiment full analysis: calibration, conservation, confusion, DeLong+Holm, duplicates, sigma."""
 import sys
-sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 import pandas as pd
 import numpy as np
-from pathlib import Path
 from sklearn.metrics import roc_auc_score, roc_curve, confusion_matrix
+from src.utils.pred_io import load_preds
+
+
+def load_preds_gc(root, key):
+    npos = NPOS.get(Path(root).parent.parent.name.split("_")[0], None)
+    return load_preds(root, key, npos)
 from scipy.stats import norm
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -18,25 +24,9 @@ TOOLS = [("lcnn","LCNN"),("ipromp","iPro-MP"),("mldspp","MLDSPP"),("mldspp_75","
 SETS = [("d39v","cds"),("d39v","gc30"),("d39v","gc33"),("tigr4","cds"),("tigr4","gc31")]
 NPOS = {"d39v": 988, "tigr4": 738}
 
-def load_preds(root, key):
-    p = Path(root)
-    pats = {"lcnn": ("lcnn/lcnn_pos.csv","lcnn/lcnn_neg.csv"),
-            "ipromp": ("ipromp/ipromp_12_predictions.csv",),
-            "mldspp": ("mldspp_pos.csv","mldspp_neg.csv"),
-            "mldspp_75": ("mldspp_75spn_pos.csv","mldspp_75spn_neg.csv"),
-            "promotech": ("promotech/workdir/hot_pg_pos/sequences_predictions.csv","promotech/workdir/hot_pg_neg/sequences_predictions.csv"),
-            "fimo": ("fimo_prok_pos.csv","fimo_prok_neg.csv"),
-            "meme": ("meme_pos.csv","meme_neg.csv")}
-    if key == "ipromp":
-        df = pd.read_csv(p/pats[key][0], sep="\t")
-        col = "PRED" if "PRED" in df.columns else "Probability"
-        npos = NPOS.get(p.parent.parent.name.split("_")[0], len(df)//2)
-        return df[col].values[:npos], df[col].values[npos:]
-    a, b = pats[key]
-    return pd.read_csv(p/a, sep="\t")["PRED"].values, pd.read_csv(p/b, sep="\t")["PRED"].values
 
 def get_scores(root, key, npos):
-    pos, neg = load_preds(root, key)
+    pos, neg = load_preds_gc(root, key)
     return np.r_[pos, neg[:npos-len(pos)] if len(pos) < npos else pos], np.r_[np.ones(npos), np.zeros(len(pos)+len(neg)-npos)]
 
 # ── Brier + reliability (isotonic-calibrated) ──
@@ -107,7 +97,7 @@ for sname, sset in SETS:
     root = Path("/home/fierro/Desktop")/f"d39v_gc/{sset}/predictions"
     for key, lab in TOOLS:
         try:
-            pos, neg = load_preds(root, key)
+            pos, neg = load_preds_gc(root, key)
         except Exception:
             continue
         y = np.r_[np.ones(len(pos)), np.zeros(len(neg))]
@@ -130,7 +120,7 @@ for sname, sset in SETS:
     npos = NPOS[sname]
     for key, lab in TOOLS:
         try:
-            pos, neg = load_preds(root, key)
+            pos, neg = load_preds_gc(root, key)
         except Exception:
             continue
         s = np.r_[pos, neg]; y = np.r_[np.ones(len(pos)), np.zeros(len(neg))]
@@ -147,7 +137,7 @@ for sname, sset in [("d39v","cds"),("d39v","gc30"),("tigr4","cds"),("tigr4","gc3
     print(f"{'tool':<11}{'AUC':>7}{'TP':>5}{'FN':>5}{'FP':>5}{'TN':>5}{'Sens':>7}{'Spec':>7}{'F1':>7}")
     for key, lab in TOOLS:
         try:
-            pos, neg = load_preds(root, key)
+            pos, neg = load_preds_gc(root, key)
         except Exception:
             continue
         y = np.r_[np.ones(len(pos)), np.zeros(len(neg))]; s = np.r_[pos, neg]
@@ -176,7 +166,7 @@ root_g = Path("/home/fierro/Desktop/d39v_gc/gc30/predictions")
 data = {}
 for key, lab in TOOLS:
     try:
-        pc, nc = load_preds(root_c, key); pg, ng = load_preds(root_g, key)
+        pc, nc = load_preds_gc(root_c, key); pg, ng = load_preds_gc(root_g, key)
     except Exception:
         continue
     data[lab] = (pc, nc, pg, ng)
@@ -222,7 +212,7 @@ for i, s in enumerate(pos_seqs):
 root = Path("/home/fierro/Desktop/d39v_gc/cds/predictions")
 for key, lab in TOOLS:
     try:
-        pos, neg = load_preds(root, key)
+        pos, neg = load_preds_gc(root, key)
     except Exception:
         continue
     y = np.r_[np.ones(len(pos)), np.zeros(len(neg))]; s = np.r_[pos, neg]
@@ -237,7 +227,7 @@ for sset in ["cds", "gc30"]:
     print(f"-- {sset} --")
     for key, lab in TOOLS:
         try:
-            pos, neg = load_preds(root, key)
+            pos, neg = load_preds_gc(root, key)
         except Exception:
             continue
         s = np.r_[pos, neg]

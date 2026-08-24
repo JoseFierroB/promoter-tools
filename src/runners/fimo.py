@@ -6,7 +6,6 @@ fimo_prok.py / fimo_db.py, which inject --db/--label/--tag.
 """
 import argparse
 import concurrent.futures
-import csv
 import math
 import os
 import shutil
@@ -18,7 +17,12 @@ from pathlib import Path
 from Bio import SeqIO
 import pandas as pd
 
-_ENV_BIN = str(Path(__file__).resolve().parent.parent.parent / "tools/meme/.pixi/envs/default/bin")
+_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(_ROOT) not in os.environ.get("PYTHONPATH", ""):
+    import sys as _sys
+    _sys.path.insert(0, str(_ROOT))
+
+_ENV_BIN = str(_ROOT / "tools/meme/.pixi/envs/default/bin")
 if _ENV_BIN not in os.environ.get("PATH", ""):
     os.environ["PATH"] = f"{_ENV_BIN}:{os.environ.get('PATH', '')}"
 
@@ -66,13 +70,8 @@ def main():
 
     scores = {}
     for out in outs:
-        for row in csv.DictReader(out.splitlines(), delimiter="\t"):
-            try:
-                pv = float(row["p-value"])
-            except (ValueError, KeyError, TypeError):
-                continue
-            nl = 999.0 if pv <= 0 else -math.log10(pv)
-            s = row["sequence_name"]
+        from src.runners._shared import fimo_score_merge
+        for s, nl in fimo_score_merge(out).items():
             if s not in scores or nl > scores[s]:
                 scores[s] = nl
 

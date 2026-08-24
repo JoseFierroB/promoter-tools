@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """XGBoost feature comparison: SantaLucia energy vs raw sequence encodings (MLDSPP protocol)."""
 import sys
+from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 import numpy as np
-from pathlib import Path
 import pandas as pd
-from pathlib import Path
 from xgboost import XGBClassifier
 from Bio import SeqIO
 from sklearn.metrics import roc_auc_score

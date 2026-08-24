@@ -4,11 +4,11 @@ Two negative schemes (sequence uShuffle / feature permutation), 10 seeds,
 controls: intra-GC-class table permutation (null) and additive OHE+SantaLucia.
 """
 import sys
+from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 import numpy as np
-from pathlib import Path
 import pandas as pd
-from pathlib import Path
 from xgboost import XGBClassifier
 from Bio import SeqIO
 from collections import Counter

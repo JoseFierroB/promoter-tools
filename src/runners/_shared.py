@@ -24,6 +24,24 @@ def extract_aligned(seq):
     return np.array([STABILITY_MAP.get(s[i:i + 2], -1.35) for i in range(79)])
 
 
+def fimo_score_merge(stdout: str) -> dict:
+    """Merge FIMO --text output: max -log10(p-value) per sequence name."""
+    import csv
+    import math
+
+    scores = {}
+    for row in csv.DictReader(stdout.splitlines(), delimiter="\t"):
+        try:
+            pv = float(row["p-value"])
+        except (ValueError, KeyError, TypeError):
+            continue
+        nl = 999.0 if pv <= 0 else -math.log10(pv)
+        s = row["sequence_name"]
+        if s not in scores or nl > scores[s]:
+            scores[s] = nl
+    return scores
+
+
 def get_promotech_python(promotech_dir):
     """Resolve the python binary from PromoTech's pixi environment."""
     from src.config import config
