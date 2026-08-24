@@ -222,9 +222,15 @@ def extract_promoter_windows(
         gc_count = kmer.count("G") + kmer.count("C")
         gc_content = (gc_count / window_size) * 100.0
 
-        utr_len = row.get("5'-UTR_length", row.get("Primary_5'-UTR_length", None))
-        loc_type = row.get("Within_coding_vs_intergenic", "intergenic")
         sheet_source = row.get("_Source_Sheet", "Unknown")
+        is_secondary = str(sheet_source).startswith("Secondary")
+        utr_key = f"Secondary_5'-UTR_length" if is_secondary else f"Primary_5'-UTR_length"
+        cov_key = f"Secondary_Processed_cov" if is_secondary else f"Primary_Processed_cov"
+        ratio_key = f"Secondary_Ratio" if is_secondary else f"Primary_Ratio"
+        utr_len = row.get(utr_key, None)
+        if pd.isna(utr_len):
+            utr_len = row.get("5'-UTR_length", None)
+        loc_type = row.get("Within_coding_vs_intergenic", "intergenic")
 
         seq_id = f"TIGR4_{locus}_TSS_{tss_pos}_{strand}"
 
@@ -242,8 +248,8 @@ def extract_promoter_windows(
             "UTR5_Length": utr_len if pd.notna(utr_len) else "NA",
             "Location_Type": loc_type,
             "Confidence_Sheet": sheet_source,
-            "Processed_Coverage": row.get("Processed_coverage", row.get("Primary_Processed_cov", "NA")),
-            "Processed_Ratio": row.get("Processed/unprocessed ratio", row.get("Primary_Ratio", "NA")),
+            "Processed_Coverage": row.get(cov_key, "NA"),
+            "Processed_Ratio": row.get(ratio_key, "NA"),
         })
 
     return extracted_records, exclusion_stats

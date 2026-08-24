@@ -28,15 +28,19 @@ def _count_seqs(fasta: Path) -> int:
 
 
 def _pick_mldspp_split(pos_fasta: Path) -> Optional[str]:
-    """Pick the mldspp_75 split built for `pos_fasta` by matching sizes.
+    """Pick the mldspp_75 split built for `pos_fasta` by size and name.
 
     A split covers exactly n_pos positive sequences when len(train_idx) +
-    len(test_idx) == n_pos (the 2k split's train_idx ends at 1998, so
-    max-index matching is unreliable). Returns the filename, or None if no
-    (or ambiguous) split matches.
+    len(test_idx) == n_pos. When several splits share the same size (e.g.
+    d39v and scale_db_988, which are content-identical), the FASTA path is
+    used to disambiguate by name overlap (d39v, tigr4_high, scale_db, ...).
+    Returns the filename, or None if no (or ambiguous) split matches.
     """
+    import re
+
     n_pos = _count_seqs(pos_fasta)
-    matches = []
+    fname = str(pos_fasta).lower()
+    candidates = []
     for split in sorted((config.data_dir / "benchmark").glob("mldspp_75_split_*.npz")):
         try:
             d = np.load(split)
@@ -44,8 +48,25 @@ def _pick_mldspp_split(pos_fasta: Path) -> Optional[str]:
         except Exception:
             continue
         if covered == n_pos:
-            matches.append(split.name)
-    return matches[0] if len(matches) == 1 else None
+            candidates.append(split.name)
+    if not candidates:
+        return None
+    if len(candidates) == 1:
+        return candidates[0]
+    path_toks = set(re.split(r"[_\-.\\/]+", fname))
+    scored = []
+    for name in candidates:
+        sname = name.replace("mldspp_75_split_", "").replace(".npz", "")
+        s_toks = set(re.split(r"[_\-.]+", sname))
+        overlap = len(s_toks & path_toks)
+        if overlap > 0:
+            scored.append((overlap, name))
+    if not scored:
+        return None
+    scored.sort(reverse=True)
+    best_overlap = scored[0][0]
+    winners = [name for ov, name in scored if ov == best_overlap]
+    return winners[0] if len(winners) == 1 else None
 
 
 def _promotech_timeout(n_seqs: int) -> int:
@@ -122,6 +143,8 @@ class LocalRunner(Runner):
                 "-m", str(config.ipromp_model_dir),
                 "-d", str(config.dnabert_dir),
             ]
+            if os.environ.get("IPROMP_SPECIES", ""):
+                cmd += ["--species", os.environ["IPROMP_SPECIES"]]
         if "promotech" in tool.short_name:
             cmd += ["--timeout", str(_promotech_timeout(n_seqs))]
         if tool.short_name == "lcnn" and os.environ.get("PROMOTER_TOOLS_LCNN_BATCH", ""):

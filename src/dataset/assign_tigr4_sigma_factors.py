@@ -22,7 +22,7 @@ ROOT = Path(__file__).resolve().parent.parent.parent
 DATA_DIR = ROOT / "data"
 TIGR4_DIR = DATA_DIR / "tigr4"
 BENCHMARK_DIR = DATA_DIR / "benchmark"
-M8_FILE = ROOT / "output" / "intergenic" / "mmseqs2" / "cross" / "D39V_vs_TIGR4.m8"
+
 
 def is_sigx_combox(seq_81bp: str) -> bool:
     """Check window [-35, -1] (indices 25:60 in 81-mer centered at TSS index 60) for SigX combox."""
@@ -34,32 +34,44 @@ def is_sigx_combox(seq_81bp: str) -> bool:
     return False
 
 def find_minus_10(seq_81bp: str) -> tuple[str, int]:
-    """Find -10 hexamer in window [-18, -6] (indices 42:55 in 81-mer)."""
+    """Find -10 hexamer in window [-20, -5] (indices 40:55 in 81-mer).
+
+    Returns (None, None) when no match is found (no fabricated default).
+    """
     window = seq_81bp[40:55]
-    # Look for canonical TATAAT or extended TRTGNT
     match = re.search(r"TA[AT]AA[AT]|T[AG]T[AG]NT|TATAAT|TACAAT|TAAAAT|TATACT|TATATT", window)
     if match:
         hexamer = match.group(0)
         pos_from_tss = 60 - (40 + match.start())
         return hexamer, pos_from_tss
-    return "TATAAT", 12
+    return None, None
 
 def process_tigr4_sigma_assignment():
     print("Executing TIGR4 Sigma Factor Assignment Pipeline...")
 
-    # Load D39V SigX reference promoters
-    d39v_sigx_df = pd.read_csv(BENCHMARK_DIR / "d39v" / "confirmed" / "positives_81bp_SigX_metadata.tsv", sep="\t")
-    sigx_genes_d39v = set(d39v_sigx_df["Downstream_Gene"].dropna().unique())
-    print(f"Loaded {len(sigx_genes_d39v)} D39V SigX reference target genes.")
+    # Cross-strain orthology: conserved IGR pairs D39V -> TIGR4 with D39V sigmas
+    validation_path = ROOT / "output" / "tables" / "conserved_igrs_tss_validation.tsv"
+    if not validation_path.exists():
+        print(f"Error: {validation_path} not found (run the cross-strain conservation pipeline first).")
+        return
+    val_df = pd.read_csv(validation_path, sep="\t")
+    tigr4_sigmas = dict(zip(val_df["target_tigr4"].astype(str), val_df["sigmas_d39v"].astype(str)))
 
-    # Load MMseqs2 alignment
-    m8_df = pd.read_csv(M8_FILE, sep="\t", header=None,
-                        names=["query", "target", "pident", "alnlen", "mism", "gaps", "qs", "qe", "ts", "te", "eval", "bits"])
+    # TIGR4 IGR intervals (to map each TSS to its intergenic region)
+    igr_path = ROOT / "output" / "intergenic" / "tigr4" / "TIGR4_igrs.tsv"
+    tigr4_igrs = pd.read_csv(igr_path, sep="\t")
+
+    def ortholog_sigx(tss_pos: int) -> bool:
+        m = tigr4_igrs[(tigr4_igrs["start"] <= tss_pos) & (tss_pos <= tigr4_igrs["end"])]
+        if len(m) == 0:
+            return False
+        sigmas = tigr4_sigmas.get(str(m.iloc[0]["igr_id"]), "")
+        return "SigX" in sigmas
 
     # Load TIGR4 High-Confidence dataset
     high_meta_path = TIGR4_DIR / "positives_high_81bp_metadata.tsv"
     high_fasta_path = TIGR4_DIR / "positives_high_81bp.fasta"
-    
+
     if not high_meta_path.exists():
         print(f"Error: {high_meta_path} not found.")
         return
@@ -79,15 +91,20 @@ def process_tigr4_sigma_assignment():
         if not seq_81bp:
             continue
 
-        # Check SigX combox motif or orthology
+        # SigX: combox motif and/or orthologous D39V SigX IGR
         is_sigx = is_sigx_combox(seq_81bp)
-        
+        tss_pos = int(row["TSS_Position"])
+        if ortholog_sigx(tss_pos):
+            is_sigx = True
+
         minus_10, dist = find_minus_10(seq_81bp)
+        minus_10_str = minus_10 if minus_10 is not None else "NA"
+        dist_str = dist if dist is not None else "NA"
 
         if is_sigx:
             sigma = "SigX"
             sig_counts["SigX"] += 1
-            sigx_records.append(SeqRecord(Seq(seq_81bp), id=seq_id, description=f"Sigma=SigX -10={minus_10}"))
+            sigx_records.append(SeqRecord(Seq(seq_81bp), id=seq_id, description=f"Sigma=SigX -10={minus_10_str}"))
         else:
             # All remaining TIGR4 TSSs are assigned as SigA or SigA-Putative
             sigma = "SigA" if "TATAAT" in seq_81bp[35:55] else "SigA_Putative"
@@ -95,12 +112,12 @@ def process_tigr4_sigma_assignment():
                 sig_counts["SigA"] += 1
             else:
                 sig_counts["SigA_Putative"] += 1
-            siga_records.append(SeqRecord(Seq(seq_81bp), id=seq_id, description=f"Sigma={sigma} -10={minus_10}"))
+            siga_records.append(SeqRecord(Seq(seq_81bp), id=seq_id, description=f"Sigma={sigma} -10={minus_10_str}"))
 
         row_dict = row.to_dict()
         row_dict["Sigma_Factor"] = sigma
-        row_dict["Minus_10_Seq"] = minus_10
-        row_dict["Minus_10_Dist_bp"] = dist
+        row_dict["Minus_10_Seq"] = minus_10_str
+        row_dict["Minus_10_Dist_bp"] = dist_str
         sig_assigned.append(row_dict)
 
     df_assigned = pd.DataFrame(sig_assigned)
