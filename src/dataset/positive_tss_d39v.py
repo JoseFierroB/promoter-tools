@@ -17,9 +17,6 @@ from Bio import SeqIO
 from BCBio import GFF
 
 # Hardcoded chromosome mappings (e.g. NCBI RefSeq accession to friendly/custom name)
-DEFAULT_CHROM_MAP = {
-    "CP027540.1": "D39V"
-}
 
 # Mapping of regulator binding site names to their respective sigma factor class
 SIGMA_FACTOR_MAPPING = {
@@ -62,70 +59,6 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument("--conflict-threshold", type=int, default=25, help="Distance threshold (bp) to flag steric hindrance same-strand conflicts (default: 25).")
     
     return parser.parse_args()
-
-def resolve_chrom_name(chrom: str, target_data: Dict, chrom_map: Dict[str, str] = None) -> str:
-    """Resolves chromosome name mapping, checking exact matches, JSON mapping, and then fallback heuristics."""
-    if chrom in target_data:
-        return chrom
-        
-    if chrom_map:
-        if chrom in chrom_map and chrom_map[chrom] in target_data:
-            return chrom_map[chrom]
-        for k, v in chrom_map.items():
-            if v == chrom and k in target_data:
-                return k
-            if k == chrom and v in target_data:
-                return v
-    
-    chrom_lower = chrom.lower()
-    for k in target_data:
-        if k.lower() == chrom_lower:
-            return k
-            
-    def clean_name(name):
-        return re.sub(r"\.[0-9]+$", "", name).strip()
-    
-    clean_chrom = clean_name(chrom)
-    for k in target_data:
-        if clean_name(k) == clean_chrom:
-            return k
-            
-    if len(target_data) == 1:
-        single_chrom = list(target_data.keys())[0]
-        if not hasattr(resolve_chrom_name, "_warned"):
-            print(f"[INFO] Mapping chromosome '{chrom}' to target chromosome '{single_chrom}' (single-chromosome match).", file=sys.stderr)
-            resolve_chrom_name._warned = True
-        return single_chrom
-        
-    return chrom
-
-# Hard identification of TSS features in GFF3 trees
-def get_all_tss(features):
-    """Recursive generator to yield nested TSS features from GFF3 trees."""
-    for f in features:
-        is_tss = False
-        if f.type == 'transcription_start_site':
-            is_tss = True
-        elif f.type in ('sequence_feature', 'misc_feature', 'regulatory'):
-            for key, val_list in f.qualifiers.items():
-                val_str = " ".join(val_list).lower()
-                if "transcription start site" in val_str or "tss" in val_str:
-                    is_tss = True
-                    break
-        
-        if is_tss:
-            yield f
-            
-        sub_feats = getattr(f, 'sub_features', None) or getattr(f, 'features', []) # Support for both BCBio and Biopython GFF parsing
-        if sub_feats:
-            yield from get_all_tss(sub_feats) # yield from nested features
-
-# %CG for a given sequence, obverving the CG composition for the extracted promoters
-def calculate_gc(seq_str: str) -> float:
-    """Calculates GC content percentage of a sequence."""
-    g = seq_str.count('G')
-    c = seq_str.count('C')
-    return ((g + c) / len(seq_str) * 100) if len(seq_str) > 0 else 0.0
 
 
 def load_cds_and_regulators(gff_cds_path: str) -> Tuple[Dict[str, List[Tuple[int, int, str]]], Dict[str, List[Tuple[int, int, str, str, str]]]]:
@@ -176,7 +109,7 @@ def load_cds_and_regulators(gff_cds_path: str) -> Tuple[Dict[str, List[Tuple[int
 
 def find_associated_regulator(chrom: str, pos: int, strand: str, regulator_data: Dict, chrom_map: Dict, max_dist=50) -> Tuple[str, str]:
     """Finds the closest upstream protein binding site on the same strand within max_dist bp."""
-    resolved_reg_chrom = resolve_chrom_name(chrom, regulator_data, chrom_map)
+    resolved_reg_chrom = chrom
     if resolved_reg_chrom not in regulator_data or not regulator_data[resolved_reg_chrom]:
         return "None", "N/A"
         
@@ -195,7 +128,7 @@ def find_associated_regulator(chrom: str, pos: int, strand: str, regulator_data:
 
 def find_downstream_cds_distance(chrom: str, pos: int, strand: str, cds_data: Dict, chrom_map: Dict) -> Tuple[str, str]:
     """Finds the closest downstream CDS on the same strand and calculates the distance (5' UTR length)."""
-    resolved_cds_chrom = resolve_chrom_name(chrom, cds_data, chrom_map)
+    resolved_cds_chrom = chrom
     if resolved_cds_chrom not in cds_data or not cds_data[resolved_cds_chrom]:
         return "None", "N/A"
         
@@ -246,7 +179,7 @@ def determine_sigma_factor(chrom: str, pos: int, strand: str, regulator_data: Di
     If both exist, resolves conflict by selecting the one closer to the TSS.
     Returns (sigma_name, assoc_site_tuple) where assoc_site_tuple is (chrom, start, end, strand, reg_name).
     """
-    resolved_reg_chrom = resolve_chrom_name(chrom, regulator_data, chrom_map)
+    resolved_reg_chrom = chrom
     if resolved_reg_chrom not in regulator_data or not regulator_data[resolved_reg_chrom]:
         return "None", None
         
@@ -397,7 +330,6 @@ def extract_positives() -> None:
     window_size = args.upstream + args.downstream + 1
 
     # Use default hardcoded chromosome mapping
-    chrom_map = DEFAULT_CHROM_MAP
 
     # Load structural annotations (CDS & Regulators)
     cds_data, regulator_data = load_cds_and_regulators(args.gff_cds)
@@ -425,7 +357,7 @@ def extract_positives() -> None:
 
     for rec in parsed_records:
         chrom = rec.id
-        resolved_genome_chrom = resolve_chrom_name(chrom, genome, chrom_map)
+        resolved_genome_chrom = chrom
         if resolved_genome_chrom not in genome:
             print(f"[WARNING] Chromosome '{chrom}' (resolved as '{resolved_genome_chrom}') not found in genome FASTA.", file=sys.stderr)
             continue
@@ -654,7 +586,7 @@ def extract_positives() -> None:
         for tss in analyzed_list:
             if not tss["is_representative"]:
                 continue
-            res_tss_chrom = resolve_chrom_name(tss["chrom"], genome, chrom_map)
+            res_tss_chrom = tss["chrom"]
             if res_tss_chrom != u_chrom or tss["strand"] != u_strand:
                 continue
             

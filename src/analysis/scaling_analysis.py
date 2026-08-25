@@ -235,25 +235,37 @@ def generate_all_figures(df):
     save_plot_everywhere(fig, "scaling_ram_linear")
     plt.close(fig)
 
-    # 4. VRAM DEDICATED O(1)
+    # 4. VRAM DEDICATED (measured per tool from peak_vram_mb)
     fig, ax = plt.subplots(figsize=(9, 6), dpi=300)
-    ipro_vram = [2390.9] * len(scales)
-    lcnn_vram = [497.2] * len(scales)
-    
-    ax.plot(scales, ipro_vram, marker="o", color="#3D185A",
-            linewidth=2.5, markersize=8, label="iPro-MP (DNABERT-6 on RTX 3090)")
-    ax.plot(scales, lcnn_vram, marker="s", color="#228B22",
-            linewidth=2.5, markersize=8, linestyle="--", label="PromoterLCNN (CNN 1D on RTX 3090/5090)")
-    
+
+    def _vram_series(df, tool_name):
+        sub = df[(df["tool"] == tool_name) & df["peak_vram_mb"].notna() & (df["peak_vram_mb"] > 0)]
+        return sub.sort_values("scale_N")[["scale_N", "peak_vram_mb"]]
+
+    for tool_name, marker in [
+        ("iPro-MP (H. pylori)", "o"),
+        ("PromoterLCNN", "s"),
+    ]:
+        vr = _vram_series(df, tool_name)
+        if vr.empty:
+            continue
+        meta = TOOL_INFO.get(tool_name, {"color": "#666666"})
+        med = float(vr["peak_vram_mb"].median())
+        ax.plot(vr["scale_N"], vr["peak_vram_mb"], marker=marker, color=meta["color"],
+                linewidth=1.2, markersize=8, linestyle="None", alpha=0.85,
+                label=f"{meta['short']} (medido)")
+        ax.axhline(med, color=meta["color"], linestyle=":", alpha=0.55,
+                   label=f"{meta['short']} mediana ≈ {med:,.0f} MB")
+
     ax.set_xscale("log")
-    ax.set_ylim(0, 3500)
+    all_vram = [vr["peak_vram_mb"] for vr in
+                [_vram_series(df, t) for t in ("iPro-MP (H. pylori)", "PromoterLCNN")]
+                if not vr.empty]
+    ymax = max(pd.concat(all_vram)) * 1.15 if all_vram else 3500
+    ax.set_ylim(0, ymax)
     ax.set_xlabel("Total Sequences (N)", fontsize=11, fontweight="bold")
     ax.set_ylabel("Peak GPU VRAM (MB)", fontsize=11, fontweight="bold")
-    ax.set_title("GPU VRAM Consumption vs Sequence Scale", fontsize=12, fontweight="bold", pad=15)
-    ax.axhline(2390.9, color="#3D185A", linestyle=":", alpha=0.6)
-    ax.text(2500, 2500, "iPro-MP Stable Buffer ~2.39 GB VRAM", fontsize=9.5, fontweight="bold", color="#3D185A")
-    ax.axhline(497.2, color="#228B22", linestyle=":", alpha=0.6)
-    ax.text(2500, 600, "LCNN Stable Buffer ~497 MB VRAM", fontsize=9.5, fontweight="bold", color="#228B22")
+    ax.set_title("GPU VRAM vs Dataset Size — constant w.r.t. N (fixed batching)", fontsize=12, fontweight="bold", pad=15)
     ax.grid(True, which="both", linestyle="--", alpha=0.4)
     ax.legend(frameon=True, fontsize=9.5, loc="center right")
     plt.tight_layout()

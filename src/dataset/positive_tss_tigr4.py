@@ -32,8 +32,16 @@ from typing import Dict, List, Tuple
 
 import numpy as np
 import pandas as pd
+import sys
+from pathlib import Path as _Path
+sys.path.insert(0, str(_Path(__file__).resolve().parents[2]))
+
 from Bio import SeqIO
 from Bio.Seq import Seq
+
+from src.dataset._tigr4_common import load_genome, write_dataset_files, compute_gc_statistics
+
+from src.dataset._tigr4_common import load_genome, write_dataset_files, compute_gc_statistics
 
 
 # ════════════════════════════════════════════════════════════════
@@ -94,28 +102,6 @@ def parse_arguments() -> argparse.Namespace:
 # ════════════════════════════════════════════════════════════════
 # 2. Genome Loading & Validation
 # ════════════════════════════════════════════════════════════════
-
-def load_genome(fasta_path: Path) -> Tuple[str, Seq, int]:
-    if not fasta_path.exists():
-        alt_fasta = fasta_path.parent / "TIGR4.fasta"
-        if alt_fasta.exists():
-            fasta_path = alt_fasta
-        else:
-            print(f"[ERROR] FASTA file not found at {fasta_path}", file=sys.stderr)
-            sys.exit(1)
-
-    genome_dict = SeqIO.to_dict(SeqIO.parse(fasta_path, "fasta"))
-    if not genome_dict:
-        print(f"[ERROR] Could not parse FASTA from {fasta_path}", file=sys.stderr)
-        sys.exit(1)
-
-    chrom_id = list(genome_dict.keys())[0]
-    seq = genome_dict[chrom_id].seq
-    seq_len = len(seq)
-
-    print(f"[INFO] Loaded genome '{chrom_id}' (length: {seq_len:,} bp) from {fasta_path.name}")
-    return chrom_id, seq, seq_len
-
 
 # ════════════════════════════════════════════════════════════════
 # 3. Excel Sheet Filtering & Loading
@@ -322,99 +308,9 @@ def _pick_best_tss_in_cluster(cluster: List[Dict]) -> Dict:
 # 6. Advanced GC Bias & Biological Validation Metrics
 # ════════════════════════════════════════════════════════════════
 
-def compute_gc_statistics(records: List[Dict], genome_seq: Seq, upstream: int = 60) -> Dict:
-    if not records:
-        return {}
-
-    sampled_gc = [r["GC_Content"] for r in records]
-    mean_gc = float(np.mean(sampled_gc))
-    stdev_gc = float(np.std(sampled_gc, ddof=1)) if len(sampled_gc) > 1 else 0.0
-
-    gen_seq_str = str(genome_seq).upper()
-    gc_gen_count = gen_seq_str.count("G") + gen_seq_str.count("C")
-    gen_gc_mean = (gc_gen_count / len(gen_seq_str)) * 100.0
-
-    n = len(sampled_gc)
-    std_error = stdev_gc / math.sqrt(n) if n > 0 and stdev_gc > 0 else 1.0
-    z_score = (mean_gc - gen_gc_mean) / std_error if std_error > 0 else 0.0
-    cohen_d = (mean_gc - gen_gc_mean) / stdev_gc if stdev_gc > 0 else 0.0
-
-    plus1_bases = [r["Sequence"][upstream] for r in records if len(r["Sequence"]) > upstream]
-    n_plus1 = len(plus1_bases)
-    n_a = plus1_bases.count("A")
-    n_g = plus1_bases.count("G")
-    n_c = plus1_bases.count("C")
-    n_t = plus1_bases.count("T")
-    purines_pct = ((n_a + n_g) / n_plus1 * 100.0) if n_plus1 > 0 else 0.0
-
-    pribnow_matches = 0
-    pribnow_exact = 0
-    for r in records:
-        seq = r["Sequence"]
-        if len(seq) == upstream + 1 + 20:
-            window = seq[40:57]
-            if "TATAAT" in window:
-                pribnow_exact += 1
-                pribnow_matches += 1
-            elif re.search(r"TA[ATGC]{3}T", window) or re.search(r"TA[ATGC]{2}AT", window):
-                pribnow_matches += 1
-
-    pribnow_pct = (pribnow_matches / n * 100.0) if n > 0 else 0.0
-    pribnow_exact_pct = (pribnow_exact / n * 100.0) if n > 0 else 0.0
-
-    valid_utrs = []
-    for r in records:
-        u_len = r.get("UTR5_Length")
-        try:
-            u_num = float(u_len)
-            if not math.isnan(u_num):
-                valid_utrs.append(u_num)
-        except (ValueError, TypeError):
-            continue
-
-    n_utrs = len(valid_utrs)
-    canonical_utrs = [u for u in valid_utrs if 15 <= u <= 45]
-    canonical_utr_pct = (len(canonical_utrs) / n_utrs * 100.0) if n_utrs > 0 else 0.0
-
-    return {
-        "n_samples": n,
-        "mean_gc": mean_gc,
-        "stdev_gc": stdev_gc,
-        "genome_gc_mean": gen_gc_mean,
-        "z_score": z_score,
-        "cohen_d": cohen_d,
-        "plus1_purines_pct": purines_pct,
-        "plus1_a_pct": (n_a / n_plus1 * 100.0) if n_plus1 > 0 else 0.0,
-        "plus1_g_pct": (n_g / n_plus1 * 100.0) if n_plus1 > 0 else 0.0,
-        "pribnow_pct": pribnow_pct,
-        "pribnow_exact_pct": pribnow_exact_pct,
-        "canonical_utr_pct": canonical_utr_pct,
-        "n_utrs": n_utrs,
-    }
-
-
 # ════════════════════════════════════════════════════════════════
 # 7. Dataset Exporters (.fasta & .tsv)
 # ════════════════════════════════════════════════════════════════
-
-def write_dataset_files(records: List[Dict], out_prefix: Path) -> Tuple[Path, Path]:
-    out_prefix.parent.mkdir(parents=True, exist_ok=True)
-    fasta_out = out_prefix.with_suffix(".fasta")
-    tsv_out = out_prefix.with_suffix(".tsv")
-
-    with open(fasta_out, "w") as f:
-        for r in records:
-            f.write(f">{r['Sequence_ID']}\n{r['Sequence']}\n")
-
-    df_meta = pd.DataFrame(records)
-    if "Sequence" in df_meta.columns:
-        df_meta_clean = df_meta.drop(columns=["Sequence"])
-    else:
-        df_meta_clean = df_meta
-
-    df_meta_clean.to_csv(tsv_out, sep="\t", index=False)
-    return fasta_out, tsv_out
-
 
 # ════════════════════════════════════════════════════════════════
 # 8. Executive Console Summary

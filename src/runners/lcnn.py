@@ -48,7 +48,6 @@ def main():
     import tensorflow.compat.v1 as tf
     tf.disable_eager_execution()
 
-    t0 = time.perf_counter()
     probs = np.empty(len(seqs), dtype=np.float32)
     with tf.Session() as sess:
         meta_graph_def = tf.saved_model.loader.load(sess, [tf.saved_model.tag_constants.SERVING], args.model)

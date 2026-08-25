@@ -72,19 +72,8 @@ def in_cds(pos):
             return True
     return False
 
-cls_tab = pd.read_csv(ROOT/"output/tables/tss_position_classification.tsv", sep="\t")
-cls_tab = cls_tab[cls_tab["strain"]=="D39V"].set_index("tss_id")
-classes = []
-for _, r in meta.iterrows():
-    c = cls_tab.loc[r["Sequence_ID"], "classification"]
-    if c in ("CDS_deep", "CDS_near_start"):
-        classes.append("intragenic")
-    elif c.startswith("IGR"):
-        gid = cls_tab.loc[r["Sequence_ID"], "igr_id"]
-        classes.append("conserved" if str(gid) in hit_igrs else "nonconserved")
-    else:
-        classes.append("other")
-meta["class_cons"] = classes
+from src.analysis.experiments._conservation import build_conservation_classes
+meta = build_conservation_classes(Path(__file__).resolve().parents[3] / "data/benchmark/d39v/positives_81bp_metadata.tsv")
 print("=== verificación de clases ===")
 print(meta["class_cons"].value_counts().to_string())
 print("original: conserved=647 nonconserved=157 intragenic=184")
@@ -197,7 +186,8 @@ m = len(pvals)
 pvals_sorted = sorted(pvals, key=lambda x: x[2])
 adj = {}
 for k, (la, lb, p) in enumerate(pvals_sorted):
-    adj[(la, lb)] = min(1.0, p * (m - k))
+    prev = max((adj[(pvals_sorted[i][0], pvals_sorted[i][1])] for i in range(k)), default=0.0)
+    adj[(la, lb)] = max(min(1.0, p * (m - k)), prev)
 for la, lb, p in pvals_sorted:
     print(f"  Δ(ΔAUC) {la} vs {lb}: diff={round((data[la][2][0]>0 and True) or 0, 3)}, p_holm={adj[(la,lb)]:.4f}" if False else f"  {la} vs {lb}: p_raw={p:.5f}  p_holm={adj[(la,lb)]:.4f}")
 

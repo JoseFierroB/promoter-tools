@@ -46,3 +46,10 @@ def get_promotech_python(promotech_dir):
     """Resolve the python binary from PromoTech's pixi environment."""
     from src.config import config
     return str(config.get_env_python(promotech_dir / "pixi.toml"))
+MLDSPP_XGB_PARAMS = {
+    "n_estimators": 100,
+    "max_depth": 6,
+    "random_state": 42,
+    "eval_metric": "logloss",
+    "verbosity": 0,
+}

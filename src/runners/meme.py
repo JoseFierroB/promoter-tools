@@ -32,8 +32,12 @@ def main():
 
     random.seed(42)
 
+    # Original FASTA order is preserved for output alignment; only the CV
+    # fold assignment uses the shuffled copies.
     pos_recs = list(SeqIO.parse(args.pos, "fasta"))
     neg_recs = list(SeqIO.parse(args.neg, "fasta"))
+    pos_order = [(r.id, str(r.seq)) for r in pos_recs]
+    neg_order = [(r.id, str(r.seq)) for r in neg_recs]
     random.shuffle(pos_recs)
     random.shuffle(neg_recs)
     mid_pos = len(pos_recs) // 2
@@ -84,18 +88,21 @@ def main():
 
         shutil.rmtree(tmpdir, ignore_errors=True)
 
-    for r in pos_recs + neg_recs:
-        if r.id not in all_scores:
-            all_scores[r.id] = 0.0
+    for r_id, _ in pos_order + neg_order:
+        if r_id not in all_scores:
+            all_scores[r_id] = 0.0
 
     elapsed = time.perf_counter() - t0
-    n_total = len(pos_recs) + len(neg_recs)
+    n_total = len(pos_order) + len(neg_order)
 
     out_dir = Path(args.output)
     out_dir.mkdir(parents=True, exist_ok=True)
-    pd.DataFrame({"PRED": [all_scores[r.id] for r in pos_recs]}).to_csv(
+    # Write in original FASTA order so row i of each CSV corresponds to
+    # sequence i of the input FASTA (positional alignment for downstream
+    # stratified analyses).
+    pd.DataFrame({"PRED": [all_scores[r_id] for r_id, _ in pos_order]}).to_csv(
         out_dir / "meme_pos.csv", sep="\t", index=False)
-    pd.DataFrame({"PRED": [all_scores[r.id] for r in neg_recs]}).to_csv(
+    pd.DataFrame({"PRED": [all_scores[r_id] for r_id, _ in neg_order]}).to_csv(
         out_dir / "meme_neg.csv", sep="\t", index=False)
 
     print(f"MEME: {n_total} seqs in {elapsed:.3f}s")

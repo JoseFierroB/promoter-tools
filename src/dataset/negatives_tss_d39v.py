@@ -19,9 +19,6 @@ from BCBio import GFF
 from collections import Counter
 
 # Hardcoded chromosome mappings (e.g. NCBI RefSeq accession to friendly/custom name)
-DEFAULT_CHROM_MAP = {
-    "CP027540.1": "D39V"
-}
 
 # Precompiled translation table for fast reverse complement computation
 _RC_TRANS = str.maketrans('ACGT', 'TGCA')
@@ -43,36 +40,6 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument("--limit", type=int, default=0, help="Max sequences to extract (0 = no limit / return all clean negatives).")
     parser.add_argument("--seed", type=int, default=42, help="Random seed for sampling reproducibility (default: 42).")
     return parser.parse_args()
-
-def resolve_chrom_name(chrom: str, target_data: Dict, chrom_map: Dict[str, str] = None) -> str:
-    if chrom in target_data:
-        return chrom
-    if chrom_map:
-        if chrom in chrom_map and chrom_map[chrom] in target_data:
-            return chrom_map[chrom]
-        for k, v in chrom_map.items():
-            if v == chrom and k in target_data:
-                return k
-            if k == chrom and v in target_data:
-                return v
-    
-    chrom_lower = chrom.lower()
-    for k in target_data:
-        if k.lower() == chrom_lower:
-            return k
-            
-    def clean_name(name):
-        return re.sub(r"\.[0-9]+$", "", name).strip()
-    
-    clean_chrom = clean_name(chrom)
-    for k in target_data:
-        if clean_name(k) == clean_chrom:
-            return k
-            
-    if len(target_data) == 1:
-        single_chrom = list(target_data.keys())[0]
-        return single_chrom
-    return chrom
 
 def get_all_tss(features):
     for f in features:
@@ -132,7 +99,7 @@ def load_tss_positions(tss_gff: str, use_fallback_if_empty: bool = True) -> Dict
     return tss_data
 
 def get_nearest_tss_distance(chrom: str, pos: int, tss_data: Dict[str, List[dict]], chrom_map: Dict[str, str] = None) -> int:
-    resolved_chrom = resolve_chrom_name(chrom, tss_data, chrom_map)
+    resolved_chrom = chrom
     if resolved_chrom not in tss_data or not tss_data[resolved_chrom]:
         return float('inf')
     positions = [t["pos"] for t in tss_data[resolved_chrom]]
@@ -167,7 +134,7 @@ def filter_tss_conflicts(tss_data: Dict[str, List[dict]], cds_data: Dict[str, Li
         for t in tss_list:
             by_strand[t['strand']].append(t)
         valid_tss = []
-        resolved_cds_chrom = resolve_chrom_name(chrom, cds_data, chrom_map)
+        resolved_cds_chrom = chrom
         cds_list = cds_data.get(resolved_cds_chrom, [])
         
         def get_dist_to_closest_cds(pos, strand):
@@ -210,7 +177,7 @@ def filter_tss_conflicts(tss_data: Dict[str, List[dict]], cds_data: Dict[str, Li
     return filtered_tss_data
 
 def has_tss_inside(chrom: str, start: int, end: int, strand: str, tss_data: Dict, chrom_map: Dict = None) -> bool:
-    resolved_chrom = resolve_chrom_name(chrom, tss_data, chrom_map)
+    resolved_chrom = chrom
     if resolved_chrom not in tss_data or not tss_data[resolved_chrom]:
         return False
     positions = [t["pos"] for t in tss_data[resolved_chrom]]
@@ -232,7 +199,6 @@ def extract_negatives(args: argparse.Namespace = None) -> None:
     if not genome:
         sys.exit("[ERROR] FASTA file is empty or invalid.")
 
-    chrom_map = DEFAULT_CHROM_MAP
 
     cds_data = {}
     print(f"[INFO] Parsing CDS GFF3 from {args.gff_cds}...", file=sys.stderr)
@@ -249,6 +215,7 @@ def extract_negatives(args: argparse.Namespace = None) -> None:
                 cds_data[chrom].append((start, end, strand_char, locus))
 
     raw_tss_data = load_tss_positions(args.gff_tss, use_fallback_if_empty=True)
+    chrom_map = {}  # not needed: all data uses the same chromosome ID
     tss_data = filter_tss_conflicts(raw_tss_data, cds_data, chrom_map, args.conflict_threshold)
 
     valid_bases = {'A', 'C', 'G', 'T'}
@@ -259,7 +226,7 @@ def extract_negatives(args: argparse.Namespace = None) -> None:
     print("[INFO] Phase 1: Scanning entire genome to build Master Pool of clean negatives...", file=sys.stderr)
 
     for chrom, cds_list in cds_data.items():
-        resolved_genome_chrom = resolve_chrom_name(chrom, genome, chrom_map)
+        resolved_genome_chrom = chrom
         if resolved_genome_chrom not in genome:
             continue
             

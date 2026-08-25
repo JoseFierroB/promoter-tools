@@ -78,9 +78,24 @@ def _promotech_timeout(n_seqs: int) -> int:
     return max(600, int(n_seqs / 20.6 * 2.5))
 
 
+def _kill_process_tree(proc: subprocess.Popen) -> None:
+    """Kill the whole process group of `proc` (children included)."""
+    import signal
+    try:
+        os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+    except (ProcessLookupError, PermissionError):
+        try:
+            proc.kill()
+        except Exception:
+            pass
+    try:
+        proc.wait(timeout=10)
+    except Exception:
+        pass
+
+
 class LocalRunner(Runner):
     """Run a tool locally using pixi env subprocess. Works on any machine."""
-
     def __init__(self, n_runs: int = 1, output_dir: str = None,
                  pos_fasta: Path = None, neg_fasta: Path = None):
         self.n_runs = n_runs
@@ -184,7 +199,8 @@ class LocalRunner(Runner):
         t0 = time.perf_counter()
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                 stderr=subprocess.STDOUT, text=True,
-                                cwd=str(ROOT), env=run_env)
+                                cwd=str(ROOT), env=run_env,
+                                start_new_session=True)
 
         import threading
         # ── Tee stdout: live terminal output + capture for regex ──
@@ -207,9 +223,13 @@ class LocalRunner(Runner):
                 import psutil
                 from src.utils.metrics import _pss, _gpu_sample
                 ps_proc = psutil.Process(proc.pid)
+                proc_cache = {ps_proc.pid: ps_proc}  # reuse Process objects: cpu_percent needs a stable baseline
                 while not stop_sampler.is_set():
                     try:
-                        procs = [ps_proc] + ps_proc.children(recursive=True)
+                        procs = [ps_proc]
+                        for child in ps_proc.children(recursive=True):
+                            p = proc_cache.setdefault(child.pid, child)
+                            procs.append(p)
                         pss_kb = sum(_pss(p.pid) for p in procs)
                         ram_mb = pss_kb / 1024.0
                         cpu = sum(p.cpu_percent() for p in procs)
@@ -259,8 +279,7 @@ class LocalRunner(Runner):
             else:
                 proc.wait(timeout=wait_timeout)
         except subprocess.TimeoutExpired:
-            proc.kill()
-            proc.wait(timeout=10)
+            _kill_process_tree(proc)
             stop_sampler.set()
             t_tee.join(timeout=2)
             t_sampler.join(timeout=2)
@@ -273,6 +292,9 @@ class LocalRunner(Runner):
                 "success": False,
                 "notes": f"Timeout after {wait_timeout}s",
             }
+        except BaseException:
+            _kill_process_tree(proc)
+            raise
 
         stop_sampler.set()
         t_tee.join(timeout=2)

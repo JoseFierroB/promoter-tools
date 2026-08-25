@@ -30,21 +30,8 @@ def youden_threshold(y, s):
 
 # metadata
 meta = pd.read_csv(ROOT/"data/benchmark/d39v/positives_81bp_metadata.tsv", sep="\t")
-cls_tab = pd.read_csv(ROOT/"output/tables/tss_position_classification.tsv", sep="\t")
-cls_tab = cls_tab[cls_tab["strain"]=="D39V"].set_index("tss_id")
-val = pd.read_csv(ROOT/"output/tables/conserved_igrs_tss_validation.tsv", sep="\t")
-hit_igrs = set(val["query_d39v"].astype(str))
-classes = []
-for _, r in meta.iterrows():
-    c = cls_tab.loc[r["Sequence_ID"], "classification"]
-    if c in ("CDS_deep", "CDS_near_start"):
-        classes.append("intragenic")
-    elif c.startswith("IGR"):
-        gid = cls_tab.loc[r["Sequence_ID"], "igr_id"]
-        classes.append("conserved" if str(gid) in hit_igrs else "nonconserved")
-    else:
-        classes.append("other")
-meta["class_cons"] = classes
+from src.analysis.experiments._conservation import build_conservation_classes
+meta = build_conservation_classes(Path(__file__).resolve().parents[3] / "data/benchmark/d39v/positives_81bp_metadata.tsv")
 meta["GC"] = pd.to_numeric(meta["GC_Content(%)"], errors="coerce")
 
 def phi(a, b):

@@ -190,9 +190,11 @@ class Config:
         except Exception:
             pass
 
-        # Fallback: .pixi/envs/<feature>/bin/python
+        # Fallback: .pixi/envs/<feature>/bin/python (only cached if it exists,
+        # so a transient pixi-info failure doesn't poison the cache)
         fallback = pixi_env_path.parent / ".pixi" / "envs" / feature / "bin" / "python"
-        self._python_cache[cache_key] = fallback
+        if fallback.exists():
+            self._python_cache[cache_key] = fallback
         return fallback
 
 

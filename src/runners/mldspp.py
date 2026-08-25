@@ -14,7 +14,7 @@ from xgboost import XGBClassifier
 ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(ROOT))
 
-from src.runners._shared import extract_aligned
+from src.runners._shared import extract_aligned, MLDSPP_XGB_PARAMS
 
 TRAIN_DIR = Path(__file__).resolve().parent.parent.parent / "tools/MLDSPP-Promoter-prediction/Sample Dataset/Promoter Sequences"
 
@@ -50,8 +50,7 @@ def main():
     X_neg = np.array([extract_aligned(str(r.seq)) for r in neg])
     X_test = np.vstack([X_pos, X_neg])
 
-    model = XGBClassifier(n_estimators=100, max_depth=6, random_state=42,
-                          eval_metric="logloss", verbosity=0,
+    model = XGBClassifier(**MLDSPP_XGB_PARAMS,
                           n_jobs=int(os.environ.get("OMP_NUM_THREADS", "1") or 1))
     model.fit(X_train, y_train)
     train_s = time.perf_counter() - t0

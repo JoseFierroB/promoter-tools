@@ -6,6 +6,7 @@ from typing import Callable, Optional
 from src.config import config
 
 ROOT = config.root
+_TOOL_SIZE_CACHE = {}
 
 
 @dataclass
@@ -24,16 +25,24 @@ class Tool:
     notes: str = ""
 
     def model_size_mb(self) -> float:
+        key = str(id(self)) + ":" + ",".join(str(p) for p in self.model_paths)
+        if key in _TOOL_SIZE_CACHE:
+            return _TOOL_SIZE_CACHE[key]
         total = 0
         for p in self.model_paths:
             pp = Path(p)
-            if pp.is_file():
-                total += pp.stat().st_size
-            elif pp.is_dir():
-                for f in pp.rglob("*"):
-                    if f.is_file():
-                        total += f.stat().st_size
-        return round(total / (1024 * 1024), 2)
+            try:
+                if pp.is_file():
+                    total += pp.stat().st_size
+                elif pp.is_dir():
+                    for f in pp.rglob("*"):
+                        if f.is_file():
+                            total += f.stat().st_size
+            except OSError:
+                continue
+        result = round(total / (1024 * 1024), 2)
+        _TOOL_SIZE_CACHE[key] = result
+        return result
 
 
 # ════════════════════════════════════════════════════════════════

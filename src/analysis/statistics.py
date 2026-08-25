@@ -11,6 +11,9 @@ def bootstrap_auc_ci(y_true: np.ndarray, y_scores: np.ndarray,
                      n_bootstrap: int = 1000, alpha: float = 0.05) -> dict:
     """Compute bootstrap 95% CI for ROC AUC.
 
+    The reported "auc" is the plug-in estimate on the full sample;
+    the bootstrap resampling is used only for the interval.
+
     Args:
         y_true: ground truth labels
         y_scores: prediction scores
@@ -18,23 +21,20 @@ def bootstrap_auc_ci(y_true: np.ndarray, y_scores: np.ndarray,
         alpha: significance level (default 0.05 for 95% CI)
 
     Returns:
-        {"auc": mean, "ci_lower": X, "ci_upper": Y, "n_bootstrap": N}
+        {"auc": point estimate, "ci_lower": X, "ci_upper": Y, ...}
     """
-    from sklearn.metrics import roc_curve, auc
-
-    n = len(y_true)
-    aucs = np.zeros(n_bootstrap)
-    rng = np.random.RandomState(42)
+    from sklearn.metrics import roc_curve, auc, roc_auc_score
 
     pos_idx = np.where(y_true == 1)[0]
     neg_idx = np.where(y_true == 0)[0]
     n_pos, n_neg = len(pos_idx), len(neg_idx)
 
+    aucs = np.zeros(n_bootstrap)
+    rng = np.random.RandomState(42)
     for i in range(n_bootstrap):
         idx_pos = rng.choice(pos_idx, size=n_pos, replace=True)
         idx_neg = rng.choice(neg_idx, size=n_neg, replace=True)
         idx = np.concatenate([idx_pos, idx_neg])
-        rng.shuffle(idx)
         fpr, tpr, _ = roc_curve(y_true[idx], y_scores[idx])
         aucs[i] = auc(fpr, tpr)
 
@@ -42,7 +42,7 @@ def bootstrap_auc_ci(y_true: np.ndarray, y_scores: np.ndarray,
     ci_upper = np.percentile(aucs, 100 * (1 - alpha / 2))
 
     return {
-        "auc": round(float(np.mean(aucs)), 4),
+        "auc": round(float(roc_auc_score(y_true, y_scores)), 4),
         "ci_lower": round(float(ci_lower), 4),
         "ci_upper": round(float(ci_upper), 4),
         "n_bootstrap": n_bootstrap,
@@ -50,74 +50,84 @@ def bootstrap_auc_ci(y_true: np.ndarray, y_scores: np.ndarray,
     }
 
 
+def _midrank(x: np.ndarray) -> np.ndarray:
+    """Midranks of x (ties get the average rank), O(n log n)."""
+    order = np.argsort(x)
+    ranks_sorted = np.empty(len(x))
+    i = 0
+    while i < len(x):
+        j = i
+        xs = x[order]
+        while j < len(x) and xs[j] == xs[i]:
+            j += 1
+        ranks_sorted[i:j] = 0.5 * (i + j - 1) + 1
+        i = j
+    out = np.empty(len(x))
+    out[order] = ranks_sorted
+    return out
+
+
 def delong_test(y_true: np.ndarray, scores_a: np.ndarray,
                 scores_b: np.ndarray) -> dict:
-    """DeLong test for comparing two correlated ROC curves.
+    """Fast DeLong test for comparing two correlated ROC curves.
 
-    Returns p-value: if p < 0.05, AUC difference is statistically significant.
-
-    Args:
-        y_true: ground truth labels
-        scores_a: predictions from model A
-        scores_b: predictions from model B
+    Vectorized via midranks/searchsorted (Sun & Xu 2014): O(n log n).
 
     Returns:
-        {"p_value": X, "significant": bool, "auc_a": X, "auc_b": X}
+        {"p_value", "significant", "auc_a", "auc_b", "delta_auc", "delta_auc_se"}
     """
     from sklearn.metrics import roc_auc_score
 
     auc_a = roc_auc_score(y_true, scores_a)
     auc_b = roc_auc_score(y_true, scores_b)
 
-    # DeLong's method: compute covariance of AUC components
     n_pos = int(np.sum(y_true == 1))
     n_neg = int(np.sum(y_true == 0))
 
-    # Structural components for DeLong
-    def compute_v10(scores, y_true):
-        pos_scores = scores[y_true == 1]
-        neg_scores = scores[y_true == 0]
+    def structural_components(scores):
+        """V10 per subject: positives vs sorted negatives and vice versa."""
         v10 = np.zeros(len(scores))
-        for i, s in enumerate(scores):
-            if y_true[i] == 1:
-                v10[i] = np.mean(s > neg_scores) + 0.5 * np.mean(s == neg_scores)
-            else:
-                v10[i] = np.mean(s < pos_scores) + 0.5 * np.mean(s == pos_scores)
+        pos_mask = y_true == 1
+        neg_mask = ~pos_mask
+        neg_sorted = np.sort(scores[neg_mask])
+        pos_sorted = np.sort(scores[pos_mask])
+
+        s_pos = scores[pos_mask]
+        left = np.searchsorted(neg_sorted, s_pos, side="left")
+        right = np.searchsorted(neg_sorted, s_pos, side="right")
+        # mean(s > neg) + 0.5 * mean(s == neg)
+        v10[pos_mask] = (right + left) / 2.0 / n_neg
+
+        s_neg = scores[neg_mask]
+        left = np.searchsorted(pos_sorted, s_neg, side="left")
+        right = np.searchsorted(pos_sorted, s_neg, side="right")
+        # mean(s < pos) + 0.5 * mean(s == pos)
+        v10[neg_mask] = ((n_pos - right) + 0.5 * (right - left)) / n_pos
         return v10
 
-    v10_a = compute_v10(scores_a, y_true)
-    v10_b = compute_v10(scores_b, y_true)
+    v10_a = structural_components(scores_a)
+    v10_b = structural_components(scores_b)
 
-    # Covariance matrix
     s_aa = float(np.var(v10_a[y_true == 1], ddof=1)) if n_pos > 1 else 0.0
     s_bb = float(np.var(v10_b[y_true == 1], ddof=1)) if n_pos > 1 else 0.0
-    if n_pos > 1:
-        s_ab = np.cov(v10_a[y_true == 1], v10_b[y_true == 1])[0, 1] if len(v10_a[y_true == 1]) > 1 else 0
-    else:
-        s_ab = 0
+    s_ab = float(np.cov(v10_a[y_true == 1], v10_b[y_true == 1])[0, 1]) if n_pos > 1 else 0.0
 
     s_aa_n = float(np.var(v10_a[y_true == 0], ddof=1)) if n_neg > 1 else 0.0
     s_bb_n = float(np.var(v10_b[y_true == 0], ddof=1)) if n_neg > 1 else 0.0
-    if n_neg > 1:
-        s_ab_n = np.cov(v10_a[y_true == 0], v10_b[y_true == 0])[0, 1] if len(v10_a[y_true == 0]) > 1 else 0
-    else:
-        s_ab_n = 0
+    s_ab_n = float(np.cov(v10_a[y_true == 0], v10_b[y_true == 0])[0, 1]) if n_neg > 1 else 0.0
 
-    # Variance of difference
-    var_diff = (float(s_aa) / n_pos +
-                float(s_bb) / n_pos +
-                float(s_aa_n) / n_neg +
-                float(s_bb_n) / n_neg -
+    var_diff = (s_aa / n_pos + s_bb / n_pos +
+                s_aa_n / n_neg + s_bb_n / n_neg -
                 2 * s_ab / n_pos - 2 * s_ab_n / n_neg)
 
     if var_diff <= 0:
         p_value = 1.0
+        se = np.nan
     else:
-        z = (auc_a - auc_b) / np.sqrt(var_diff)
+        se = np.sqrt(var_diff)
         from scipy.stats import norm
-        p_value = 2 * (1 - norm.cdf(abs(z)))
+        p_value = 2 * (1 - norm.cdf(abs(auc_a - auc_b) / se))
 
-    se = np.sqrt(var_diff) if var_diff > 0 else np.nan
     return {
         "auc_a": round(float(auc_a), 4),
         "auc_b": round(float(auc_b), 4),
@@ -146,10 +156,10 @@ def aggregate_runs(runs: list[dict], metric_keys: list[str] = None) -> dict:
 
     result = {"n_runs": len(runs)}
     for key in metric_keys:
-        values = [r.get(key) for r in runs if r.get(key) is not None]
+        values = [r.get(key) for r in runs if r.get(key) is not None and r.get(key) == r.get(key)]
         if values:
             result[key] = round(float(np.mean(values)), 4)
-            result[f"{key}_std"] = round(float(np.std(values)), 4)
+            result[f"{key}_std"] = round(float(np.std(values, ddof=1)) if len(values) > 1 else 0.0, 4)
         else:
             result[key] = None
             result[f"{key}_std"] = None

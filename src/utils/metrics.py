@@ -132,9 +132,15 @@ def collect_slurm(job_id: str, tool) -> dict:
 # ── helpers ──
 
 def _pss(pid: int) -> int:
-    """Proportional Set Size (KB) from /proc/pid/smaps.
-    PSS divides shared memory proportionally — no double-counting like RSS.
-    Falls back to RSS if /proc unavailable (non-Linux)."""
+    """Proportional Set Size (KB). Prefers /proc/pid/smaps_rollup
+    (kernel-aggregated, ~100x faster); falls back to full smaps, then RSS."""
+    try:
+        with open(f"/proc/{pid}/smaps_rollup") as f:
+            for line in f:
+                if line.startswith("Pss:"):
+                    return int(line.split()[1])
+    except (FileNotFoundError, ProcessLookupError, PermissionError):
+        pass
     try:
         with open(f"/proc/{pid}/smaps") as f:
             return sum(int(l.split()[1]) for l in f if l.startswith("Pss:"))
