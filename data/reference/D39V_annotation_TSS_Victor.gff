@@ -872,6 +872,7 @@ D39V	Cappable-seq	transcription_start_site	1796461	1796461	10	-	.	ID=transcripti
 D39V	Cappable-seq	transcription_start_site	1797653	1797653	22	-	.	ID=transcription_start_site.872;Name=Transcription_start_site;Function=Transcription start site
 D39V	Cappable-seq	transcription_start_site	1797965	1797965	93	-	.	ID=transcription_start_site.873;Name=Transcription_start_site;Function=Transcription start site
 D39V	Cappable-seq	transcription_start_site	1801047	1801047	45	-	.	ID=transcription_start_site.874;Name=Transcription_start_site;Function=Transcription start site
+D39V	Cappable-seq	transcription_start_site	1801133	1801133	100	+	.	ID=transcription_start_site.1004;Name=Transcription_start_site;Function=Transcription start site
 D39V	Cappable-seq	transcription_start_site	1802826	1802826	24	-	.	ID=transcription_start_site.875;Name=Transcription_start_site;Function=Transcription start site
 D39V	Cappable-seq	transcription_start_site	1802866	1802866	828	-	.	ID=transcription_start_site.876;Name=Transcription_start_site;Function=Transcription start site
 D39V	Cappable-seq	transcription_start_site	1803059	1803059	5234	-	.	ID=transcription_start_site.877;Name=Transcription_start_site;Function=Transcription start site

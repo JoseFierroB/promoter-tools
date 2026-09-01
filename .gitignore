@@ -55,3 +55,10 @@ output/
 mmseqs_db/
 benchmark_plots_organized/
 scratch/
+# Benchmark derivados IGR/CDS/ortho y raw TSS (generados, no fuente)
+data/benchmark/d39v_1003_all_raw/
+data/benchmark_cds/
+data/benchmark_igr/
+data/benchmark_ortho_1to1/
+# Backup GFF local
+*.bak_*
