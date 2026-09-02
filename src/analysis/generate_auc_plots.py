@@ -707,8 +707,8 @@ def plot_roc_combined_d39v_tigr4_all():
 
 def main():
     print("=" * 65)
-    print("  EJECUTANDO GENERADOR CANÓNICO DE ROC / AUC (PNG, SVG, PDF)")
-    print(f"  Directorio Canónico: {CANONICAL_TARGET}")
+    print("  RUNNING CANONICAL ROC / AUC GENERATOR (PNG, SVG, PDF)")
+    print(f"  Canonical directory: {CANONICAL_TARGET}")
     print("=" * 65)
     plot_roc_989()
     plot_roc_30k()
@@ -717,7 +717,7 @@ def main():
     plot_roc_combined_d39v_tigr4_high()
     plot_roc_combined_d39v_tigr4_all()
     print("\n" + "=" * 65)
-    print("  GENERACIÓN DE ROC / AUC FINALIZADA CON ÉXITO")
+    print("  ROC / AUC GENERATION COMPLETED SUCCESSFULLY")
     print("=" * 65)
 
 

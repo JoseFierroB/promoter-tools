@@ -439,7 +439,7 @@ def main():
         p.mkdir(parents=True, exist_ok=True)
 
     print("=" * 70)
-    print("  EJECUTANDO SCALING ANALYSIS CANÓNICO MEJORADO")
+    print("  RUNNING ENHANCED CANONICAL SCALING ANALYSIS")
     print("=" * 70)
     df = load_all()
     OUT_TSV.parent.mkdir(parents=True, exist_ok=True)
@@ -475,10 +475,10 @@ def main():
     extrap.to_csv(EXTRAP_TSV, sep="\t", index=False)
     print(f"Extrapolations saved -> {EXTRAP_TSV}")
 
-    print("\nGenerando figuras científicas...")
+    print("\nGenerating scientific figures...")
     generate_all_figures(df)
     print("\n" + "=" * 70)
-    print("  GENERACIÓN DE GRÁFICOS CANÓNICOS FINALIZADA CON ÉXITO")
+    print("  CANONICAL FIGURE GENERATION COMPLETED SUCCESSFULLY")
     print("=" * 70)
 
 

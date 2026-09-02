@@ -176,7 +176,7 @@ def generate_baseline_plots(base_out, sec_out=None, data_dir=DEFAULT_DATA_DIR):
         save_fig(fig, dir_16cpu, "compute_time_baseline", sec_16cpu)
         plt.close(fig)
 
-    # GPU Baseline Weights vs VRAM (desde métricas)
+    # GPU Baseline Weights vs VRAM (from metrics)
     gpu_names = ["PromoterLCNN", "iPro-MP (H. pylori)"]
     gpu_models = []
     weights_size_mb = []
@@ -291,8 +291,8 @@ def main():
     data_dir = Path(args.data_dir)
 
     print("=" * 75)
-    print(f"  EJECUTANDO GENERADOR MAESTRO DE ANÁLISIS Y GRÁFICOS (Modo: {args.mode})")
-    print(f"  Directorio Canónico: {out_base}")
+    print(f"  EJECUTANDO MASTER ANALYSIS & PLOT GENERATOR (Mode: {args.mode})")
+    print(f"  Canonical directory: {out_base}")
     if sec_base:
         print(f"  Directorio Espejo:   {sec_base}")
     print("=" * 75)
@@ -306,7 +306,7 @@ def main():
         run_scaling()
 
     print("\n" + "=" * 75)
-    print("  PIPELINE DE GENERACIÓN FINALIZADO CON ÉXITO")
+    print("  GENERATION PIPELINE COMPLETED SUCCESSFULLY")
     print("=" * 75)
 
 

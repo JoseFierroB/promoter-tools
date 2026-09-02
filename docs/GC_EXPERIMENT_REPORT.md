@@ -1,28 +1,28 @@
-# Experimento GC — Reporte de composición y análisis de robustez
+# GC Experiment — Composition report and robustness analysis
 
-> Proyecto: Benchmark de herramientas de predicción de promotores en S. pneumoniae (D39V y TIGR4 high)
+> Project: Benchmark of promoter prediction tools in S. pneumoniae (D39V and TIGR4 high)
 > Fecha: 21 Agosto 2026
-> Objetivo: cuantificar el efecto del confundidor de composición GC (positivos 29.9% vs negativos CDS 41.2% en D39V; 30.9% vs 42.0% en TIGR4) mediante sets de negativos emparejados por GC.
+> Objective: quantify the effect of the GC composition confounder (positives 29.9% vs CDS negatives 41.2% on D39V; 30.9% vs 42.0% on TIGR4) using GC-matched negative sets.
 
 ---
 
-## 1. DATASETS DEL EXPERIMENTO
+## 1. EXPERIMENT DATASETS
 
 | Set | Positivos | Negativos | GC neg (media±SD) | n |
 |-----|-----------|-----------|--------------------|---|
-| D39V cds (canónico) | d39v/positives_81bp.fasta | d39v/negatives_81bp.fasta | 41.2 ± 6.3 | 988/1000 |
-| D39V gc30 | ídem | d39v_gc/negatives_81bp_gc30.fasta | **31.7 ± 2.5** | 988/1000 |
-| D39V gc33 | ídem | d39v_gc/negatives_81bp_gc33.fasta | **34.0 ± 2.6** | 988/1000 |
-| TIGR4 cds (canónico) | tigr4/positives_high_81bp.fasta | tigr4/negatives_high_81bp.fasta | 42.0 ± 6.3 | 738/738 |
-| TIGR4 gc31 | ídem | tigr4_gc/negatives_high_81bp_gc31.fasta | **33.0 ± 2.5** | 738/738 |
+| D39V cds (canonical) | d39v/positives_81bp.fasta | d39v/negatives_81bp.fasta | 41.2 ± 6.3 | 988/1000 |
+| D39V gc30 | same | d39v_gc/negatives_81bp_gc30.fasta | **31.7 ± 2.5** | 988/1000 |
+| D39V gc33 | same | d39v_gc/negatives_81bp_gc33.fasta | **34.0 ± 2.6** | 988/1000 |
+| TIGR4 cds (canonical) | tigr4/positives_high_81bp.fasta | tigr4/negatives_high_81bp.fasta | 42.0 ± 6.3 | 738/738 |
+| TIGR4 gc31 | same | tigr4_gc/negatives_high_81bp_gc31.fasta | **33.0 ± 2.5** | 738/738 |
 
 - Generados con `negatives_tss_d39v.py --target-gc` y `negatives_tss_tigr4.py --target-gc` (flag aditivo nuevo, verificado byte-identical sin flags).
-- TIGR4 gc31 regenerado con `--dedup-rc` (canónico TIGR4 verificado sin RC-dupes: byte-identical con y sin el flag).
-- Sin solape de secuencias con positivos en ningún set. Positivos canónicos intactos.
-- iPro-MP: ensemble 5-fold canónico (12_fold_1..5, promedio de softmax), split pos/neg exacto.
+- TIGR4 gc31 regenerated with `--dedup-rc` (canonical TIGR4 verified RC-dupe-free: byte-identical with and without the flag).
+- No sequence overlap with positives in any set. Canonical positives untouched.
+- iPro-MP: canonical 5-fold ensemble (12_fold_1..5, softmax average), exact pos/neg split.
 - MEME: re-corrido con STREME `-seed 42` (determinista; d39v cds AUC pasa de 0.8414 a 0.8617).
 
-## 2. AUC POR SET — EFECTO COMPOSICIÓN
+## 2. AUC PER SET — COMPOSITION EFFECT
 
 | Tool | D39V cds | D39V gc30 | D39V gc33 | Δgc30 | Δgc33 | TIGR4 cds | TIGR4 gc31 | Δgc31 |
 |------|----------|-----------|-----------|-------|-------|-----------|------------|-------|
@@ -34,11 +34,11 @@
 | MLDSPP | 0.8651 | 0.8608 | 0.8475 | −0.004 | −0.018 | 0.8182 | 0.7971 | −0.021 |
 | FIMO | 0.7592 | 0.6486 | 0.6946 | **−0.111** | −0.065 | 0.7469 | 0.6256 | **−0.121** |
 
-**Lectura**: el confundidor GC infla el AUC de TODAS las tools; FIMO es el más sensible (hasta −0.12: su fondo uniforme A/C/G/T premia regiones AT-ricas), LCNN pierde 2-4 puntos, e iPro-MP es el más robusto (Δ ≈ 0.003-0.005, señal motívica/posicional).
+**Reading**: the GC confounder inflates AUC for ALL tools; FIMO is the most sensitive (up to −0.12: its uniform A/C/G/T background favors AT-rich regions), LCNN loses 2-4 points, and iPro-MP is the most robust (Δ ≈ 0.003-0.005, motif/positional signal).
 
 **Ranking con GC-matched (set honesto)**: iPro-MP > MLDSPP75 > PromoTech > LCNN > MEME > MLDSPP > FIMO.
 
-## 3. CALIBRACIÓN (Brier)
+## 3. CALIBRATION (Brier)
 
 | Tool | D39V cds | D39V gc30 | TIGR4 cds | TIGR4 gc31 |
 |------|----------|-----------|-----------|------------|
@@ -50,9 +50,9 @@
 | MEME | 9.08 | 9.34 | 8.15 | 9.88 |
 | FIMO | 26.4 | 28.0 | 25.5 | 27.4 |
 
-Los scores de FIMO (−log10 p-valor) y MEME (max sobre motivos) **no son probabilidades** (Brier ≫ 1); los DL/ML (iPro-MP, PromoTech, LCNN) son los mejor calibrados. Para uso probabilístico real, solo iPro-MP/PromoTech/LCNN son interpretables tras calibración isotónica.
+FIMO (−log10 p-value) and MEME (max over motifs) scores **are not probabilities** (Brier ≫ 1); DL/ML tools (iPro-MP, PromoTech, LCNN) are the best calibrated. For real probabilistic use, only iPro-MP/PromoTech/LCNN are interpretable after isotonic calibration.
 
-## 4. CONSERVACIÓN CON GC-MATCHED (D39V, clases canónicas: 647/157/184)
+## 4. CONSERVATION WITH GC-MATCHED (D39V, canonical classes: 647/157/184)
 
 | Tool | cds Cons | cds Intra | cds NonC | gc30 Cons | gc30 Intra | gc30 NonC |
 |------|----------|-----------|----------|-----------|------------|-----------|
@@ -64,9 +64,9 @@ Los scores de FIMO (−log10 p-valor) y MEME (max sobre motivos) **no son probab
 | MEME | 0.8584 | 0.8695 | 0.8661 | 0.8037 | 0.8144 | 0.8301 |
 | FIMO | 0.7792 | 0.6915 | 0.7563 | 0.6745 | 0.5581 | 0.6479 |
 
-El patrón se mantiene con GC-matched: PromoTech sigue siendo el más robusto a intragénicos (Δcons-intra pequeño); la caída intragénica de las demás persiste pero se atenúa para iPro-MP/MLDSPP.
+The pattern holds with GC-matched: PromoTech remains the most robust to intragenic (small Δcons-intra); the intragenic drop of the others persists but is attenuated for iPro-MP/MLDSPP.
 
-## 5. CONFUSIÓN (Youden) — D39V canónico vs gc30
+## 5. CONFUSION (Youden) — D39V canonical vs gc30
 
 | Tool | cds TP/FN/FP/TN | cds F1 | gc30 TP/FN/FP/TN | gc30 F1 |
 |------|-----------------|--------|-------------------|---------|
@@ -78,13 +78,13 @@ El patrón se mantiene con GC-matched: PromoTech sigue siendo el más robusto a 
 | MLDSPP | 821/167/246/754 | 0.799 | 810/178/249/751 | 0.791 |
 | FIMO | 665/323/286/714 | 0.686 | 496/492/271/729 | 0.565 |
 
-## 6. DELONG PAREADO (d39v cds vs gc30) — Holm corregido
+## 6. PAIRED DELONG (d39v cds vs gc30) — Holm-corrected
 
-Significativos tras Holm (p<0.05): diferencias de ΔAUC de **FIMO vs todos** y de **MEME vs todos**; LCNN vs PromoTech (p=0.020), LCNN vs MLDSPP75 (p=0.022), LCNN vs MEME (p=0.030). iPro-MP vs PromoTech (p=0.296) y el resto del top NO difieren significativamente entre sí.
+Significant after Holm (p<0.05): ΔAUC differences of **FIMO vs all** and **MEME vs all**; LCNN vs PromoTech (p=0.020), LCNN vs MLDSPP75 (p=0.022), LCNN vs MEME (p=0.030). iPro-MP vs PromoTech (p=0.296) and the rest of the top do NOT differ significantly from each other.
 
-## 7. DUPLICADOS EN POSITIVOS (d39v: 988 entradas, 972 únicas, 16 dupes en 9 grupos)
+## 7. DUPLICATES IN POSITIVES (d39v: 988 entries, 972 unique, 16 dupes in 9 groups)
 
-| Tool | AUC 988 | AUC 972 únicas | Δ |
+| Tool | AUC 988 | AUC 972 unique | Δ |
 |------|---------|----------------|---|
 | LCNN | 0.9487 | 0.9534 | +0.005 |
 | iPro-MP | 0.9600 | 0.9637 | +0.004 |
@@ -94,9 +94,9 @@ Significativos tras Holm (p<0.05): diferencias de ΔAUC de **FIMO vs todos** y d
 | FIMO | 0.7592 | 0.7608 | +0.002 |
 | MEME | 0.8617 | 0.8618 | +0.000 |
 
-Impacto despreciable (≤0.005). La deduplicación canónica es por posición (chrom,pos,strand), no por identidad de secuencia.
+Negligible impact (≤0.005). Canonical deduplication is by position (chrom,pos,strand), not by sequence identity.
 
-## 8. AUC POR SIGMA FACTOR (D39V)
+## 8. AUC BY SIGMA FACTOR (D39V)
 
 | Tool | cds None(570) | cds SigA(397) | cds SigX(21) | gc30 None | gc30 SigA | gc30 SigX |
 |------|---------------|---------------|--------------|-----------|-----------|-----------|
@@ -108,9 +108,9 @@ Impacto despreciable (≤0.005). La deduplicación canónica es por posición (c
 | MEME | 0.8459 | 0.8675 | 0.8422 | 0.7980 | 0.8289 | 0.7733 |
 | FIMO | 0.7405 | 0.7882 | 0.7196 | 0.6209 | 0.6900 | 0.6152 |
 
-SigA es la clase más fácil (AUC 0.95-0.99); SigX (n=21) es ruidosa. Con GC-matched las caídas son pequeñas para iPro-MP/MLDSPP75.
+SigA is the easiest class (AUC 0.95-0.99); SigX (n=21) is noisy. With GC-matched the drops are small for iPro-MP/MLDSPP75.
 
-## 9. INTERMEDIOS EN DISCO (workdirs)
+## 9. ON-DISK INTERMEDIATES (workdirs)
 
 | Set | PromoTech workdir | iPro-MP dir |
 |-----|-------------------|-------------|
@@ -119,30 +119,30 @@ SigA es la clase más fácil (AUC 0.95-0.99); SigX (n=21) es ruidosa. Con GC-mat
 
 PromoTech domina: ~54 KB/secuencia (matrices joblib 42n×160 float64 ×2 hebras + genome_predictions.csv) → **~42 GB estimados @197600** (n=395,200). El resto de tools no dejan intermedios significativos.
 
-## 10. DECISIONES Y CAMBIOS DE ESTA SESIÓN
+## 10. DECISIONS AND CHANGES THIS SESSION
 
-- **Canónico intacto**: data/benchmark/d39v/*, data/tigr4/*, output/predictions, REPORT.md no modificados.
-- **Cambios de código** (pendientes de commit):
-  1. `src/runners/ipromp_sp12.py` — ensemble 5-fold (canónico iPro-MP)
+- **Canonical untouched**: data/benchmark/d39v/*, data/tigr4/*, output/predictions, REPORT.md unmodified.
+- **Code changes** (pending commit):
+  1. `src/runners/ipromp_sp12.py` — ensemble 5-fold (canonical iPro-MP)
   2. `src/runners/meme.py` — STREME `-seed 42` (determinista)
   3. `src/dataset/negatives_tss_tigr4.py` — flags aditivos `--target-gc`/`--gc-tolerance`/`--dedup-rc` (byte-identical sin flags)
   4. `src/backend/slurm.py` — fix imports NameError latente
   5. `src/analysis/statistics.py` — aggregate_runs conserva VRAM/CPU/GPU
-  6. `src/analysis/scaling_analysis.py` — CIs bootstrap de proyección (time_s_ci_low/high en extrapolation.tsv)
+  6. `src/analysis/scaling_analysis.py` — projection bootstrap CIs (time_s_ci_low/high in extrapolation.tsv)
   7. `data/benchmark/mldspp_75_split_scale_db_988.npz` — split 988
-- **Excluidos de reportes futuros**: PromoTech TETRA, FIMO E. coli DB, validación Shimada (por decisión).
-- **Pendiente**: benchmark sp12 vs s23 (modelo s23 en WS/NFS); protocolo de medición uniforme (time_s puro) + re-runs de escalado.
-- **Escalado**: los fits de LCNN (n^0.19) y MLDSPP (speedup 1.74×@988) son artefactos de load/training incluidos en time_s — pendiente re-medición con protocolo uniforme (los modelos honestos: LCNN ≈ 1.8 s + 9 µs·n; MLDSPP speedup real de inferencia ≈ 1.06×).
+- **Excluded from future reports**: PromoTech TETRA, FIMO E. coli DB, Shimada validation (by decision).
+- **Pending**: sp12 vs s23 benchmark (s23 model on WS/NFS); uniform measurement protocol (pure time_s) + scaling re-runs.
+- **Scaling**: LCNN (n^0.19) and MLDSPP (speedup 1.74×@988) fits are load/training artifacts included in time_s — pending re-measurement with a uniform protocol (honest models: LCNN ≈ 1.8 s + 9 µs·n; MLDSPP true inference speedup ≈ 1.06×).
 
-## 11. ARCHIVOS GENERADOS
+## 11. GENERATED FILES
 
 - Datasets: `data/benchmark/d39v_gc/`, `data/tigr4_gc/`
 - Predicciones: `output/d39v_gc/{cds,gc30,gc33}/predictions/`, `output/tigr4_gc/{cds,gc31}/predictions/` (WS) y `~/Desktop/{d39v_gc,tigr4_gc}/` (espejo local)
-- Análisis: `output/gc_analysis/full_analysis.log`, `output/gc_analysis/calibration_brier.tsv`
-- CIs de proyección: `output/tables/extrapolation.tsv` (+time_s_ci_low/high)
-## 12. ERROR ANALYSIS Y CONSENSO (añadido)
+- Analysis: `output/gc_analysis/full_analysis.log`, `output/gc_analysis/calibration_brier.tsv`
+- Projection CIs: `output/tables/extrapolation.tsv` (+time_s_ci_low/high)
+## 12. ERROR ANALYSIS AND CONSENSUS (added)
 
-### Consenso (media de scores: ranks / voto / isotónico)
+### Consensus (score averaging: ranks / vote / isotonic)
 
 | Set | Mejor individual | CONS_rank | CONS_vote | CONS_iso | Lift (iso) |
 |-----|------------------|-----------|-----------|----------|------------|
@@ -154,18 +154,18 @@ PromoTech domina: ~54 KB/secuencia (matrices joblib 42n×160 float64 ×2 hebras 
 
 **El consenso de las 7 tools supera a la mejor individual en +0.03 a +0.08 AUC** (el consenso iso es in-sample, optimista; CONS_rank es la cota honesta: +0.03-0.04).
 
-### Correlación de errores (phi, D39V cds)
+### Error correlation (phi, D39V cds)
 
-Los errores son mayormente **independientes entre tools** (phi 0.02-0.62): LCNN-iPro-MP 0.62 (ambas DL), MLDSPP-MLDSPP75 0.49, LCNN-MLDSPP75 0.31; la mayoría de pares < 0.1 → las tools fallan en casos distintos → complementariedad que explica el consenso.
+Errors are mostly **independent across tools** (phi 0.02-0.62): LCNN-iPro-MP 0.62 (both DL), MLDSPP-MLDSPP75 0.49, LCNN-MLDSPP75 0.31; most pairs < 0.1 → tools fail on different cases → complementarity explaining the consensus.
 
-### Casos difíciles (positivos que fallan TODAS las tools)
+### Hard cases (positives missed by ALL tools)
 
-- D39V (cds/gc30/gc33): **1 solo positivo** (conservado, sigma None, GC 43.2% vs media 29.9% — un promotor GC-rico atípico que confunde a las tools composicionales)
+- D39V (cds/gc30/gc33): **a single positive** (conserved, sigma None, GC 43.2% vs 29.9% mean — an atypical GC-rich promoter that confuses composition-based tools)
 - TIGR4: 5-6 positivos
-- **Ningún negativo** es falso positivo de todas las tools
+- **No negative** is a false positive for all tools
 
-### Fix de gráficos (hardcodes eliminados)
+### Plot fixes (hardcodes removed)
 
-- `generate_master_plots.py`: tiempos/RAM/VRAM/pesos ahora se leen de las métricas de campaña (antes hardcodeados y obsoletos: LCNN RAM 337.1 vs real 1839.9; PromoTech 96.4 vs 106.0; VRAM LCNN 497.2 vs real 2072-5169); `n_pos` desde config; paths parametrizables (`--data-dir`, `--desktop-out`)
+- `generate_master_plots.py`: time/RAM/VRAM/weights now read from campaign metrics (previously hardcoded and stale: LCNN RAM 337.1 vs actual 1839.9; PromoTech 96.4 vs 106.0; LCNN VRAM 497.2 vs actual 2072-5169); `n_pos` from config; parameterizable paths (`--data-dir`, `--desktop-out`)
 - `resource_plots.py`: `--data-dir`/`--out-dir` parametrizables
 - `generate_master_roc.py`: etiqueta FIMO sin hardcode "838"

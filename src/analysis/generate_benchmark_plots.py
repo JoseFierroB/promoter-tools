@@ -276,7 +276,7 @@ def generate_baseline_time():
 # 2. BASELINE MEMORY (N = 1,976)
 # =============================================================================
 def generate_baseline_memory():
-    # 1 CPU RAM (leído de métricas)
+    # 1 CPU RAM (read from metrics)
     m1r = load_metrics(DATA_DIR, "scale_db", "988")
     n_ram = int(_metric(m1r, "MLDSPP XGBoost", "n_sequences") or 1976)
     tools_1cpu = []
@@ -313,7 +313,7 @@ def generate_baseline_memory():
     save_plot(fig, DIR_1CPU, "peak_memory_baseline")
     plt.close(fig)
 
-    # 16 CPU RAM (leído de métricas)
+    # 16 CPU RAM (read from metrics)
     m16r = load_metrics(DATA_DIR, "scale_db_16cpu", "988")
     n_ram16 = int(_metric(m16r, "MLDSPP XGBoost", "n_sequences") or 1976)
     tools_16cpu = []
@@ -350,7 +350,7 @@ def generate_baseline_memory():
     save_plot(fig, DIR_16CPU, "peak_memory_baseline")
     plt.close(fig)
 
-    # GPU Weights vs VRAM (leído de métricas gpu_thr1)
+    # GPU Weights vs VRAM (read from gpu_thr1 metrics)
     mgpu = load_metrics(DATA_DIR, "scale_db_gpu_thr1", "988")
     gpu_models, weights_size_mb, inference_vram_mb = [], [], []
     for gn in ["PromoterLCNN", "iPro-MP (H. pylori)"]:
@@ -865,8 +865,8 @@ def generate_by_scale_plots():
 
 def main():
     print("=" * 75)
-    print("  GENERANDO GRÁFICOS DE BENCHMARK (TIEMPOS, RAM Y ESCALAMIENTO)")
-    print(f"  Directorio Canónico: {CANONICAL_TARGET}")
+    print("  GENERATING BENCHMARK PLOTS (TIME, RAM AND SCALING)")
+    print(f"  Canonical directory: {CANONICAL_TARGET}")
     print("=" * 75)
     generate_baseline_time()
     generate_baseline_memory()
@@ -876,7 +876,7 @@ def main():
     generate_speedup_and_ram()
     generate_by_scale_plots()
     print("\n" + "=" * 75)
-    print("  GENERACIÓN DE GRÁFICOS DE BENCHMARK FINALIZADA CON ÉXITO")
+    print("  BENCHMARK PLOT GENERATION COMPLETED SUCCESSFULLY")
     print("=" * 75)
 
 

@@ -1,14 +1,14 @@
 # Promoter-Tools — Memory & Key Findings
 
-> Proyecto: Benchmark de 7 herramientas (9 runners) de predicción de promotores en S. pneumoniae D39V vs TIGR4
-> Fecha del reporte: Agosto 2026
+> Project: Benchmark of 7 tools (9 runners) for promoter prediction in S. pneumoniae D39V vs TIGR4
+> Report date: August 2026
 > Estado: ~85% completado
 
 ---
 
-## 1. BENCHMARK: AUC por herramienta y dataset
+## 1. BENCHMARK: AUC per tool and dataset
 
-### AUC Global (6 datasets, 6 tools principales)
+### Global AUC (6 datasets, 6 main tools)
 
 | Tool | D39V | T4 hi | T4+sec | T4 ext | T4 all | MIX |
 |------|------|-------|--------|--------|--------|-----|
@@ -19,24 +19,24 @@
 | MLDSPP 0% | 0.8651 | 0.8182 | 0.8056 | 0.6763 | 0.6686 | 0.8449 |
 | FIMO PROK | 0.7592 | 0.7469 | 0.7398 | 0.6483 | 0.6402 | 0.7535 |
 
-*MLDSPP 75% usa 75% S. pneumoniae en training → data leakage. MLDSPP 0% es el valor real.
+*MLDSPP 75% uses 75% S. pneumoniae in training → data leakage. MLDSPP 0% is the true value.
 
 ---
 
-## 2. CONFUSION MATRIX — Mejor umbral (Youden's J)
+## 2. CONFUSION MATRIX — Best threshold (Youden's J)
 
 ### D39V (989 pos, 1000 neg)
 
 | Tool | AUC | TP | FN | FP | TN | Sens | Spec | F1 | Balance |
 |------|-----|----|----|----|----|------|------|-----|---------|
-| **iPro-MP** | 0.960 | 892 | 96 | **31** | 969 | 0.903 | 0.969 | **0.934** | ✅ Muy armónico |
-| **LCNN** | 0.949 | 838 | 150 | 35 | 965 | 0.848 | 0.965 | 0.901 | ✅ Armónico |
-| **PromoTech HOT** | 0.943 | 868 | 120 | 64 | 936 | 0.879 | 0.936 | 0.904 | ✅ Armónico |
+| **iPro-MP** | 0.960 | 892 | 96 | **31** | 969 | 0.903 | 0.969 | **0.934** | ✅ Very balanced |
+| **LCNN** | 0.949 | 838 | 150 | 35 | 965 | 0.848 | 0.965 | 0.901 | ✅ Balanced |
+| **PromoTech HOT** | 0.943 | 868 | 120 | 64 | 936 | 0.879 | 0.936 | 0.904 | ✅ Balanced |
 | PromoTech TETRA | 0.917 | 820 | 168 | 115 | 885 | 0.830 | 0.885 | 0.853 | |
-| MLDSPP | 0.865 | 821 | 167 | **246** | 754 | 0.831 | 0.754 | 0.799 | ⚠️ Exceso FP |
+| MLDSPP | 0.865 | 821 | 167 | **246** | 754 | 0.831 | 0.754 | 0.799 | ⚠️ FP excess |
 | MEME | 0.841 | 751 | 237 | 139 | 861 | 0.760 | 0.861 | 0.800 | |
-| FIMO PROK | 0.759 | 665 | 323 | 286 | 714 | 0.673 | 0.714 | 0.686 | ⚠️ Exceso FP+FN |
-| FIMO DB | 0.736 | 651 | 337 | **302** | 698 | 0.659 | 0.698 | 0.671 | ⚠️ Peor balance |
+| FIMO PROK | 0.759 | 665 | 323 | 286 | 714 | 0.673 | 0.714 | 0.686 | ⚠️ FP+FN excess |
+| FIMO DB | 0.736 | 651 | 337 | **302** | 698 | 0.659 | 0.698 | 0.671 | ⚠️ Worst balance |
 
 ### TIGR4 high (738 pos, 738 neg)
 
@@ -47,15 +47,15 @@
 | PromoTech TETRA | 0.889 | 582 | 156 | 75 | 663 | 0.789 | 0.898 | 0.834 |
 | MLDSPP | 0.818 | 505 | 233 | 131 | 607 | 0.684 | 0.822 | 0.735 |
 
-### Conclusión clave
-- **iPro-MP y PromoTech HOT**: armónicas (FP y FN balanceados) — las más confiables
-- **FIMO DB/FIMO PROK**: exceso de FP (30% falsa alarma) — poca especificidad
-- **MLDSPP**: identifica bien TSS pero con costo en FP (24.6% en D39V)
-- **TIGR4 es más difícil para todas**: menor sensibilidad, más TSS perdidos
+### Key conclusions
+- **iPro-MP and PromoTech HOT**: balanced (FP and FN even) — most reliable
+- **FIMO DB/FIMO PROK**: FP excess (30% false alarm) — low specificity
+- **MLDSPP**: identifies TSS well but at an FP cost (24.6% on D39V)
+- **TIGR4 is harder for all tools**: lower sensitivity, more missed TSS
 
 ---
 
-## 3. RECURSOS (tiempo, RAM)
+## 3. RESOURCES (time, RAM)
 
 | Tool | Time | RAM |
 |------|------|-----|
@@ -66,7 +66,7 @@
 
 ---
 
-## 4. AUC POR CONSERVACIÓN DE IGRs
+## 4. AUC BY IGR CONSERVATION
 
 ### D39V — AUC split by conservation
 
@@ -80,52 +80,52 @@
 | FIMO DB | 0.7364 | 0.7566 | 0.7459 | 0.6574 | **+0.099** |
 | FIMO PROK | 0.7592 | 0.7792 | 0.7563 | 0.6915 | **+0.088** |
 
-**Conclusión**: Todas las tools bajan su AUC en TSS intragénicos. PromoTech HOT es la más robusta (sin caída).
+**Conclusion**: All tools drop AUC on intragenic TSS. PromoTech HOT is the most robust (no drop).
 
 ---
 
-## 5. ALINEAMIENTO IGRs D39V ↔ TIGR4 (MMseqs2)
+## 5. IGR ALIGNMENT D39V ↔ TIGR4 (MMseqs2)
 
 ### Cross-strain
-- **1,323 pares** conservados D39V→TIGR4 (971/1670 IGRs, 58.1%)
-- **2,240 pares** reverso TIGR4→D39V
-- **823 intersección** (reciprocal best by direction)
+- **1,323 pairs** conserved D39V→TIGR4 (971/1670 IGRs, 58.1%)
+- **2,240 pairs** reverse TIGR4→D39V
+- **823 intersection** (reciprocal best by direction)
 - Identidad media: **96.2%**, 525 pares (39.7%) al 100%
-- **81.9%** sinténicos por arquitectura génica
-- **643 pares** con genes flanqueantes ortólogos (SPV_* ↔ SP_RS*)
-- **209 pares** 100% idénticos con TSS en ambas cepas
+- **81.9%** syntenic by gene architecture
+- **643 pairs** with orthologous flanking genes (SPV_* ↔ SP_RS*)
+- **209 pairs** 100% identical with TSS in both strains
 
 ### Intra-strain
 - D39V: 1,670 IGRs → 1,580 clusters (98.4% singletons)
 - TIGR4: 1,784 IGRs → 1,584 clusters (97.9% singletons)
-- 31 IGRs repetitivas (BOX/RUP/IS) = 28.9% de pares cross-strain
+- 31 repetitive IGRs (BOX/RUP/IS) = 28.9% of cross-strain pairs
 
 ### nucmer
-- 1,025 bloques colineales, 86% en orden genómico
-- 52.1% de pares MMseqs2 validados por nucmer
+- 1,025 collinear blocks, 86% in genomic order
+- 52.1% of MMseqs2 pairs validated by nucmer
 
 ---
 
-## 6. TSS — POSICIÓN Y FACTIBILIDAD
+## 6. TSS — POSITION AND FEASIBILITY
 
 ### D39V (989 TSS curados de 1003 brutos)
-| Categoría | N | % |
+| Category | N | % |
 |-----------|---|---|
-| En IGR (usables) | 804 | 81.4% |
-| └─ Ventana 100% en IGR | 307 | 31.1% |
+| In IGR (usable) | 804 | 81.4% |
+| └─ Window 100% in IGR | 307 | 31.1% |
 | └─ <50% CDS overlap | 490 | 49.6% |
-| En CDS | 184 | 18.6% |
+| In CDS | 184 | 18.6% |
 | └─ Deep internal (>50bp) | 95 | 9.6% |
-| **TSS usables para IGR** | **891** | **90.2%** |
-| **TSS perdidos** | **97** | **9.8%** |
+| **TSS usable for IGR** | **891** | **90.2%** |
+| **TSS missed** | **97** | **9.8%** |
 
 ### TIGR4 (738 TSS)
-| Categoría | N | % |
+| Category | N | % |
 |-----------|---|---|
 | En IGR (usables) | 558 | 75.6% |
 | En CDS | 180 | 24.4% |
 | **TSS usables** | **627** | **85.0%** |
-| **TSS perdidos** | **111** | **15.0%** |
+| **TSS missed** | **111** | **15.0%** |
 
 ### Sigma factors D39V
 | Sigma | Total | En IGRs conservadas | % |
@@ -136,41 +136,41 @@
 
 ---
 
-## 6b. IGR BENCHMARK — EXPERIMENTAL (no consolidado)
+## 6b. IGR BENCHMARK — EXPERIMENTAL (not consolidated)
 
-> **Estado: experimental.** Extensión en paralelo al benchmark canónico; mismos
-> runners y CLI, solo cambia el dataset. Resultados preliminares sujetos a cambio.
+> **Status: experimental.** Parallel extension of the canonical benchmark; same
+> runners and CLI, only the dataset changes. Preliminary results subject to change.
 
-| Dataset | Pos/Neg | Contenido |
+| Dataset | Pos/Neg | Content |
 |---|---|---|
-| D39V IGR | 723 / 723 | Promotores en IGRs refinadas vs fondo intergénico |
+| D39V IGR | 723 / 723 | Promoters in refined IGRs vs intergenic background |
 | TIGR4 IGR subset_1 | 553 / 553 | high-conf primary |
 | TIGR4 IGR subset_2 | 578 / 578 | high-conf all |
 | TIGR4 IGR subset_3 | 971 / 971 | all primary |
 | TIGR4 IGR subset_4 | 1009 / 1009 | all comprehensive |
 
-- **Linaje D39V**: GFF 1003 TSS (Victor + Axel) → 989 curados (proximidad <25bp) → 723 en IGRs refinadas.
-- **Clusters IGR cross-strain (2 cepas)**: 2,247 clusters MMseqs2 (1,074 pares 1:1, 1,124 singletons, 49 multi-hit).
-- **Ejecución**: pura configuración del CLI (`--pos/--neg`), sin código dedicado — ver `docs/RUNNING.md`.
-- **Datasets versionados**: `data/benchmark_igr/` + split MLDSPP 723 (seed 42).
+- **D39V lineage**: GFF 1003 TSS (Victor + Axel) → 989 curated (proximity <25bp) → 723 in refined IGRs.
+- **Cross-strain IGR clusters (2 strains)**: 2,247 MMseqs2 clusters (1,074 1:1 pairs, 1,124 singletons, 49 multi-hit).
+- **Execution**: pure CLI configuration (`--pos/--neg`), no dedicated code — see `docs/RUNNING.md`.
+- **Versioned datasets**: `data/benchmark_igr/` + MLDSPP 723 split (seed 42).
 
 ---
 
-## 7. PENDIENTE (para cerrar el proyecto)
+## 7. PENDING (to close out the project)
 
 | # | Tarea | Esfuerzo |
 |---|-------|----------|
-| 1 | Asignar sigma putativo a 570 TSS "None" de D39V | 30 min |
-| 2 | AUC per sigma factor (usando scores cacheados) | 15 min |
-| 3 | Ejecutar MEME/FIMO en TIGR4 localmente | 5 min |
-| 4 | iPro-MP en TIGR4 (requiere GPU/Codon) | Slurm |
-| 5 | Documentar limitación TIGR4 sigma | 5 min |
+| 1 | Assign putative sigma to 570 D39V "None" TSS | 30 min |
+| 2 | AUC per sigma factor (using cached scores) | 15 min |
+| 3 | Run MEME/FIMO on TIGR4 locally | 5 min |
+| 4 | iPro-MP on TIGR4 (requires GPU/Codon) | Slurm |
+| 5 | Document TIGR4 sigma limitation | 5 min |
 
 ---
 
-## 8. HERRAMIENTAS Y SUS ESTADOS
+## 8. TOOLS AND THEIR STATUS
 
-| # | Tool | D39V scores | TIGR4 scores | Runner | Tipo |
+| # | Tool | D39V scores | TIGR4 scores | Runner | Type |
 |---|------|------------|-------------|--------|------|
 | 1 | MEME (STREME+FIMO) | ✅ | ❌ | `meme.py` | Motif |
 | 2 | FIMO + E. coli DB | ✅ | ❌ | `fimo_db.py` | Motif |
@@ -182,4 +182,4 @@
 | 8 | PromoTech RF-TETRA | ✅ | ✅ | `promotech_tetra.py` | ML |
 | 9 | iPro-MP (DNABERT-6) | ✅ | ❌ | `ipromp_sp12.py` | DL |
 
-*MLDSPP 75% = data leakage (75% S. pneumoniae en training). Valor real: MLDSPP 0%.
+*MLDSPP 75% = data leakage (75% S. pneumoniae in training). True value: MLDSPP 0%.

@@ -25,8 +25,8 @@ def run_tool(tool: str, out_dir: Path):
 def test_cli_guardrails():
     r1 = subprocess.run([PY, "src/cli.py", "run", "tool_inexistente"], cwd=ROOT,
                         capture_output=True, text=True)
-    assert r1.returncode == 2, f"tool inválida debe salir 2 (got {r1.returncode})"
-    assert "unknown tool" in r1.stdout.lower(), "mensaje de tool inválida"
+    assert r1.returncode == 2, f"invalid tool must exit 2 (got {r1.returncode})"
+    assert "unknown tool" in r1.stdout.lower(), "invalid tool message"
     r2 = subprocess.run([PY, "src/cli.py", "run"], cwd=ROOT, capture_output=True, text=True)
     assert r2.returncode == 2, f"sin args debe salir 2 (got {r2.returncode})"
     print("OK CLI guardrails (exit 2 + lista de tools)")

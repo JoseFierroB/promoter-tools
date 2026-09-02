@@ -74,12 +74,12 @@ def in_cds(pos):
 
 from src.analysis.experiments._conservation import build_conservation_classes
 meta = build_conservation_classes(Path(__file__).resolve().parents[3] / "data/benchmark/d39v/positives_81bp_metadata.tsv")
-print("=== verificación de clases ===")
+print("=== class verification ===")
 print(meta["class_cons"].value_counts().to_string())
 print("original: conserved=647 nonconserved=157 intragenic=184")
 
 # ── A2: conservation-stratified AUC por set ──
-print("\n=== A2: AUC por clase de conservación (d39v) ===")
+print("\n=== A2: AUC by conservation class (d39v) ===")
 rows = []
 for sname, sset in SETS:
     if sname != "d39v": continue
@@ -119,7 +119,7 @@ df.to_csv(OUT/"calibration_brier.tsv", sep="\t", index=False)
 print(df.pivot_table(index="tool", columns=["strain","set"], values="Brier_raw").round(4).to_string())
 
 # ── A3: confusion (Youden) por set ──
-print("\n=== A3: Confusion Youden (canónico vs gc30 d39v) ===")
+print("\n=== A3: Confusion Youden (canonical vs gc30 d39v) ===")
 for sname, sset in [("d39v","cds"),("d39v","gc30"),("tigr4","cds"),("tigr4","gc31")]:
     root = Path("/home/fierro/Desktop")/f"{sname}_gc/{sset}/predictions"
     print(f"\n-- {sname} {sset} --")
@@ -192,7 +192,7 @@ for la, lb, p in pvals_sorted:
     print(f"  Δ(ΔAUC) {la} vs {lb}: diff={round((data[la][2][0]>0 and True) or 0, 3)}, p_holm={adj[(la,lb)]:.4f}" if False else f"  {la} vs {lb}: p_raw={p:.5f}  p_holm={adj[(la,lb)]:.4f}")
 
 # ── A5: duplicados sensibilidad ──
-print("\n=== A5: duplicados — AUC 972 únicas vs 988 (d39v cds) ===")
+print("\n=== A5: duplicates — AUC 972 unique vs 988 (d39v cds) ===")
 pos_seqs = [str(r.seq) for r in __import__("Bio.SeqIO", fromlist=["SeqIO"]).parse(ROOT/"data/benchmark/d39v/positives_81bp.fasta", "fasta")]
 keep = np.ones(len(pos_seqs), bool)
 seen = set()
@@ -208,7 +208,7 @@ for key, lab in TOOLS:
     y = np.r_[np.ones(len(pos)), np.zeros(len(neg))]; s = np.r_[pos, neg]
     a_all = roc_auc_score(y, s)
     a_uniq = roc_auc_score(np.r_[np.ones(keep.sum()), np.zeros(len(neg))], np.r_[pos[keep], neg])
-    print(f"  {lab:<11} AUC 988={a_all:.4f}  AUC 972 únicas={a_uniq:.4f}  Δ={a_uniq-a_all:+.4f}")
+    print(f"  {lab:<11} AUC 988={a_all:.4f}  AUC 972 unique={a_uniq:.4f}  Δ={a_uniq-a_all:+.4f}")
 
 print("\n=== A6: AUC por Sigma_Factor (d39v cds y gc30) ===")
 sig = meta["Sigma_Factor"].fillna("None").values
