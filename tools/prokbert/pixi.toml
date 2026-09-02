@@ -1,0 +1,25 @@
+[workspace]
+authors = ["nbrg-ppcu"]
+channels = ["conda-forge"]
+name = "prokbert"
+platforms = ["linux-64"]
+version = "0.0.50"
+
+[tasks]
+
+[dependencies]
+python = "3.10.*"
+pip = "*"
+transformers = ">=4.30,<4.45"
+numpy = "*"
+biopython = "*"
+pandas = "*"
+scikit-learn = "*"
+h5py = "*"
+datasets = "*"
+accelerate = "*"
+huggingface_hub = "*"
+
+[pypi-dependencies]
+torch = { version = ">=2.0,<2.12", index = "https://download.pytorch.org/whl/cu128" }
+prokbert = { path = ".", editable = true }

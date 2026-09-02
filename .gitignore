@@ -62,3 +62,6 @@ data/benchmark_cds/
 data/benchmark_ortho_1to1/
 # Backup GFF local
 *.bak_*
+# New tools (2026-09): vendored code only; heavy data/models stay local
+tools/EvoSNR-Prom/data/
+tools/Prompt/one/
