@@ -37,7 +37,7 @@ pixi run python src/cli.py run meme fimo_prok mldspp mldspp_75 lcnn promotech_ho
 
 > **Status: experimental** — preliminary datasets and results, subject to change.
 > Reuses the same runners, CLI, and analysis modules; only the dataset changes.
-> No dedicated orchestration code — pure CLI configuration (see `docs/RUNNING.md`).
+> All IGR/niche code is self-contained in `experiments/igr/` (with its own README).
 
 - **IGR benchmark** — promoters inside refined intergenic regions: D39V (723/723) and 4 TIGR4 subsets (553/578/971/1009). Versioned in `data/benchmark_igr/`.
 - **Specialized niches** — CDS-internal promoters and 1:1 ortholog pairs (`data/benchmark_cds/`, `data/benchmark_ortho_1to1/`, generated).
@@ -45,12 +45,12 @@ pixi run python src/cli.py run meme fimo_prok mldspp mldspp_75 lcnn promotech_ho
 
 ```bash
 # 1. Build all IGR/niche datasets (see docs/RUNNING.md for each step)
-python src/dataset/extract_intergenic_regions_refined.py \
+python experiments/igr/extract_intergenic_regions_refined.py \
     --fasta data/reference/D39V.fna --gff data/reference/D39V.gff3 \
     --out-dir output/intergenic_refined/d39v --circular
-python src/dataset/build_igr_benchmark_dataset.py
-python src/dataset/build_tigr4_igr_datasets.py
-python src/dataset/build_cds_and_ortho_datasets.py
+python experiments/igr/build_d39v_igr.py
+python experiments/igr/build_tigr4_igr.py
+python experiments/igr/build_cds_ortho.py
 
 # 2. Benchmark IGR (same CLI, different dataset) — works with or without pixi
 python src/cli.py run meme fimo_prok mldspp mldspp_75 lcnn promotech_hot ipromp_sp12 \
@@ -80,6 +80,9 @@ data/
 ├── benchmark_igr/      # Experimental: IGR benchmark (D39V 723 + TIGR4 subsets)
 ├── tigr4/              # Canonical: TIGR4 TSS datasets (multiple tiers)
 └── reference/          # Reference genomes + annotations (GFF3 + FASTA)
+
+experiments/igr/         # Experimental IGR modules — self-contained (builders,
+                         #   clustering, IGR metrics) + README with full recipes
 
 tools/                   # External tool packages (each with pixi.toml)
 ├── meme/                # MEME Suite

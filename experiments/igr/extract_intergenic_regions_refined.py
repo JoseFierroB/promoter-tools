@@ -9,7 +9,7 @@ Enhancements over baseline:
      and initial spacer (before first feature) across the replication origin (coordinate L -> 1).
 
 Usage:
-  python src/dataset/extract_intergenic_regions_refined.py \
+  python experiments/igr/extract_intergenic_regions_refined.py \
     --fasta data/reference/D39V.fna \
     --gff data/reference/D39V.gff3 \
     --out-dir output/intergenic_refined/d39v \

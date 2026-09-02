@@ -178,14 +178,14 @@ pixi run python src/cli.py run lcnn \
 
 ```bash
 # Step 0 — Refined intergenic regions (input for all IGR datasets)
-python src/dataset/extract_intergenic_regions_refined.py \
+python experiments/igr/extract_intergenic_regions_refined.py \
     --fasta data/reference/D39V.fna --gff data/reference/D39V.gff3 \
     --out-dir output/intergenic_refined/d39v --circular
 
 # Step 1-3 — the four dataset families (D39V IGR + TIGR4 IGR subsets + CDS + ortho 1:1)
-python src/dataset/build_igr_benchmark_dataset.py      # D39V IGR 723/723 → data/benchmark_igr/d39v
-python src/dataset/build_tigr4_igr_datasets.py         # TIGR4 4 subsets (553/578/971/1009) → data/benchmark_igr/tigr4
-python src/dataset/build_cds_and_ortho_datasets.py     # CDS internal + ortho 1:1 → data/benchmark_cds, data/benchmark_ortho_1to1
+python experiments/igr/build_d39v_igr.py      # D39V IGR 723/723 → data/benchmark_igr/d39v
+python experiments/igr/build_tigr4_igr.py         # TIGR4 4 subsets (553/578/971/1009) → data/benchmark_igr/tigr4
+python experiments/igr/build_cds_ortho.py     # CDS internal + ortho 1:1 → data/benchmark_cds, data/benchmark_ortho_1to1
 ```
 
 > Commands shown without the `pixi run` prefix work identically inside the pixi
@@ -220,9 +220,9 @@ Same command with different `--pos/--neg` covers every dataset family:
 ### 3. Metrics, plots and cross-strain IGR clustering
 
 ```bash
-python src/analysis/process_igr_benchmark_results.py        # AUC/ACC/MCC + ROC from predictions_igr
-python src/analysis/cluster_igrs.py                         # cross-strain IGR clusters (2,247) tables
-python src/analysis/sigma_stratified_roc.py                 # ROC stratified by SigA/None/SigX
+python experiments/igr/process_results.py        # AUC/ACC/MCC + ROC from predictions_igr
+python experiments/igr/cluster_igrs.py                         # cross-strain IGR clusters (2,247) tables
+python experiments/igr/sigma_roc.py                 # ROC stratified by SigA/None/SigX
 
 # Confusion matrices for the canonical benchmark (reuse existing analysis code)
 python src/analysis/benchmark_confusion.py

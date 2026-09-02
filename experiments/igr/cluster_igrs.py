@@ -8,7 +8,7 @@ Consumes MMseqs2 combined clusters + refined IGR TSVs + TSS metadata to produce:
   - output/tables/igr_multihit_and_paralogs.tsv (multi-hit families / intra-strain paralogs)
 
 Usage:
-    python src/analysis/cluster_igrs.py
+    python experiments/igr/cluster_igrs.py
 """
 
 import sys
