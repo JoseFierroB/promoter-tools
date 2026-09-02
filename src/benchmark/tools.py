@@ -128,6 +128,37 @@ PROMOTER_TOOLS = {
         gpu_id="0",                      # GPU 0 = RTX 3090 (PCI_BUS_ID): misma que LCNN; torch cu128 soporta sm_86
         notes="DNABERT-6 transformer. Heavy on CPU, fast on GPU.",
     ),
+    "prokbert": Tool(
+        name="ProkBERT-mini (NeuralBioInfo)",
+        short_name="prokbert_mini",
+        category="DL",
+        pixi_env=config.ipromp_dir / "pixi.toml",
+        outputs=[ROOT / "output/predictions/prokbert.tsv"],
+        model_paths=[],
+        gpu_capable=True,
+        gpu_id="0",
+        notes="Official fine-tuned ProkBERT-mini-promoter gLM transformer.",
+    ),
+    "prompt": Tool(
+        name="Prompt MLP (B. subtilis 168)",
+        short_name="prompt",
+        category="ML",
+        pixi_env=config.ipromp_dir / "pixi.toml",
+        outputs=[ROOT / "output/predictions/prompt.tsv"],
+        model_paths=[ROOT / "tools/Prompt/mlp/ckpt/168/model_500.pth"],
+        gpu_capable=False,
+        notes="Official Prompt MLP model trained on B. subtilis 168.",
+    ),
+    "evosnr": Tool(
+        name="EvoSNR-Prom (Lexicon)",
+        short_name="evosnr",
+        category="DL",
+        pixi_env=config.ipromp_dir / "pixi.toml",
+        outputs=[ROOT / "output/predictions/evosnr.tsv"],
+        model_paths=[ROOT / "tools/EvoSNR-Prom/data/Esch/fasttext_model/model.bin"],
+        gpu_capable=False,
+        notes="EvoSNR-Prom FastText lexicon model aggregated over 81 bp fragment.",
+    ),
 }
 
 
