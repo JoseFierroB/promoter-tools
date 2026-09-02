@@ -13,10 +13,13 @@ import numpy as np
 import pandas as pd
 import torch
 from Bio import SeqIO
+
+ROOT_DIR = Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(ROOT_DIR / "tools/prokbert/src"))
+
 from transformers import AutoModelForSequenceClassification
 from prokbert.prokbert_tokenizer import ProkBERTTokenizer
 
-ROOT_DIR = Path(__file__).resolve().parent.parent.parent
 MODEL_NAME = "neuralbioinfo/prokbert-mini-promoter"
 
 def parse_args():
@@ -34,14 +37,14 @@ def predict_fasta(model, tokenizer, fasta_path, device, batch_size=64):
         return [], []
     seq_ids = [r.id for r in records]
     seq_texts = [str(r.seq).upper() for r in records]
-    
+
     preds = []
     for i in range(0, len(seq_texts), batch_size):
         batch_seqs = seq_texts[i : i + batch_size]
-        batch_inputs = [tokenizer(s, return_tensors="pt") for s in batch_seqs]
-        input_ids = torch.stack([b["input_ids"] for b in batch_inputs], dim=0).to(device)
-        attention_mask = torch.stack([b["attention_mask"] for b in batch_inputs], dim=0).to(device)
-        
+        encoded = tokenizer.batch_encode_plus(batch_seqs, return_tensors="pt")
+        input_ids = encoded["input_ids"].to(device)
+        attention_mask = encoded["attention_mask"].to(device)
+
         with torch.no_grad():
             outputs = model(input_ids=input_ids, attention_mask=attention_mask)
             logits = outputs.logits
@@ -53,9 +56,9 @@ def predict_fasta(model, tokenizer, fasta_path, device, batch_size=64):
 def main():
     args = parse_args()
     out_path = Path(args.output)
-    
+
     t0 = time.time()
-    tokenizer = ProkBERTTokenizer(tokenization_params={'kmer': 6, 'shift': 1})
+    tokenizer = ProkBERTTokenizer(tokenization_params={'kmer': 6, 'shift': 1}, operation_space='sequence')
     model = AutoModelForSequenceClassification.from_pretrained(MODEL_NAME, trust_remote_code=True)
     model.to(args.device)
     model.eval()

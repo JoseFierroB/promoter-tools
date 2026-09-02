@@ -36,3 +36,5 @@ artemis = "*"
 
 [pypi-dependencies]
 nvidia-ml-py = "*"
+# evosnr runner: FastText lexicon model loading (wheel build; pure fasttext fails to compile)
+fasttext-wheel = "==0.9.2"
