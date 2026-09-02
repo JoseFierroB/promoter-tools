@@ -137,7 +137,7 @@ PromoTech domina: ~54 KB/secuencia (matrices joblib 42n×160 float64 ×2 hebras 
 ## 11. ARCHIVOS GENERADOS
 
 - Datasets: `data/benchmark/d39v_gc/`, `data/tigr4_gc/`
-- Predicciones: `output/d39v_gc/{cds,gc30,gc33}/predictions/`, `output/tigr4_gc/{cds,gc31}/predictions/` (WS) y `/home/fierro/Desktop/{d39v_gc,tigr4_gc}/` (local)
+- Predicciones: `output/d39v_gc/{cds,gc30,gc33}/predictions/`, `output/tigr4_gc/{cds,gc31}/predictions/` (WS) y `~/Desktop/{d39v_gc,tigr4_gc}/` (espejo local)
 - Análisis: `output/gc_analysis/full_analysis.log`, `output/gc_analysis/calibration_brier.tsv`
 - CIs de proyección: `output/tables/extrapolation.tsv` (+time_s_ci_low/high)
 ## 12. ERROR ANALYSIS Y CONSENSO (añadido)

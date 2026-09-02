@@ -1,0 +1,5 @@
+Subset_Key	Subset_Name	Positives_N	Negatives_N	Total_N	Pos_GC_Mean	Neg_GC_Mean	Description
+subset_1_high_conf_primary	TIGR4 IGR High Confidence Primary	553	553	1106	29.239	33.144	Primary High-Confidence TSSs (TSS_100.4) located strictly inside refined IGRs.
+subset_2_high_conf_all	TIGR4 IGR High Confidence Primary + Secondary	578	578	1156	29.358	33.201	All High-Confidence TSSs (Primary + Secondary) located strictly inside refined IGRs.
+subset_3_all_primary	TIGR4 IGR All Primary (High + Low Confidence)	971	971	1942	30.151	33.12	All Primary TSSs (High and Low confidence) located strictly inside refined IGRs.
+subset_4_all_comprehensive	TIGR4 IGR All Comprehensive (4 Sheets)	1009	1009	2018	30.252	33.115	Comprehensive set of all experimental TSSs from S1_TSS.xlsx located strictly inside refined IGRs.

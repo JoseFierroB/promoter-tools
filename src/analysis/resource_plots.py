@@ -24,7 +24,8 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 DEFAULT_DATA_DIR = Path(os.environ.get("PROMOTER_DATA_DIR", "/home/fierro/Desktop"))
-DEFAULT_OUT_DIR = DEFAULT_DATA_DIR / "scale_db_4tools" / "plots"
+# Por defecto barras verticales individuales, organizadas por experimento/dato en output/plots/resources/bars_vertical (y output/plots/resources/ para compatibilidad)
+DEFAULT_OUT_DIR = ROOT / "output" / "plots" / "resources" / "bars_vertical"
 OUT_DIR = DEFAULT_OUT_DIR
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 

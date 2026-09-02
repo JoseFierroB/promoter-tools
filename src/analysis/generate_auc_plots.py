@@ -4,12 +4,12 @@ Canonical Repository Master ROC / AUC Plot Generator.
 Location: src/analysis/generate_auc_plots.py
 
 Generates Standardized Publication-Grade ROC / AUC Curves across all 6 datasets:
-  1. roc_auc_baseline_988.png / .svg / .pdf          (D39V N = 1,976: 988 Pos + 988 Neg)
+  1. roc_auc_baseline_989.png / .svg / .pdf          (D39V N = 1,978: 989 Pos + 989 Neg)
   2. roc_auc_scaling_30k.png / .svg / .pdf           (D39V Scaling N = 59,280: 29.6k Pos + 29.6k Neg)
   3. roc_tigr4_high.png / .svg / .pdf                (TIGR4 High-Confidence N = 1,476: 738 Pos + 738 Neg)
   4. roc_tigr4_all.png / .svg / .pdf                 (TIGR4 All TSS N = 4,000: 2,000 Pos + 2,000 Neg)
-  5. roc_combined_d39v_tigr4_high.png / .svg / .pdf  (Combined D39V + TIGR4 High N = 3,452: 1,726 Pos + 1,726 Neg)
-  6. roc_combined_d39v_tigr4_all.png / .svg / .pdf   (Combined D39V + TIGR4 All N = 5,976: 2,988 Pos + 2,988 Neg)
+  5. roc_combined_d39v_tigr4_high.png / .svg / .pdf  (Combined D39V + TIGR4 High N = 3,454: 1,727 Pos + 1,727 Neg)
+  6. roc_combined_d39v_tigr4_all.png / .svg / .pdf   (Combined D39V + TIGR4 All N = 5,978: 2,989 Pos + 2,989 Neg)
 
 Outputs are automatically saved to output/plots/organized/ (1_cpu/, 16_cpu/, gpu_vram/)
 and mirrored to ~/Desktop/benchmark_plots_organized/ and ~/Desktop/roc_curves_master/.
@@ -54,14 +54,14 @@ for d in DESTINATIONS:
     d.mkdir(parents=True, exist_ok=True)
 
 
-def plot_roc_988():
+def plot_roc_989():
     curves = []
 
     # 1. iPro-MP (H. pylori) [gLM]
     ip_f = P_988 / 'ipromp' / 'ipromp_12_predictions.csv'
     if ip_f.exists():
         df_ip = pd.read_csv(ip_f)
-        n_pos = 988
+        n_pos = 989
         n_neg = len(df_ip) - n_pos
         y = np.hstack([np.ones(n_pos), np.zeros(n_neg)])
         col = 'Probability' if 'Probability' in df_ip.columns else 'PRED'
@@ -150,7 +150,7 @@ def plot_roc_988():
     ax.plot([0, 1], [0, 1], color="#9E9E9E", linestyle="--", linewidth=1.2, label="Random Chance (AUC = 0.500)")
     ax.set_xlabel("False Positive Rate (1 - Specificity)", fontsize=12, fontweight="bold")
     ax.set_ylabel("True Positive Rate (Sensitivity)", fontsize=12, fontweight="bold")
-    ax.set_title("Receiver Operating Characteristic (ROC) — D39V Baseline (N = 1,976)",
+    ax.set_title("Receiver Operating Characteristic (ROC) — D39V Baseline (N = 1,978)",
                  fontsize=13, fontweight="bold", pad=15)
     ax.set_xlim([0.0, 1.0])
     ax.set_ylim([0.0, 1.02])
@@ -160,13 +160,13 @@ def plot_roc_988():
     plt.tight_layout()
 
     for d in DESTINATIONS:
-        for fname in ["roc_auc_baseline_988", "roc_auc_N1976"]:
+        for fname in ["roc_auc_baseline_989", "roc_auc_N1978", "roc_auc_baseline_988", "roc_auc_N1976"]:
             fig.savefig(d / f"{fname}.png", dpi=300, bbox_inches="tight")
             fig.savefig(d / f"{fname}.svg", dpi=300, bbox_inches="tight")
             fig.savefig(d / f"{fname}.pdf", dpi=300, bbox_inches="tight")
             if (d / "graph_png").exists():
                 fig.savefig(d / "graph_png" / f"{fname}.png", dpi=300, bbox_inches="tight")
-    print("  [Saved ROC] roc_auc_N1976 / roc_auc_baseline_988 (.png, .svg, .pdf)")
+    print("  [Saved ROC] roc_auc_N1978 / roc_auc_baseline_989 (alias 988/N1976) (.png, .svg, .pdf)")
     plt.close(fig)
 
 
@@ -486,7 +486,7 @@ def plot_roc_combined_d39v_tigr4_high():
 
     # 1. iPro-MP
     df_ip_d = pd.read_csv(P_988 / 'ipromp/ipromp_12_predictions.csv')
-    y_ip_d = np.hstack([np.ones(988), np.zeros(len(df_ip_d) - 988)])
+    y_ip_d = np.hstack([np.ones(989), np.zeros(len(df_ip_d) - 989)])
     s_ip_d = df_ip_d['Probability' if 'Probability' in df_ip_d.columns else 'PRED'].values
 
     df_ip_t = pd.read_csv(REPO_ROOT / 'output/predictions/ipromp/ipromp_tigr4_predictions.csv')
@@ -578,7 +578,7 @@ def plot_roc_combined_d39v_tigr4_high():
     ax.plot([0, 1], [0, 1], color="#9E9E9E", linestyle="--", linewidth=1.2, label="Random Chance (AUC = 0.500)")
     ax.set_xlabel("False Positive Rate (1 - Specificity)", fontsize=12, fontweight="bold")
     ax.set_ylabel("True Positive Rate (Sensitivity)", fontsize=12, fontweight="bold")
-    ax.set_title("Combined ROC — D39V + TIGR4 High-Confidence (N = 3,452: 1:1 Balanced)",
+    ax.set_title("Combined ROC — D39V + TIGR4 High-Confidence (N = 3,454: 1:1 Balanced)",
                  fontsize=13, fontweight="bold", pad=15)
     ax.set_xlim([0.0, 1.0])
     ax.set_ylim([0.0, 1.02])
@@ -604,7 +604,7 @@ def plot_roc_combined_d39v_tigr4_all():
 
     # 1. iPro-MP
     df_ip_d = pd.read_csv(P_988 / 'ipromp/ipromp_12_predictions.csv')
-    y_ip_d = np.hstack([np.ones(988), np.zeros(len(df_ip_d) - 988)])
+    y_ip_d = np.hstack([np.ones(989), np.zeros(len(df_ip_d) - 989)])
     s_ip_d = df_ip_d['Probability' if 'Probability' in df_ip_d.columns else 'PRED'].values
 
     df_ip_a = pd.read_csv(p_ext / 'ipromp_tigr4_extended.csv')
@@ -710,7 +710,7 @@ def main():
     print("  EJECUTANDO GENERADOR CANÓNICO DE ROC / AUC (PNG, SVG, PDF)")
     print(f"  Directorio Canónico: {CANONICAL_TARGET}")
     print("=" * 65)
-    plot_roc_988()
+    plot_roc_989()
     plot_roc_30k()
     plot_roc_tigr4_high()
     plot_roc_tigr4_all()

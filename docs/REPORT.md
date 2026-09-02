@@ -1,6 +1,6 @@
 # Promoter-Tools — Memory & Key Findings
 
-> Proyecto: Benchmark de 9 herramientas de predicción de promotores en S. pneumoniae D39V vs TIGR4
+> Proyecto: Benchmark de 7 herramientas (9 runners) de predicción de promotores en S. pneumoniae D39V vs TIGR4
 > Fecha del reporte: Agosto 2026
 > Estado: ~85% completado
 
@@ -25,7 +25,7 @@
 
 ## 2. CONFUSION MATRIX — Mejor umbral (Youden's J)
 
-### D39V (988 pos, 1000 neg)
+### D39V (989 pos, 1000 neg)
 
 | Tool | AUC | TP | FN | FP | TN | Sens | Spec | F1 | Balance |
 |------|-----|----|----|----|----|------|------|-----|---------|
@@ -108,7 +108,7 @@
 
 ## 6. TSS — POSICIÓN Y FACTIBILIDAD
 
-### D39V (988 TSS)
+### D39V (989 TSS curados de 1003 brutos)
 | Categoría | N | % |
 |-----------|---|---|
 | En IGR (usables) | 804 | 81.4% |
@@ -133,6 +133,26 @@
 | SigA | 397 | 271 | 68.3% |
 | SigX | 21 | 11 | 52.4% |
 | None | 570 | — | — |
+
+---
+
+## 6b. IGR BENCHMARK — EXPERIMENTAL (no consolidado)
+
+> **Estado: experimental.** Extensión en paralelo al benchmark canónico; mismos
+> runners y CLI, solo cambia el dataset. Resultados preliminares sujetos a cambio.
+
+| Dataset | Pos/Neg | Contenido |
+|---|---|---|
+| D39V IGR | 723 / 723 | Promotores en IGRs refinadas vs fondo intergénico |
+| TIGR4 IGR subset_1 | 553 / 553 | high-conf primary |
+| TIGR4 IGR subset_2 | 578 / 578 | high-conf all |
+| TIGR4 IGR subset_3 | 971 / 971 | all primary |
+| TIGR4 IGR subset_4 | 1009 / 1009 | all comprehensive |
+
+- **Linaje D39V**: GFF 1003 TSS (Victor + Axel) → 989 curados (proximidad <25bp) → 723 en IGRs refinadas.
+- **Clusters IGR cross-strain (2 cepas)**: 2,247 clusters MMseqs2 (1,074 pares 1:1, 1,124 singletons, 49 multi-hit).
+- **Ejecución**: pura configuración del CLI (`--pos/--neg`), sin código dedicado — ver `docs/RUNNING.md`.
+- **Datasets versionados**: `data/benchmark_igr/` + split MLDSPP 723 (seed 42).
 
 ---
 
