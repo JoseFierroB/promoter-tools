@@ -1,0 +1,990 @@
+Sequence_ID	Reported_Sigma	Predicted_Sigma	RpoD_Recovered	ComX_Recovered
+TSS_1_D39V_2971_+_656_SigA	SigA	RpoD_Bipartite	True	False
+TSS_2_D39V_8311_+_220_None		RpoD_Bipartite	False	False
+TSS_3_D39V_9760_-_5_None		RpoD_Bipartite	False	False
+TSS_4_D39V_11583_+_419_None		RpoD_Bipartite	False	False
+TSS_5_D39V_14240_+_3048_SigA	SigA	Orphan_or_Extended10	False	False
+TSS_6_D39V_14809_+_5214_SigA	SigA	RpoD_Bipartite	True	False
+TSS_7_D39V_15002_+_1049_SigA	SigA	RpoD_Bipartite	True	False
+TSS_8_D39V_15042_+_60_SigA	SigA	Orphan_or_Extended10	False	False
+TSS_9_D39V_16855_+_14_None		Orphan_or_Extended10	False	False
+TSS_11_D39V_19903_+_108_None		Orphan_or_Extended10	False	False
+TSS_12_D39V_20225_+_121_None		RpoD_Bipartite	False	False
+TSS_13_D39V_22142_+_138_None		RpoD_Bipartite	False	False
+TSS_14_D39V_22562_+_683_SigA	SigA	RpoD_Bipartite	True	False
+TSS_15_D39V_23967_+_0_CiaR-LOWCONF		Orphan_or_Extended10	False	False
+TSS_16_D39V_24095_+_117_None		RpoD_Bipartite	False	False
+TSS_17_D39V_24632_+_0_SigA-LOWCONF	SigA	RpoD_Bipartite	True	False
+TSS_18_D39V_24736_+_14_SigX	SigX	ComX	False	True
+TSS_20_D39V_27149_+_909_None		RpoD_Bipartite	False	False
+TSS_21_D39V_28585_+_570_SigA	SigA	RpoD_Bipartite	True	False
+TSS_22_D39V_29658_+_1153_SigX	SigX	ComX	False	True
+TSS_23_D39V_29885_-_5_None		Orphan_or_Extended10	False	False
+TSS_24_D39V_31168_-_4_None		RpoD_Bipartite	False	False
+TSS_25_D39V_31219_-_41_None		ComX	False	False
+TSS_26_D39V_31306_+_305_SigX	SigX	RpoD_Bipartite	False	False
+TSS_27_D39V_34008_+_1100_None		RpoD_Bipartite	False	False
+TSS_28_D39V_35683_-_367_SigA	SigA	RpoD_Bipartite	True	False
+TSS_29_D39V_35787_+_494_SigA	SigA	RpoD_Bipartite	True	False
+TSS_30_D39V_39464_+_33_BlpR		RpoD_Bipartite	False	False
+TSS_31_D39V_41369_-_5_None		Orphan_or_Extended10	False	False
+TSS_32_D39V_41719_+_1311_SigA	SigA	Orphan_or_Extended10	False	False
+TSS_33_D39V_45561_+_451_None		RpoD_Bipartite	False	False
+TSS_34_D39V_55618_+_278_PurR		RpoD_Bipartite	False	False
+TSS_35_D39V_58788_+_40_None		Orphan_or_Extended10	False	False
+TSS_36_D39V_65524_-_40_None		Orphan_or_Extended10	False	False
+TSS_37_D39V_65800_+_17_SigA	SigA	RpoD_Bipartite	True	False
+TSS_38_D39V_73040_+_17_SigA	SigA	RpoD_Bipartite	True	False
+TSS_39_D39V_74057_+_185_SigA	SigA	RpoD_Bipartite	True	False
+TSS_40_D39V_75292_+_219_SigA	SigA	RpoD_Bipartite	True	False
+TSS_41_D39V_76686_+_869_None		Orphan_or_Extended10	False	False
+TSS_42_D39V_78854_+_273_SigA	SigA	RpoD_Bipartite	True	False
+TSS_43_D39V_79885_+_9_None		Orphan_or_Extended10	False	False
+TSS_44_D39V_80154_+_2_None		Orphan_or_Extended10	False	False
+TSS_45_D39V_84261_+_307_None		RpoD_Bipartite	False	False
+TSS_46_D39V_86080_+_7_SigA	SigA	RpoD_Bipartite	True	False
+TSS_48_D39V_87033_+_51_None		RpoD_Bipartite	False	False
+TSS_49_D39V_88197_+_curated_None		RpoD_Bipartite	False	False
+TSS_50_D39V_92084_+_261_None		Orphan_or_Extended10	False	False
+TSS_51_D39V_93218_+_44_None		RpoD_Bipartite	False	False
+TSS_52_D39V_95269_-_curated_None		RpoD_Bipartite	False	False
+TSS_53_D39V_97161_-_29_SigA	SigA	RpoD_Bipartite	True	False
+TSS_54_D39V_98446_-_80_SigA	SigA	RpoD_Bipartite	True	False
+TSS_55_D39V_98483_+_54_CiaR		RpoD_Bipartite	False	False
+TSS_56_D39V_98544_+_94_None		Orphan_or_Extended10	False	False
+TSS_57_D39V_99639_+_13_None		RpoD_Bipartite	False	False
+TSS_58_D39V_104149_-_323_SigA	SigA	RpoD_Bipartite	True	False
+TSS_59_D39V_104342_+_7031_None		Orphan_or_Extended10	False	False
+TSS_60_D39V_105394_+_174_SigA	SigA	RpoD_Bipartite	True	False
+TSS_61_D39V_105722_+_3_None		RpoD_Bipartite	False	False
+TSS_62_D39V_106080_+_6_None		RpoD_Bipartite	False	False
+TSS_63_D39V_106298_-_2_SigA	SigA	RpoD_Bipartite	True	False
+TSS_64_D39V_108919_+_curated_None		RpoD_Bipartite	False	False
+TSS_65_D39V_113592_-_11_None		RpoD_Bipartite	False	False
+TSS_66_D39V_121347_+_3_None		RpoD_Bipartite	False	False
+TSS_67_D39V_125709_+_5_SigA	SigA	RpoD_Bipartite	True	False
+TSS_68_D39V_127630_+_2_None		Orphan_or_Extended10	False	False
+TSS_69_D39V_127681_+_0_SigA-LOWCONF	SigA	RpoD_Bipartite	True	False
+TSS_70_D39V_128769_+_140_SigA	SigA	RpoD_Bipartite	True	False
+TSS_71_D39V_130999_+_143_SigA	SigA	RpoD_Bipartite	True	False
+TSS_72_D39V_132229_+_748_SigA	SigA	RpoD_Bipartite	False	False
+TSS_73_D39V_137110_-_763_SigA	SigA	RpoD_Bipartite	True	False
+TSS_74_D39V_137994_-_4_None		Orphan_or_Extended10	False	False
+TSS_75_D39V_138189_-_1875_SigX	SigX	ComX	False	True
+TSS_76_D39V_138318_+_351_SigA	SigA	RpoD_Bipartite	True	False
+TSS_77_D39V_149645_+_216_None		RpoD_Bipartite	False	False
+TSS_78_D39V_149935_+_262_SigA	SigA	RpoD_Bipartite	True	False
+TSS_79_D39V_150914_-_3368_SigA	SigA	RpoD_Bipartite	True	False
+TSS_80_D39V_151037_+_56_SigA	SigA	RpoD_Bipartite	False	False
+TSS_81_D39V_151192_+_20_None		Orphan_or_Extended10	False	False
+TSS_82_D39V_151757_+_2_None		Orphan_or_Extended10	False	False
+TSS_83_D39V_154902_+_2674_CmbR		Orphan_or_Extended10	False	False
+TSS_84_D39V_155885_+_120_MtaR		RpoD_Bipartite	False	False
+TSS_85_D39V_157954_+_106_SigA	SigA	RpoD_Bipartite	True	False
+TSS_86_D39V_160610_-_241_SigA	SigA	RpoD_Bipartite	True	False
+TSS_87_D39V_160696_+_428_SigA	SigA	RpoD_Bipartite	True	False
+TSS_88_D39V_164318_+_1128_SigA	SigA	RpoD_Bipartite	True	False
+TSS_89_D39V_164903_+_397_SigA	SigA	RpoD_Bipartite	True	False
+TSS_90_D39V_167010_-_70_None		RpoD_Bipartite	False	False
+TSS_91_D39V_168371_-_14_SigA	SigA	RpoD_Bipartite	False	False
+TSS_92_D39V_168487_+_165_None		RpoD_Bipartite	False	False
+TSS_93_D39V_174470_-_1161_SigA	SigA	RpoD_Bipartite	True	False
+TSS_94_D39V_174595_+_106_None		Orphan_or_Extended10	False	False
+TSS_95_D39V_177669_-_193_None		Orphan_or_Extended10	False	False
+TSS_96_D39V_179577_-_419_SigA	SigA	RpoD_Bipartite	True	False
+TSS_97_D39V_179647_+_323_None		RpoD_Bipartite	False	False
+TSS_98_D39V_183652_+_1040_SigA	SigA	RpoD_Bipartite	True	False
+TSS_100_D39V_184784_+_5527_SigA	SigA	RpoD_Bipartite	True	False
+TSS_101_D39V_185086_+_8_None		Orphan_or_Extended10	False	False
+TSS_102_D39V_187557_+_641_SigA	SigA	RpoD_Bipartite	True	False
+TSS_103_D39V_188146_+_44_SigA	SigA	RpoD_Bipartite	True	False
+TSS_104_D39V_189781_+_79_SigX	SigX	ComX	False	True
+TSS_105_D39V_189952_+_486_SigA	SigA	RpoD_Bipartite	True	False
+TSS_106_D39V_191604_+_141_SigA	SigA	RpoD_Bipartite	True	False
+TSS_107_D39V_194983_+_5_SigA	SigA	RpoD_Bipartite	True	False
+TSS_108_D39V_195877_+_1021_SigA	SigA	Orphan_or_Extended10	False	False
+TSS_109_D39V_196175_-_3_None		Orphan_or_Extended10	False	False
+TSS_110_D39V_196465_+_3_None		Orphan_or_Extended10	False	False
+TSS_111_D39V_200569_+_2_None		Orphan_or_Extended10	False	False
+TSS_112_D39V_208214_+_2483_SigA	SigA	RpoD_Bipartite	True	False
+TSS_113_D39V_210479_+_3_None		Orphan_or_Extended10	False	False
+TSS_114_D39V_210542_+_4_None		Orphan_or_Extended10	False	False
+TSS_116_D39V_211008_+_264_None		RpoD_Bipartite	False	False
+TSS_117_D39V_212734_+_0_CiaR-LOWCONF		Orphan_or_Extended10	False	False
+TSS_118_D39V_212907_+_635_None		RpoD_Bipartite	False	False
+TSS_119_D39V_218863_-_24_DeoR		Orphan_or_Extended10	False	False
+TSS_120_D39V_220835_+_curated_None		RpoD_Bipartite	False	False
+TSS_121_D39V_223001_+_curated_None		RpoD_Bipartite	False	False
+TSS_122_D39V_227704_+_949_SigA	SigA	RpoD_Bipartite	True	False
+TSS_123_D39V_230384_+_238_None		RpoD_Bipartite	False	False
+TSS_124_D39V_231599_+_0_CiaR-LOWCONF		Orphan_or_Extended10	False	False
+TSS_125_D39V_231787_+_curated_CiaR		Orphan_or_Extended10	False	False
+TSS_126_D39V_232279_+_182_SigA	SigA	RpoD_Bipartite	True	False
+TSS_127_D39V_232491_-_0_None-LOWCONF		RpoD_Bipartite	False	False
+TSS_128_D39V_232585_+_382_SigA	SigA	RpoD_Bipartite	True	False
+TSS_129_D39V_234171_+_curated_None		Orphan_or_Extended10	False	False
+TSS_130_D39V_234340_+_740_None		RpoD_Bipartite	False	False
+TSS_131_D39V_239157_+_13_None		Orphan_or_Extended10	False	False
+TSS_132_D39V_240680_+_0_SigA-LOWCONF	SigA	RpoD_Bipartite	True	False
+TSS_133_D39V_242645_+_181_None		RpoD_Bipartite	False	False
+TSS_134_D39V_243294_+_3_None		Orphan_or_Extended10	False	False
+TSS_135_D39V_247626_-_428_MalR		RpoD_Bipartite	False	False
+TSS_136_D39V_247889_+_47_SigA	SigA	RpoD_Bipartite	True	False
+TSS_137_D39V_249314_+_60_None		RpoD_Bipartite	False	False
+TSS_138_D39V_251510_+_135_None		RpoD_Bipartite	False	False
+TSS_139_D39V_256007_+_287_SigA	SigA	RpoD_Bipartite	True	False
+TSS_140_D39V_258547_+_333_SigA	SigA	RpoD_Bipartite	True	False
+TSS_141_D39V_259467_+_229_SigA	SigA	RpoD_Bipartite	True	False
+TSS_142_D39V_263684_-_730_CcpA		RpoD_Bipartite	False	False
+TSS_143_D39V_264979_-_232_Rex		RpoD_Bipartite	False	False
+TSS_144_D39V_265161_-_3_None		Orphan_or_Extended10	False	False
+TSS_145_D39V_265212_-_3_None		Orphan_or_Extended10	False	False
+TSS_146_D39V_266066_-_146_None		Orphan_or_Extended10	False	False
+TSS_147_D39V_266193_+_603_SigA	SigA	RpoD_Bipartite	True	False
+TSS_148_D39V_268493_+_205_None		RpoD_Bipartite	False	False
+TSS_149_D39V_272569_-_149_None		RpoD_Bipartite	False	False
+TSS_150_D39V_272798_+_257_SigA	SigA	RpoD_Bipartite	True	False
+TSS_151_D39V_274983_+_59_CcpA		RpoD_Bipartite	False	False
+TSS_152_D39V_276801_+_5_SigA	SigA	RpoD_Bipartite	True	False
+TSS_153_D39V_277264_+_3_SigA	SigA	RpoD_Bipartite	True	False
+TSS_154_D39V_281916_+_943_SigA	SigA	RpoD_Bipartite	True	False
+TSS_155_D39V_285438_-_5_None		RpoD_Bipartite	False	False
+TSS_156_D39V_289191_+_2_None		RpoD_Bipartite	False	False
+TSS_157_D39V_290431_-_3_None		Orphan_or_Extended10	False	False
+TSS_158_D39V_293172_-_4_SigA	SigA	RpoD_Bipartite	True	False
+TSS_159_D39V_299335_+_216_None		RpoD_Bipartite	False	False
+TSS_160_D39V_299401_+_26_None		RpoD_Bipartite	False	False
+TSS_161_D39V_301352_-_73_SigA	SigA	RpoD_Bipartite	True	False
+TSS_162_D39V_301481_+_653_SigA	SigA	Orphan_or_Extended10	False	False
+TSS_163_D39V_302760_+_40_None		RpoD_Bipartite	False	False
+TSS_164_D39V_306329_+_0_SigA-LOWCONF	SigA	RpoD_Bipartite	True	False
+TSS_165_D39V_309462_-_293_SigA	SigA	RpoD_Bipartite	True	False
+TSS_166_D39V_311032_-_53_None		RpoD_Bipartite	False	False
+TSS_167_D39V_311146_+_239_MalR		RpoD_Bipartite	False	False
+TSS_168_D39V_313950_-_73_SigA	SigA	RpoD_Bipartite	True	False
+TSS_169_D39V_314177_+_1226_SigA	SigA	ComX	True	False
+TSS_170_D39V_320310_+_5_None		Orphan_or_Extended10	False	False
+TSS_171_D39V_333076_+_407_SigA	SigA	RpoD_Bipartite	True	False
+TSS_172_D39V_335271_+_curated_None		RpoD_Bipartite	False	False
+TSS_173_D39V_343628_-_105_SigA	SigA	RpoD_Bipartite	True	False
+TSS_174_D39V_343629_+_36_SigA	SigA	RpoD_Bipartite	True	False
+TSS_175_D39V_344241_+_1199_SigA	SigA	RpoD_Bipartite	True	False
+TSS_176_D39V_344596_+_3_None		Orphan_or_Extended10	False	False
+TSS_177_D39V_347696_+_2281_None		RpoD_Bipartite	False	False
+TSS_178_D39V_349928_+_curated_None		RpoD_Bipartite	False	False
+TSS_179_D39V_351022_+_36_None		Orphan_or_Extended10	False	False
+TSS_180_D39V_354945_+_22_LiaR		RpoD_Bipartite	False	False
+TSS_181_D39V_358127_+_21_SigA	SigA	RpoD_Bipartite	True	False
+TSS_182_D39V_358201_+_18_SigA	SigA	RpoD_Bipartite	True	False
+TSS_183_D39V_361216_-_5_None		Orphan_or_Extended10	False	False
+TSS_184_D39V_367898_+_940_CcpA		RpoD_Bipartite	False	False
+TSS_185_D39V_373359_-_231_SigA	SigA	RpoD_Bipartite	True	False
+TSS_186_D39V_373434_+_172_SigA	SigA	RpoD_Bipartite	True	False
+TSS_187_D39V_376828_+_386_SigA	SigA	RpoD_Bipartite	True	False
+TSS_188_D39V_378503_+_382_None		Orphan_or_Extended10	False	False
+TSS_189_D39V_379251_+_893_CcpA		Orphan_or_Extended10	False	False
+TSS_190_D39V_381662_-_1179_SigA	SigA	RpoD_Bipartite	True	False
+TSS_191_D39V_383446_-_161_SigA	SigA	ComX	True	False
+TSS_192_D39V_383590_+_1372_None		RpoD_Bipartite	False	False
+TSS_193_D39V_384576_+_387_None		RpoD_Bipartite	False	False
+TSS_194_D39V_386370_+_3_None		Orphan_or_Extended10	False	False
+TSS_195_D39V_386413_+_15_FabT		Orphan_or_Extended10	False	False
+TSS_196_D39V_386446_+_5_FabT		Orphan_or_Extended10	False	False
+TSS_197_D39V_388771_+_72_SigA	SigA	Orphan_or_Extended10	False	False
+TSS_198_D39V_394420_+_303_SigA	SigA	RpoD_Bipartite	True	False
+TSS_199_D39V_396825_-_685_None		RpoD_Bipartite	False	False
+TSS_200_D39V_400169_-_88_None		Orphan_or_Extended10	False	False
+TSS_201_D39V_400264_+_155_SigA	SigA	RpoD_Bipartite	True	False
+TSS_202_D39V_402710_+_109669_None		RpoD_Bipartite	False	False
+TSS_204_D39V_402777_+_6_None		Orphan_or_Extended10	False	False
+TSS_205_D39V_403084_+_1345_SigA	SigA	RpoD_Bipartite	True	False
+TSS_206_D39V_405311_+_899_SigA	SigA	RpoD_Bipartite	True	False
+TSS_207_D39V_409434_+_8_SigA	SigA	RpoD_Bipartite	True	False
+TSS_208_D39V_411544_+_3605_SigA	SigA	RpoD_Bipartite	True	False
+TSS_209_D39V_414235_-_445_SigA	SigA	RpoD_Bipartite	True	False
+TSS_210_D39V_414315_+_141_CcpA		RpoD_Bipartite	False	False
+TSS_211_D39V_416272_+_222_SigA	SigA	RpoD_Bipartite	True	False
+TSS_212_D39V_417560_+_29_None		Orphan_or_Extended10	False	False
+TSS_213_D39V_419892_-_203_None		RpoD_Bipartite	False	False
+TSS_214_D39V_420055_+_547_SigA	SigA	RpoD_Bipartite	True	False
+TSS_215_D39V_424325_-_curated_None		RpoD_Bipartite	False	False
+TSS_216_D39V_426292_-_58_None		RpoD_Bipartite	False	False
+TSS_217_D39V_436281_-_507_None		Orphan_or_Extended10	False	False
+TSS_218_D39V_436430_+_91_MtaR		Orphan_or_Extended10	False	False
+TSS_219_D39V_438154_+_138_None		RpoD_Bipartite	False	False
+TSS_220_D39V_440744_+_24_SigA	SigA	RpoD_Bipartite	True	False
+TSS_221_D39V_441436_+_1143_None		Orphan_or_Extended10	False	False
+TSS_222_D39V_443966_+_1766_SigA	SigA	RpoD_Bipartite	True	False
+TSS_224_D39V_444667_+_0_SigA-LOWCONF	SigA	RpoD_Bipartite	True	False
+TSS_225_D39V_448844_-_59_None		RpoD_Bipartite	False	False
+TSS_226_D39V_449009_+_2_None		Orphan_or_Extended10	False	False
+TSS_227_D39V_454139_+_506_None		RpoD_Bipartite	False	False
+TSS_228_D39V_455487_+_0_None-LOWCONF		RpoD_Bipartite	False	False
+TSS_229_D39V_456088_+_1518_SigA	SigA	RpoD_Bipartite	True	False
+TSS_230_D39V_458000_+_5_SigA	SigA	RpoD_Bipartite	True	False
+TSS_231_D39V_459935_+_30_None		Orphan_or_Extended10	False	False
+TSS_232_D39V_464802_+_3_SigA	SigA	Orphan_or_Extended10	False	False
+TSS_233_D39V_466761_-_246_None		RpoD_Bipartite	False	False
+TSS_234_D39V_467922_+_740_SigA	SigA	RpoD_Bipartite	True	False
+TSS_235_D39V_474826_-_532_SigA	SigA	RpoD_Bipartite	False	False
+TSS_236_D39V_474831_+_784_None		RpoD_Bipartite	False	False
+TSS_237_D39V_477186_-_755_BlpR		RpoD_Bipartite	False	False
+TSS_238_D39V_477290_+_118_BlpR		RpoD_Bipartite	False	False
+TSS_239_D39V_477392_+_27_None		Orphan_or_Extended10	False	False
+TSS_240_D39V_483648_-_520_SigA	SigA	RpoD_Bipartite	True	False
+TSS_241_D39V_483870_+_673_BlpR		RpoD_Bipartite	False	False
+TSS_242_D39V_486042_+_978_SigA	SigA	RpoD_Bipartite	True	False
+TSS_243_D39V_487564_+_733_SigA	SigA	RpoD_Bipartite	True	False
+TSS_244_D39V_494753_+_217_SigA	SigA	RpoD_Bipartite	False	False
+TSS_245_D39V_496865_+_1040_None		RpoD_Bipartite	False	False
+TSS_246_D39V_497356_+_2189_None		Orphan_or_Extended10	False	False
+TSS_247_D39V_502386_+_68_SigA	SigA	RpoD_Bipartite	True	False
+TSS_248_D39V_505295_-_2_None		Orphan_or_Extended10	False	False
+TSS_249_D39V_505839_+_61_SigA	SigA	RpoD_Bipartite	True	False
+TSS_250_D39V_508697_+_0_SigA-LOWCONF	SigA	RpoD_Bipartite	True	False
+TSS_251_D39V_513346_+_4011_None		RpoD_Bipartite	False	False
+TSS_252_D39V_518836_-_0_SigA-LOWCONF	SigA	RpoD_Bipartite	True	False
+TSS_253_D39V_519908_+_8_MtaR		RpoD_Bipartite	False	False
+TSS_254_D39V_523206_+_133_None		RpoD_Bipartite	False	False
+TSS_255_D39V_523752_+_5_None		Orphan_or_Extended10	False	False
+TSS_256_D39V_531618_+_21_SigA	SigA	RpoD_Bipartite	True	False
+TSS_257_D39V_535176_+_13_None		RpoD_Bipartite	False	False
+TSS_258_D39V_535267_+_6_SigA	SigA	RpoD_Bipartite	True	False
+TSS_259_D39V_537396_+_3100_Rex		Orphan_or_Extended10	False	False
+TSS_260_D39V_539877_-_24_SigA	SigA	RpoD_Bipartite	False	False
+TSS_261_D39V_543039_-_26_SigA	SigA	RpoD_Bipartite	True	False
+TSS_262_D39V_543257_+_222_SigA	SigA	RpoD_Bipartite	True	False
+TSS_263_D39V_545597_+_703_SigA	SigA	RpoD_Bipartite	True	False
+TSS_264_D39V_548279_+_89_None		RpoD_Bipartite	False	False
+TSS_265_D39V_550294_+_2_None		Orphan_or_Extended10	False	False
+TSS_266_D39V_550817_+_1959_None		RpoD_Bipartite	False	False
+TSS_267_D39V_551578_+_148_None		RpoD_Bipartite	False	False
+TSS_268_D39V_555251_-_236_CmbR		Orphan_or_Extended10	False	False
+TSS_269_D39V_555372_+_386_None		RpoD_Bipartite	False	False
+TSS_270_D39V_558642_+_206_SigA	SigA	RpoD_Bipartite	False	False
+TSS_271_D39V_560184_+_118_None		RpoD_Bipartite	False	False
+TSS_272_D39V_562666_+_11_SigA	SigA	RpoD_Bipartite	True	False
+TSS_273_D39V_563657_+_3_None		Orphan_or_Extended10	False	False
+TSS_274_D39V_565153_-_14_None		RpoD_Bipartite	False	False
+TSS_275_D39V_565724_+_5_SigA	SigA	RpoD_Bipartite	True	False
+TSS_276_D39V_566467_+_878_CcpA		RpoD_Bipartite	False	False
+TSS_277_D39V_569714_+_4_SigA	SigA	RpoD_Bipartite	True	False
+TSS_278_D39V_570269_+_4_MntR		RpoD_Bipartite	False	False
+TSS_279_D39V_577435_+_41_SigA	SigA	RpoD_Bipartite	True	False
+TSS_280_D39V_588464_-_64_None		RpoD_Bipartite	False	False
+TSS_281_D39V_588571_+_152_SigA	SigA	RpoD_Bipartite	True	False
+TSS_282_D39V_593596_+_7_None		RpoD_Bipartite	False	False
+TSS_283_D39V_596286_+_191_None		Orphan_or_Extended10	False	False
+TSS_284_D39V_598829_+_1218_None		RpoD_Bipartite	False	False
+TSS_285_D39V_605135_+_167_SigA	SigA	RpoD_Bipartite	True	False
+TSS_286_D39V_605401_+_7_None		Orphan_or_Extended10	False	False
+TSS_287_D39V_606983_+_10_None		RpoD_Bipartite	False	False
+TSS_288_D39V_608097_+_20_None		RpoD_Bipartite	False	False
+TSS_289_D39V_609172_+_263_None		Orphan_or_Extended10	False	False
+TSS_290_D39V_610328_-_18315_None		RpoD_Bipartite	False	False
+TSS_291_D39V_610340_+_570_SigA	SigA	RpoD_Bipartite	True	False
+TSS_292_D39V_615786_-_216_None		Orphan_or_Extended10	False	False
+TSS_293_D39V_615898_+_765_SigA	SigA	RpoD_Bipartite	True	False
+TSS_294_D39V_617583_-_23_None		Orphan_or_Extended10	False	False
+TSS_295_D39V_617706_+_898_None		RpoD_Bipartite	False	False
+TSS_296_D39V_620133_+_61_None		RpoD_Bipartite	False	False
+TSS_297_D39V_623338_+_209_None		RpoD_Bipartite	False	False
+TSS_298_D39V_632244_+_1493_SigA	SigA	RpoD_Bipartite	True	False
+TSS_299_D39V_633886_+_176_SigA	SigA	RpoD_Bipartite	True	False
+TSS_300_D39V_640376_-_17_CmbR		RpoD_Bipartite	False	False
+TSS_301_D39V_640521_+_32_None		RpoD_Bipartite	False	False
+TSS_302_D39V_640785_+_808_None		RpoD_Bipartite	False	False
+TSS_303_D39V_642491_-_11_SigA	SigA	RpoD_Bipartite	True	False
+TSS_304_D39V_642911_+_824_SigA	SigA	RpoD_Bipartite	True	False
+TSS_305_D39V_644329_+_7398_SigA	SigA	RpoD_Bipartite	True	False
+TSS_306_D39V_647211_+_2208_SigA	SigA	RpoD_Bipartite	True	False
+TSS_307_D39V_649686_-_10_None		RpoD_Bipartite	False	False
+TSS_308_D39V_654021_-_curated_None		RpoD_Bipartite	False	False
+TSS_309_D39V_654162_+_205_SigA	SigA	RpoD_Bipartite	True	False
+TSS_310_D39V_657355_+_7238_CcpA		RpoD_Bipartite	False	False
+TSS_311_D39V_661497_+_44_SigA	SigA	RpoD_Bipartite	False	False
+TSS_312_D39V_663366_+_46_None		Orphan_or_Extended10	False	False
+TSS_313_D39V_664022_+_curated_None		RpoD_Bipartite	False	False
+TSS_314_D39V_666460_-_235_None		Orphan_or_Extended10	False	False
+TSS_315_D39V_667417_-_223_SigA	SigA	RpoD_Bipartite	True	False
+TSS_316_D39V_667429_+_59_SigA	SigA	RpoD_Bipartite	True	False
+TSS_317_D39V_668593_+_2979_None		Orphan_or_Extended10	False	False
+TSS_318_D39V_669376_+_882_SigA	SigA	RpoD_Bipartite	True	False
+TSS_319_D39V_670066_+_50_SigA	SigA	RpoD_Bipartite	True	False
+TSS_320_D39V_670412_+_26_SigA	SigA	RpoD_Bipartite	True	False
+TSS_321_D39V_675565_+_123_SigA	SigA	RpoD_Bipartite	True	False
+TSS_322_D39V_676333_+_1145_SigA	SigA	RpoD_Bipartite	True	False
+TSS_323_D39V_679303_+_49_SigA	SigA	RpoD_Bipartite	True	False
+TSS_324_D39V_682527_+_739_SigA	SigA	RpoD_Bipartite	True	False
+TSS_325_D39V_684007_+_3_SigA	SigA	RpoD_Bipartite	True	False
+TSS_326_D39V_685822_+_646_None		RpoD_Bipartite	False	False
+TSS_327_D39V_688004_+_1970_SigA	SigA	RpoD_Bipartite	True	False
+TSS_328_D39V_688763_+_653_None		Orphan_or_Extended10	False	False
+TSS_329_D39V_693323_-_126_SigA	SigA	RpoD_Bipartite	True	False
+TSS_330_D39V_694317_-_4_None		RpoD_Bipartite	False	False
+TSS_331_D39V_694409_+_12_SigA	SigA	RpoD_Bipartite	True	False
+TSS_333_D39V_695534_+_250_SigA	SigA	RpoD_Bipartite	True	False
+TSS_334_D39V_698345_-_82_None		RpoD_Bipartite	False	False
+TSS_335_D39V_698401_-_curated_None		Orphan_or_Extended10	False	False
+TSS_336_D39V_699404_-_924_SigA	SigA	RpoD_Bipartite	True	False
+TSS_337_D39V_700968_-_1330_None		RpoD_Bipartite	False	False
+TSS_338_D39V_701072_+_104_SigA	SigA	RpoD_Bipartite	True	False
+TSS_339_D39V_701157_+_93_SigA	SigA	RpoD_Bipartite	True	False
+TSS_340_D39V_704415_+_67_SigA	SigA	RpoD_Bipartite	True	False
+TSS_341_D39V_706738_+_156_SigA	SigA	RpoD_Bipartite	True	False
+TSS_342_D39V_707965_+_123_None		Orphan_or_Extended10	False	False
+TSS_343_D39V_708303_+_3_None		RpoD_Bipartite	False	False
+TSS_344_D39V_708576_+_3_None		Orphan_or_Extended10	False	False
+TSS_345_D39V_708994_+_66_None		RpoD_Bipartite	False	False
+TSS_346_D39V_711185_+_13_SigA	SigA	RpoD_Bipartite	True	False
+TSS_347_D39V_712579_+_549_None		RpoD_Bipartite	False	False
+TSS_348_D39V_715262_+_2009_CiaR		RpoD_Bipartite	False	False
+TSS_349_D39V_717619_-_3658_None		Orphan_or_Extended10	False	False
+TSS_350_D39V_717739_+_1467_None		RpoD_Bipartite	False	False
+TSS_351_D39V_718867_+_372_SigA	SigA	RpoD_Bipartite	True	False
+TSS_352_D39V_723228_+_357_None		RpoD_Bipartite	False	False
+TSS_353_D39V_725805_+_105_None		RpoD_Bipartite	False	False
+TSS_354_D39V_730202_-_4715_None		RpoD_Bipartite	False	False
+TSS_355_D39V_730880_+_51_None		RpoD_Bipartite	False	False
+TSS_356_D39V_734255_-_141_SigA	SigA	RpoD_Bipartite	True	False
+TSS_357_D39V_734675_-_6046_SigA	SigA	RpoD_Bipartite	True	False
+TSS_358_D39V_734813_+_449_SigA	SigA	RpoD_Bipartite	True	False
+TSS_359_D39V_736387_+_35_SigA	SigA	RpoD_Bipartite	True	False
+TSS_360_D39V_737397_+_34_None		Orphan_or_Extended10	False	False
+TSS_361_D39V_738361_+_4_SigA	SigA	RpoD_Bipartite	True	False
+TSS_362_D39V_738544_+_4110_CcpA		RpoD_Bipartite	False	False
+TSS_363_D39V_746064_-_7630_SigA	SigA	RpoD_Bipartite	True	False
+TSS_364_D39V_747048_-_78_CcpA		RpoD_Bipartite	False	False
+TSS_365_D39V_747378_+_2_None		Orphan_or_Extended10	False	False
+TSS_366_D39V_747872_+_723_SigA	SigA	RpoD_Bipartite	True	False
+TSS_367_D39V_749695_+_94_None		RpoD_Bipartite	False	False
+TSS_368_D39V_756029_+_11_None		Orphan_or_Extended10	False	False
+TSS_369_D39V_757739_-_229_None		RpoD_Bipartite	False	False
+TSS_370_D39V_757852_+_453_SigA	SigA	RpoD_Bipartite	True	False
+TSS_371_D39V_762810_+_608_CodY		RpoD_Bipartite	False	False
+TSS_372_D39V_764760_+_3_None		RpoD_Bipartite	False	False
+TSS_373_D39V_767105_+_3957_None		RpoD_Bipartite	False	False
+TSS_374_D39V_767390_+_138_None		RpoD_Bipartite	False	False
+TSS_375_D39V_767527_+_12_None		Orphan_or_Extended10	False	False
+TSS_376_D39V_767609_+_3_None		Orphan_or_Extended10	False	False
+TSS_378_D39V_770583_+_467_SigA	SigA	RpoD_Bipartite	True	False
+TSS_379_D39V_772763_+_220_None		Orphan_or_Extended10	False	False
+TSS_380_D39V_773016_+_2585_None		Orphan_or_Extended10	False	False
+TSS_381_D39V_779740_-_103_None		Orphan_or_Extended10	False	False
+TSS_382_D39V_779826_+_curated_None		RpoD_Bipartite	False	False
+TSS_383_D39V_781585_+_5038_SigA	SigA	RpoD_Bipartite	True	False
+TSS_384_D39V_782221_-_184_None		Orphan_or_Extended10	False	False
+TSS_385_D39V_782349_+_552_SigA	SigA	RpoD_Bipartite	True	False
+TSS_386_D39V_786057_+_335_SigA	SigA	RpoD_Bipartite	True	False
+TSS_387_D39V_788851_-_797_SigA	SigA	RpoD_Bipartite	True	False
+TSS_388_D39V_788946_+_414_SigA	SigA	RpoD_Bipartite	True	False
+TSS_389_D39V_791441_+_17_None		RpoD_Bipartite	False	False
+TSS_390_D39V_794707_+_127_CiaR		RpoD_Bipartite	False	False
+TSS_391_D39V_796912_+_74_None		RpoD_Bipartite	False	False
+TSS_392_D39V_800551_+_5_None		Orphan_or_Extended10	False	False
+TSS_393_D39V_803660_-_4_None		RpoD_Bipartite	False	False
+TSS_394_D39V_803957_+_348_None		RpoD_Bipartite	False	False
+TSS_395_D39V_807133_+_1099_CcpA		RpoD_Bipartite	False	False
+TSS_396_D39V_808187_+_3_None		RpoD_Bipartite	False	False
+TSS_397_D39V_811416_+_14_SigA	SigA	RpoD_Bipartite	True	False
+TSS_398_D39V_812905_-_14_None		Orphan_or_Extended10	False	False
+TSS_399_D39V_813024_+_curated_None		RpoD_Bipartite	False	False
+TSS_400_D39V_816082_-_635_None		RpoD_Bipartite	False	False
+TSS_401_D39V_817739_+_57_SigA	SigA	RpoD_Bipartite	True	False
+TSS_402_D39V_820339_+_5528_SigA	SigA	Orphan_or_Extended10	False	False
+TSS_403_D39V_821306_-_2_None		RpoD_Bipartite	False	False
+TSS_404_D39V_821460_+_17_None		RpoD_Bipartite	False	False
+TSS_405_D39V_825973_-_curated_None		RpoD_Bipartite	False	False
+TSS_406_D39V_826260_+_584_SigA	SigA	RpoD_Bipartite	True	False
+TSS_407_D39V_835285_-_67_None		RpoD_Bipartite	False	False
+TSS_408_D39V_835420_+_11_BlpR		Orphan_or_Extended10	False	False
+TSS_409_D39V_836701_+_406_SigA	SigA	RpoD_Bipartite	True	False
+TSS_410_D39V_840682_+_5_None		Orphan_or_Extended10	False	False
+TSS_411_D39V_840930_+_348_None		RpoD_Bipartite	False	False
+TSS_412_D39V_844228_+_91_SigA	SigA	RpoD_Bipartite	True	False
+TSS_413_D39V_849299_-_50_None		Orphan_or_Extended10	False	False
+TSS_414_D39V_849652_+_46_None		RpoD_Bipartite	False	False
+TSS_415_D39V_851190_+_3139_None		RpoD_Bipartite	False	False
+TSS_416_D39V_853710_+_93_SigA	SigA	RpoD_Bipartite	True	False
+TSS_417_D39V_857289_+_89_None		RpoD_Bipartite	False	False
+TSS_418_D39V_857941_+_586_SigX	SigX	ComX	False	True
+TSS_419_D39V_860907_+_152_None		RpoD_Bipartite	False	False
+TSS_420_D39V_863157_+_12138_SigA	SigA	RpoD_Bipartite	True	False
+TSS_421_D39V_863324_+_2_None		Orphan_or_Extended10	False	False
+TSS_422_D39V_864986_+_1311_SigA	SigA	RpoD_Bipartite	True	False
+TSS_423_D39V_866991_+_148_None		RpoD_Bipartite	False	False
+TSS_424_D39V_868963_+_5_None		Orphan_or_Extended10	False	False
+TSS_425_D39V_870864_-_91_None		RpoD_Bipartite	False	False
+TSS_426_D39V_870922_+_1665_None		RpoD_Bipartite	False	False
+TSS_427_D39V_875569_+_2006_None		RpoD_Bipartite	False	False
+TSS_428_D39V_879640_+_20_SigX	SigX	ComX	False	True
+TSS_429_D39V_880613_+_453_None		Orphan_or_Extended10	False	False
+TSS_430_D39V_883185_+_420_CiaR		RpoD_Bipartite	False	False
+TSS_431_D39V_887352_-_218_None		RpoD_Bipartite	False	False
+TSS_432_D39V_888213_-_349_None		RpoD_Bipartite	False	False
+TSS_433_D39V_888330_+_1102_None		RpoD_Bipartite	False	False
+TSS_434_D39V_891368_+_634_SigA	SigA	RpoD_Bipartite	True	False
+TSS_435_D39V_894566_+_33_None		RpoD_Bipartite	False	False
+TSS_436_D39V_896223_+_0_None-LOWCONF		RpoD_Bipartite	False	False
+TSS_437_D39V_896926_+_3_None		Orphan_or_Extended10	False	False
+TSS_438_D39V_897876_+_811_SigA	SigA	RpoD_Bipartite	True	False
+TSS_439_D39V_899405_+_56_SigA	SigA	RpoD_Bipartite	True	False
+TSS_440_D39V_904081_+_109_SigA	SigA	RpoD_Bipartite	True	False
+TSS_441_D39V_905598_+_368_None		Orphan_or_Extended10	False	False
+TSS_442_D39V_909800_+_728_SigA	SigA	RpoD_Bipartite	True	False
+TSS_443_D39V_917033_-_21_SigA	SigA	RpoD_Bipartite	True	False
+TSS_444_D39V_920898_-_57_SigA	SigA	RpoD_Bipartite	True	False
+TSS_445_D39V_927214_-_92_SigA	SigA	RpoD_Bipartite	True	False
+TSS_446_D39V_935631_-_203_None		RpoD_Bipartite	False	False
+TSS_447_D39V_936131_+_54_None		RpoD_Bipartite	False	False
+TSS_448_D39V_938798_-_1652_SigA	SigA	RpoD_Bipartite	True	False
+TSS_449_D39V_938930_+_892_CcpA		Orphan_or_Extended10	False	False
+TSS_450_D39V_943786_-_2_None		Orphan_or_Extended10	False	False
+TSS_451_D39V_946851_-_45_SigA	SigA	RpoD_Bipartite	True	False
+TSS_452_D39V_948733_-_81_None		RpoD_Bipartite	False	False
+TSS_453_D39V_953602_-_1248_SigA	SigA	RpoD_Bipartite	True	False
+TSS_454_D39V_954895_-_4_None		RpoD_Bipartite	False	False
+TSS_455_D39V_957720_-_228_SigA	SigA	RpoD_Bipartite	True	False
+TSS_456_D39V_958454_-_44598_SigA	SigA	RpoD_Bipartite	True	False
+TSS_457_D39V_959407_-_128_None		RpoD_Bipartite	False	False
+TSS_458_D39V_959489_+_112_None		RpoD_Bipartite	False	False
+TSS_459_D39V_961366_-_1851_SigA	SigA	RpoD_Bipartite	True	False
+TSS_460_D39V_963439_-_740_SigA	SigA	RpoD_Bipartite	True	False
+TSS_461_D39V_964202_-_151_None		Orphan_or_Extended10	False	False
+TSS_462_D39V_964482_+_648_None		RpoD_Bipartite	False	False
+TSS_463_D39V_966611_-_37_None		Orphan_or_Extended10	False	False
+TSS_464_D39V_970110_-_319_SigA	SigA	RpoD_Bipartite	True	False
+TSS_465_D39V_970111_+_16_None		RpoD_Bipartite	False	False
+TSS_466_D39V_970764_+_241_None		RpoD_Bipartite	False	False
+TSS_467_D39V_973568_+_402_Rex		RpoD_Bipartite	False	False
+TSS_468_D39V_975625_-_290_SigX	SigX	ComX	False	True
+TSS_469_D39V_977973_-_439_SigA	SigA	RpoD_Bipartite	True	False
+TSS_470_D39V_978939_-_10_None		Orphan_or_Extended10	False	False
+TSS_471_D39V_983335_-_508_None		RpoD_Bipartite	False	False
+TSS_472_D39V_984164_-_10_None		RpoD_Bipartite	False	False
+TSS_473_D39V_986817_+_9_None		Orphan_or_Extended10	False	False
+TSS_474_D39V_987618_-_63_SigA	SigA	RpoD_Bipartite	True	False
+TSS_475_D39V_990240_-_714_None		RpoD_Bipartite	False	False
+TSS_476_D39V_993447_-_39_None		Orphan_or_Extended10	False	False
+TSS_478_D39V_993600_-_419_None		RpoD_Bipartite	False	False
+TSS_479_D39V_996678_-_3055_SigA	SigA	RpoD_Bipartite	True	False
+TSS_480_D39V_1000777_-_67_None		RpoD_Bipartite	False	False
+TSS_481_D39V_1001848_-_curated_None		RpoD_Bipartite	False	False
+TSS_482_D39V_1004243_-_5_None		RpoD_Bipartite	False	False
+TSS_483_D39V_1015411_+_7_None		Orphan_or_Extended10	False	False
+TSS_484_D39V_1022227_-_48_None		RpoD_Bipartite	False	False
+TSS_485_D39V_1023324_-_17_None		RpoD_Bipartite	False	False
+TSS_486_D39V_1025176_-_58_None		RpoD_Bipartite	False	False
+TSS_487_D39V_1026226_-_220_None		RpoD_Bipartite	False	False
+TSS_488_D39V_1028210_-_0_SigA-LOWCONF	SigA	RpoD_Bipartite	True	False
+TSS_489_D39V_1031103_-_10_SigA	SigA	RpoD_Bipartite	True	False
+TSS_490_D39V_1036872_-_350_SigA	SigA	RpoD_Bipartite	True	False
+TSS_491_D39V_1039878_-_11_None		RpoD_Bipartite	False	False
+TSS_492_D39V_1040897_-_2552_CiaR		Orphan_or_Extended10	False	False
+TSS_493_D39V_1045181_-_curated_None		RpoD_Bipartite	False	False
+TSS_494_D39V_1047916_-_467_None		RpoD_Bipartite	False	False
+TSS_495_D39V_1047977_+_1364_None		RpoD_Bipartite	False	False
+TSS_496_D39V_1048273_+_185_None		RpoD_Bipartite	False	False
+TSS_497_D39V_1051644_-_2_SigA	SigA	RpoD_Bipartite	True	False
+TSS_498_D39V_1051849_-_1306_SigA	SigA	RpoD_Bipartite	True	False
+TSS_499_D39V_1052049_-_7092_SigA	SigA	RpoD_Bipartite	True	False
+TSS_500_D39V_1052229_-_167_SigA	SigA	RpoD_Bipartite	True	False
+TSS_501_D39V_1052911_-_114_None		Orphan_or_Extended10	False	False
+TSS_502_D39V_1052957_+_38_None		Orphan_or_Extended10	False	False
+TSS_503_D39V_1053448_+_1182_None		RpoD_Bipartite	False	False
+TSS_504_D39V_1055009_-_21_None		RpoD_Bipartite	False	False
+TSS_505_D39V_1055111_+_26_None		RpoD_Bipartite	False	False
+TSS_506_D39V_1062045_-_19_None		RpoD_Bipartite	False	False
+TSS_507_D39V_1064823_-_16_SigA	SigA	RpoD_Bipartite	True	False
+TSS_508_D39V_1065690_-_12_SigA	SigA	RpoD_Bipartite	True	False
+TSS_509_D39V_1067447_-_66_SigA	SigA	RpoD_Bipartite	True	False
+TSS_510_D39V_1069682_-_355_SigA	SigA	RpoD_Bipartite	True	False
+TSS_511_D39V_1069950_+_1920_SigA	SigA	RpoD_Bipartite	True	False
+TSS_512_D39V_1072583_+_3_None		Orphan_or_Extended10	False	False
+TSS_513_D39V_1073750_+_258_LacR		RpoD_Bipartite	False	False
+TSS_514_D39V_1079658_-_0_SigA-LOWCONF	SigA	RpoD_Bipartite	True	False
+TSS_515_D39V_1082731_-_14_SigA	SigA	RpoD_Bipartite	True	False
+TSS_516_D39V_1084121_-_2_None		Orphan_or_Extended10	False	False
+TSS_517_D39V_1084974_-_curated_None		RpoD_Bipartite	False	False
+TSS_518_D39V_1087203_-_71_SigA	SigA	RpoD_Bipartite	True	False
+TSS_519_D39V_1091901_-_2_None		Orphan_or_Extended10	False	False
+TSS_520_D39V_1093331_-_860_None		RpoD_Bipartite	False	False
+TSS_521_D39V_1094086_-_326_None		RpoD_Bipartite	False	False
+TSS_522_D39V_1094639_-_57_SigA	SigA	RpoD_Bipartite	True	False
+TSS_523_D39V_1100188_-_106_SigA	SigA	RpoD_Bipartite	True	False
+TSS_524_D39V_1101545_-_14_SigA	SigA	RpoD_Bipartite	True	False
+TSS_525_D39V_1102488_-_74_Rex		RpoD_Bipartite	False	False
+TSS_526_D39V_1102918_-_5_None		RpoD_Bipartite	False	False
+TSS_527_D39V_1105951_-_965_SigA	SigA	RpoD_Bipartite	True	False
+TSS_528_D39V_1106069_+_967_CcpA		RpoD_Bipartite	False	False
+TSS_529_D39V_1110855_-_62_SigA	SigA	RpoD_Bipartite	True	False
+TSS_530_D39V_1112797_-_21_SigA	SigA	RpoD_Bipartite	True	False
+TSS_531_D39V_1113374_-_90_SigA	SigA	RpoD_Bipartite	True	False
+TSS_532_D39V_1116312_-_126_None		RpoD_Bipartite	False	False
+TSS_533_D39V_1117527_-_1378_SigA	SigA	RpoD_Bipartite	True	False
+TSS_534_D39V_1117585_-_2_None		Orphan_or_Extended10	False	False
+TSS_535_D39V_1119554_-_817_PurR		RpoD_Bipartite	False	False
+TSS_536_D39V_1119756_+_537_None		RpoD_Bipartite	False	False
+TSS_537_D39V_1121810_+_37_None		Orphan_or_Extended10	False	False
+TSS_538_D39V_1122325_+_12_None		RpoD_Bipartite	False	False
+TSS_539_D39V_1126466_-_153_None		RpoD_Bipartite	False	False
+TSS_540_D39V_1127501_-_191_SigA	SigA	RpoD_Bipartite	True	False
+TSS_541_D39V_1127624_+_1327_SigA	SigA	RpoD_Bipartite	True	False
+TSS_542_D39V_1130639_+_147_None		RpoD_Bipartite	False	False
+TSS_543_D39V_1139380_-_165_SigA	SigA	RpoD_Bipartite	True	False
+TSS_544_D39V_1140727_-_399_SigA	SigA	RpoD_Bipartite	True	False
+TSS_545_D39V_1149162_-_13_None		RpoD_Bipartite	False	False
+TSS_546_D39V_1149614_-_474_None		RpoD_Bipartite	False	False
+TSS_547_D39V_1151812_-_117_SigA	SigA	RpoD_Bipartite	True	False
+TSS_548_D39V_1153265_-_104_SigA	SigA	RpoD_Bipartite	True	False
+TSS_549_D39V_1154757_-_460_SigX	SigX	ComX	False	True
+TSS_550_D39V_1159051_-_97_SigA	SigA	RpoD_Bipartite	True	False
+TSS_551_D39V_1159217_-_2_CiaR		RpoD_Bipartite	False	False
+TSS_552_D39V_1159338_+_7_None		RpoD_Bipartite	False	False
+TSS_554_D39V_1168970_-_5080_SigA	SigA	RpoD_Bipartite	True	False
+TSS_555_D39V_1170223_-_479_SigA	SigA	RpoD_Bipartite	True	False
+TSS_556_D39V_1170339_+_19_None		RpoD_Bipartite	False	False
+TSS_557_D39V_1170746_+_0_SigA-LOWCONF	SigA	RpoD_Bipartite	True	False
+TSS_558_D39V_1174123_-_844_None		RpoD_Bipartite	False	False
+TSS_559_D39V_1174168_+_102_None		RpoD_Bipartite	False	False
+TSS_560_D39V_1175105_+_1799_SigA	SigA	RpoD_Bipartite	True	False
+TSS_561_D39V_1178648_-_480_None		RpoD_Bipartite	False	False
+TSS_562_D39V_1179142_-_511_None		RpoD_Bipartite	False	False
+TSS_563_D39V_1179188_+_84_SigA	SigA	RpoD_Bipartite	True	False
+TSS_564_D39V_1181901_-_5_None		Orphan_or_Extended10	False	False
+TSS_565_D39V_1182924_-_139_None		Orphan_or_Extended10	False	False
+TSS_566_D39V_1183485_-_6513_SigA	SigA	RpoD_Bipartite	True	False
+TSS_567_D39V_1183548_+_62_None		RpoD_Bipartite	False	False
+TSS_568_D39V_1184547_+_53842_None		RpoD_Bipartite	False	False
+TSS_569_D39V_1187118_-_60_None		RpoD_Bipartite	False	False
+TSS_570_D39V_1187429_+_658_SigA	SigA	RpoD_Bipartite	True	False
+TSS_571_D39V_1202802_-_6_SigA	SigA	RpoD_Bipartite	True	False
+TSS_572_D39V_1202833_-_9_SigA	SigA	RpoD_Bipartite	True	False
+TSS_573_D39V_1212984_-_29_SigA	SigA	RpoD_Bipartite	True	False
+TSS_574_D39V_1215355_-_5_None		Orphan_or_Extended10	False	False
+TSS_575_D39V_1215469_-_3_None		Orphan_or_Extended10	False	False
+TSS_576_D39V_1216425_-_2158_None		Orphan_or_Extended10	False	False
+TSS_577_D39V_1217994_-_45_SigA	SigA	RpoD_Bipartite	True	False
+TSS_578_D39V_1222704_-_7_None		Orphan_or_Extended10	False	False
+TSS_579_D39V_1225016_-_1436_CodY		RpoD_Bipartite	False	False
+TSS_580_D39V_1225904_-_529_SigA	SigA	RpoD_Bipartite	True	False
+TSS_581_D39V_1231477_-_405_SigA	SigA	RpoD_Bipartite	True	False
+TSS_582_D39V_1235545_-_5_None		Orphan_or_Extended10	False	False
+TSS_583_D39V_1235633_-_155_None		RpoD_Bipartite	False	False
+TSS_584_D39V_1242103_-_3925_SigA	SigA	RpoD_Bipartite	True	False
+TSS_585_D39V_1242196_+_23_None		RpoD_Bipartite	False	False
+TSS_586_D39V_1245185_-_22_SigA	SigA	RpoD_Bipartite	True	False
+TSS_587_D39V_1245304_+_11_MalR		RpoD_Bipartite	False	False
+TSS_588_D39V_1250194_-_161_SigA	SigA	RpoD_Bipartite	True	False
+TSS_589_D39V_1250634_-_14_None		Orphan_or_Extended10	False	False
+TSS_590_D39V_1255590_-_271_SigA	SigA	RpoD_Bipartite	True	False
+TSS_591_D39V_1257079_-_4_SigA	SigA	Orphan_or_Extended10	False	False
+TSS_592_D39V_1257202_-_286_SigA	SigA	RpoD_Bipartite	True	False
+TSS_593_D39V_1259444_-_165_SigA	SigA	RpoD_Bipartite	True	False
+TSS_594_D39V_1265026_-_967_None		RpoD_Bipartite	False	False
+TSS_595_D39V_1267843_-_4502_SigA	SigA	RpoD_Bipartite	True	False
+TSS_596_D39V_1271288_-_922_SigA	SigA	RpoD_Bipartite	True	False
+TSS_597_D39V_1273902_-_527_SigA	SigA	RpoD_Bipartite	True	False
+TSS_598_D39V_1274211_-_62601_SigA	SigA	RpoD_Bipartite	True	False
+TSS_599_D39V_1274289_-_2_None		Orphan_or_Extended10	False	False
+TSS_600_D39V_1275053_-_4051_SigA	SigA	RpoD_Bipartite	True	False
+TSS_601_D39V_1275151_+_146_CcpA		Orphan_or_Extended10	False	False
+TSS_602_D39V_1277991_-_24_None		RpoD_Bipartite	False	False
+TSS_603_D39V_1281748_-_430_SigA	SigA	RpoD_Bipartite	False	False
+TSS_604_D39V_1287478_-_67_None		RpoD_Bipartite	False	False
+TSS_605_D39V_1287942_+_0_None-LOWCONF		RpoD_Bipartite	False	False
+TSS_606_D39V_1291372_-_12_None		RpoD_Bipartite	False	False
+TSS_607_D39V_1291405_+_curated_None		RpoD_Bipartite	False	False
+TSS_608_D39V_1296045_-_4_SigA	SigA	RpoD_Bipartite	True	False
+TSS_609_D39V_1296266_+_7_None		Orphan_or_Extended10	False	False
+TSS_610_D39V_1300317_-_3_None		Orphan_or_Extended10	False	False
+TSS_611_D39V_1302186_-_1141_None		RpoD_Bipartite	False	False
+TSS_612_D39V_1305617_-_0_None-LOWCONF		RpoD_Bipartite	False	False
+TSS_613_D39V_1308537_-_12_SigA	SigA	RpoD_Bipartite	True	False
+TSS_614_D39V_1308660_+_1247_None		RpoD_Bipartite	False	False
+TSS_615_D39V_1309407_+_369_SigA	SigA	RpoD_Bipartite	True	False
+TSS_616_D39V_1311112_-_324_None		Orphan_or_Extended10	False	False
+TSS_617_D39V_1311440_-_129_SigA	SigA	RpoD_Bipartite	True	False
+TSS_618_D39V_1313018_-_69_None		Orphan_or_Extended10	False	False
+TSS_619_D39V_1313084_-_307_CmbR		Orphan_or_Extended10	False	False
+TSS_620_D39V_1314554_-_394_None		RpoD_Bipartite	False	False
+TSS_621_D39V_1314635_+_86_SigA	SigA	RpoD_Bipartite	True	False
+TSS_622_D39V_1318792_-_1549_SigA	SigA	RpoD_Bipartite	True	False
+TSS_623_D39V_1318973_+_21_SigA	SigA	RpoD_Bipartite	True	False
+TSS_624_D39V_1326709_-_4181_None		RpoD_Bipartite	False	False
+TSS_625_D39V_1327625_-_46_None		RpoD_Bipartite	False	False
+TSS_626_D39V_1329109_-_1041_SigA	SigA	RpoD_Bipartite	True	False
+TSS_627_D39V_1329764_-_95_SigX	SigX	RpoD_Bipartite	False	False
+TSS_628_D39V_1329816_-_145_SigX	SigX	ComX	False	True
+TSS_629_D39V_1329908_+_534_SigA	SigA	RpoD_Bipartite	True	False
+TSS_630_D39V_1333592_-_4_None		Orphan_or_Extended10	False	False
+TSS_631_D39V_1334568_-_27_None		RpoD_Bipartite	False	False
+TSS_632_D39V_1336213_-_0_None-LOWCONF		RpoD_Bipartite	False	False
+TSS_633_D39V_1337971_-_1053_None		RpoD_Bipartite	False	False
+TSS_634_D39V_1338947_+_7_None		RpoD_Bipartite	False	False
+TSS_635_D39V_1341603_+_416_None		RpoD_Bipartite	False	False
+TSS_636_D39V_1343442_+_6129_None		Orphan_or_Extended10	False	False
+TSS_637_D39V_1346242_-_400_SigA	SigA	RpoD_Bipartite	True	False
+TSS_638_D39V_1348771_-_551_None		RpoD_Bipartite	False	False
+TSS_639_D39V_1348873_+_523_CcpA		RpoD_Bipartite	False	False
+TSS_640_D39V_1356313_-_2623_SigA	SigA	RpoD_Bipartite	True	False
+TSS_641_D39V_1357395_-_curated_None		RpoD_Bipartite	False	False
+TSS_642_D39V_1360995_-_681_None		RpoD_Bipartite	False	False
+TSS_643_D39V_1363996_-_133_SigA	SigA	RpoD_Bipartite	True	False
+TSS_644_D39V_1367143_-_216_SigA	SigA	RpoD_Bipartite	True	False
+TSS_645_D39V_1369505_-_6_MtaR		Orphan_or_Extended10	False	False
+TSS_646_D39V_1373483_-_36_SigA	SigA	RpoD_Bipartite	True	False
+TSS_647_D39V_1375321_-_468_SigA	SigA	RpoD_Bipartite	True	False
+TSS_648_D39V_1375387_+_359_SigA	SigA	RpoD_Bipartite	True	False
+TSS_649_D39V_1377071_-_4_SigA	SigA	Orphan_or_Extended10	False	False
+TSS_650_D39V_1377114_-_11000_SigA	SigA	RpoD_Bipartite	True	False
+TSS_651_D39V_1379364_-_91_SigA	SigA	RpoD_Bipartite	True	False
+TSS_652_D39V_1380448_-_267_SigA	SigA	RpoD_Bipartite	True	False
+TSS_653_D39V_1382287_-_985_None		Orphan_or_Extended10	False	False
+TSS_654_D39V_1382606_-_3_None		Orphan_or_Extended10	False	False
+TSS_655_D39V_1383337_-_3_None		Orphan_or_Extended10	False	False
+TSS_656_D39V_1383667_-_488_None		RpoD_Bipartite	False	False
+TSS_657_D39V_1385232_-_3_None		Orphan_or_Extended10	False	False
+TSS_658_D39V_1386019_-_2_SigA	SigA	RpoD_Bipartite	True	False
+TSS_659_D39V_1387146_-_89_None		RpoD_Bipartite	False	False
+TSS_660_D39V_1387422_+_1055_None		RpoD_Bipartite	False	False
+TSS_661_D39V_1395933_-_curated_None		Orphan_or_Extended10	False	False
+TSS_662_D39V_1396107_+_curated_None		RpoD_Bipartite	False	False
+TSS_663_D39V_1398387_-_258_None		Orphan_or_Extended10	False	False
+TSS_664_D39V_1398657_-_4607_None		RpoD_Bipartite	False	False
+TSS_665_D39V_1400846_-_887_SigA	SigA	RpoD_Bipartite	True	False
+TSS_666_D39V_1404618_-_2260_SigA	SigA	RpoD_Bipartite	True	False
+TSS_667_D39V_1404707_+_992_SigA	SigA	RpoD_Bipartite	True	False
+TSS_668_D39V_1411418_-_475_None		RpoD_Bipartite	False	False
+TSS_669_D39V_1414495_-_382_None		RpoD_Bipartite	False	False
+TSS_670_D39V_1414577_+_curated_None		RpoD_Bipartite	False	False
+TSS_672_D39V_1418510_-_4_None		Orphan_or_Extended10	False	False
+TSS_673_D39V_1421376_-_1002_None		Orphan_or_Extended10	False	False
+TSS_674_D39V_1421988_-_8_SigA	SigA	Orphan_or_Extended10	False	False
+TSS_675_D39V_1422049_-_13_SigA	SigA	RpoD_Bipartite	True	False
+TSS_676_D39V_1422799_-_3_None		Orphan_or_Extended10	False	False
+TSS_677_D39V_1424830_-_0_SigA-LOWCONF	SigA	RpoD_Bipartite	True	False
+TSS_678_D39V_1426597_-_37_SigA	SigA	RpoD_Bipartite	True	False
+TSS_679_D39V_1427250_-_96_None		RpoD_Bipartite	False	False
+TSS_680_D39V_1428087_-_102_SigA	SigA	RpoD_Bipartite	True	False
+TSS_681_D39V_1428152_+_2_None		RpoD_Bipartite	False	False
+TSS_682_D39V_1428166_-_2_None		RpoD_Bipartite	False	False
+TSS_683_D39V_1429725_-_177_SigA	SigA	RpoD_Bipartite	True	False
+TSS_684_D39V_1430076_-_8141_SigA	SigA	RpoD_Bipartite	True	False
+TSS_685_D39V_1431532_-_590_SigA	SigA	RpoD_Bipartite	True	False
+TSS_686_D39V_1431691_+_3_SigA	SigA	RpoD_Bipartite	True	False
+TSS_687_D39V_1433494_-_0_None-LOWCONF		Orphan_or_Extended10	False	False
+TSS_688_D39V_1434825_-_curated_None		Orphan_or_Extended10	False	False
+TSS_689_D39V_1434948_+_1212_CcpA		Orphan_or_Extended10	False	False
+TSS_690_D39V_1436380_+_472_SigA	SigA	RpoD_Bipartite	False	False
+TSS_691_D39V_1438613_+_155_None		Orphan_or_Extended10	False	False
+TSS_692_D39V_1440975_-_3_None		Orphan_or_Extended10	False	False
+TSS_693_D39V_1443479_-_60_None		RpoD_Bipartite	False	False
+TSS_694_D39V_1446205_-_410_SigA	SigA	RpoD_Bipartite	True	False
+TSS_695_D39V_1447486_+_247_None		RpoD_Bipartite	False	False
+TSS_696_D39V_1447718_-_185_None		Orphan_or_Extended10	False	False
+TSS_697_D39V_1449764_-_204_SigA	SigA	RpoD_Bipartite	True	False
+TSS_698_D39V_1452642_-_121_SigA	SigA	RpoD_Bipartite	True	False
+TSS_699_D39V_1455054_-_708_None		RpoD_Bipartite	False	False
+TSS_700_D39V_1455163_+_228_SigA	SigA	RpoD_Bipartite	True	False
+TSS_701_D39V_1457011_-_577_SigA	SigA	RpoD_Bipartite	True	False
+TSS_702_D39V_1457929_-_0_SigA-LOWCONF	SigA	RpoD_Bipartite	True	False
+TSS_703_D39V_1458650_+_curated_None		Orphan_or_Extended10	False	False
+TSS_704_D39V_1458809_+_95_SigA	SigA	RpoD_Bipartite	True	False
+TSS_705_D39V_1459261_+_410_SigA	SigA	RpoD_Bipartite	True	False
+TSS_706_D39V_1463517_-_29_None		Orphan_or_Extended10	False	False
+TSS_707_D39V_1463641_+_8_None		Orphan_or_Extended10	False	False
+TSS_708_D39V_1465141_-_0_None-LOWCONF		Orphan_or_Extended10	False	False
+TSS_709_D39V_1465278_-_11_None		Orphan_or_Extended10	False	False
+TSS_710_D39V_1465677_-_286_SigA	SigA	RpoD_Bipartite	True	False
+TSS_711_D39V_1466573_-_210_None		Orphan_or_Extended10	False	False
+TSS_712_D39V_1466638_+_201_None		RpoD_Bipartite	False	False
+TSS_713_D39V_1468241_+_curated_None		RpoD_Bipartite	False	False
+TSS_714_D39V_1469696_-_725_None		RpoD_Bipartite	False	False
+TSS_715_D39V_1473163_-_100_None		RpoD_Bipartite	False	False
+TSS_716_D39V_1473999_+_87_None		Orphan_or_Extended10	False	False
+TSS_717_D39V_1476809_-_171_None		Orphan_or_Extended10	False	False
+TSS_718_D39V_1477058_+_234_MntR		RpoD_Bipartite	False	False
+TSS_719_D39V_1479706_+_372_None		RpoD_Bipartite	False	False
+TSS_720_D39V_1483738_-_3_None		Orphan_or_Extended10	False	False
+TSS_721_D39V_1483876_-_40_SigA	SigA	RpoD_Bipartite	True	False
+TSS_722_D39V_1486385_-_36_None		Orphan_or_Extended10	False	False
+TSS_723_D39V_1487176_-_3730_None		Orphan_or_Extended10	False	False
+TSS_724_D39V_1488117_-_curated_None		RpoD_Bipartite	False	False
+TSS_725_D39V_1497383_-_489_None		RpoD_Bipartite	False	False
+TSS_726_D39V_1498264_-_274_None		Orphan_or_Extended10	False	False
+TSS_727_D39V_1501453_-_119_None		RpoD_Bipartite	False	False
+TSS_728_D39V_1504278_-_181_None		Orphan_or_Extended10	False	False
+TSS_729_D39V_1504406_+_19_None		RpoD_Bipartite	False	False
+TSS_730_D39V_1507197_-_curated_None		RpoD_Bipartite	False	False
+TSS_731_D39V_1513518_-_6_None		Orphan_or_Extended10	False	False
+TSS_732_D39V_1514942_-_curated_CcpA		RpoD_Bipartite	False	False
+TSS_733_D39V_1526639_-_3_SigA	SigA	RpoD_Bipartite	True	False
+TSS_734_D39V_1528412_-_15_None		Orphan_or_Extended10	False	False
+TSS_735_D39V_1528643_-_504_None		Orphan_or_Extended10	False	False
+TSS_736_D39V_1536931_-_530_SigA	SigA	RpoD_Bipartite	True	False
+TSS_737_D39V_1540098_+_18_SigA	SigA	RpoD_Bipartite	True	False
+TSS_738_D39V_1542093_-_30_SigA	SigA	RpoD_Bipartite	True	False
+TSS_739_D39V_1546741_-_46_SigA	SigA	RpoD_Bipartite	True	False
+TSS_740_D39V_1546828_+_2075_SigA	SigA	RpoD_Bipartite	True	False
+TSS_741_D39V_1551231_-_954_SigA	SigA	RpoD_Bipartite	True	False
+TSS_742_D39V_1551527_-_806_SigA	SigA	RpoD_Bipartite	True	False
+TSS_743_D39V_1552495_+_498_None		Orphan_or_Extended10	False	False
+TSS_744_D39V_1553182_+_12_None		Orphan_or_Extended10	False	False
+TSS_745_D39V_1554366_-_6_None		Orphan_or_Extended10	False	False
+TSS_746_D39V_1556437_-_149_SigA	SigA	RpoD_Bipartite	True	False
+TSS_747_D39V_1556730_+_285_None		RpoD_Bipartite	False	False
+TSS_748_D39V_1561671_-_808_None		RpoD_Bipartite	False	False
+TSS_749_D39V_1562477_-_56_None		Orphan_or_Extended10	False	False
+TSS_750_D39V_1563998_-_316_None		Orphan_or_Extended10	False	False
+TSS_751_D39V_1567019_-_133_SigA	SigA	RpoD_Bipartite	True	False
+TSS_752_D39V_1572584_-_1131_None		RpoD_Bipartite	False	False
+TSS_753_D39V_1574289_-_1085_None		RpoD_Bipartite	False	False
+TSS_754_D39V_1574975_-_204_SigA	SigA	RpoD_Bipartite	True	False
+TSS_755_D39V_1582377_-_169_None		RpoD_Bipartite	False	False
+TSS_756_D39V_1582988_-_172_SigA	SigA	RpoD_Bipartite	False	False
+TSS_757_D39V_1583092_+_258_SigA	SigA	RpoD_Bipartite	True	False
+TSS_758_D39V_1585406_+_240_SigA	SigA	RpoD_Bipartite	True	False
+TSS_759_D39V_1585942_+_967_SigA	SigA	RpoD_Bipartite	True	False
+TSS_760_D39V_1588530_-_737_SigA	SigA	RpoD_Bipartite	True	False
+TSS_761_D39V_1595105_-_126_None		Orphan_or_Extended10	False	False
+TSS_762_D39V_1595109_+_57_None		Orphan_or_Extended10	False	False
+TSS_763_D39V_1595134_-_104_None		Orphan_or_Extended10	False	False
+TSS_764_D39V_1596020_-_0_SigA-LOWCONF	SigA	RpoD_Bipartite	True	False
+TSS_765_D39V_1596069_-_76_SigA	SigA	RpoD_Bipartite	True	False
+TSS_766_D39V_1596713_-_21_SigA	SigA	RpoD_Bipartite	True	False
+TSS_767_D39V_1596936_+_43_SigA	SigA	RpoD_Bipartite	True	False
+TSS_768_D39V_1598326_+_0_None-LOWCONF		RpoD_Bipartite	False	False
+TSS_769_D39V_1598534_+_2_None		Orphan_or_Extended10	False	False
+TSS_770_D39V_1603377_-_19_SigA	SigA	RpoD_Bipartite	True	False
+TSS_771_D39V_1603669_-_2_None		RpoD_Bipartite	False	False
+TSS_772_D39V_1604430_-_342_None		RpoD_Bipartite	False	False
+TSS_773_D39V_1606297_-_curated_None		RpoD_Bipartite	False	False
+TSS_774_D39V_1606494_+_33_None		RpoD_Bipartite	False	False
+TSS_775_D39V_1606580_+_61_SigA	SigA	RpoD_Bipartite	True	False
+TSS_776_D39V_1609575_-_62_None		RpoD_Bipartite	False	False
+TSS_777_D39V_1609620_+_388_SigX	SigX	ComX	False	True
+TSS_778_D39V_1612254_-_34_None		RpoD_Bipartite	False	False
+TSS_779_D39V_1619057_-_4_None		Orphan_or_Extended10	False	False
+TSS_780_D39V_1619341_-_5_None		Orphan_or_Extended10	False	False
+TSS_781_D39V_1619381_-_5_None		ComX	False	False
+TSS_782_D39V_1619756_-_26398_SigA	SigA	RpoD_Bipartite	True	False
+TSS_783_D39V_1620443_-_2_None		RpoD_Bipartite	False	False
+TSS_784_D39V_1621002_-_curated_None		RpoD_Bipartite	False	False
+TSS_785_D39V_1622173_-_5_SigA	SigA	RpoD_Bipartite	True	False
+TSS_786_D39V_1626870_-_5_SigA	SigA	RpoD_Bipartite	True	False
+TSS_787_D39V_1633260_-_2_SigA	SigA	RpoD_Bipartite	True	False
+TSS_789_D39V_1636342_-_324_SigA	SigA	RpoD_Bipartite	True	False
+TSS_790_D39V_1641101_-_748_SigA	SigA	RpoD_Bipartite	True	False
+TSS_791_D39V_1641182_+_528_None		RpoD_Bipartite	False	False
+TSS_792_D39V_1642795_+_447_None		RpoD_Bipartite	False	False
+TSS_793_D39V_1646480_-_81_None		RpoD_Bipartite	False	False
+TSS_794_D39V_1647032_-_1012_None		RpoD_Bipartite	False	False
+TSS_795_D39V_1649808_-_curated_GalR		RpoD_Bipartite	False	False
+TSS_796_D39V_1649907_+_25_GalR		RpoD_Bipartite	False	False
+TSS_797_D39V_1652418_-_28_SigA	SigA	RpoD_Bipartite	True	False
+TSS_798_D39V_1653543_-_7_SczA		Orphan_or_Extended10	False	False
+TSS_799_D39V_1660471_-_1673_SigA	SigA	RpoD_Bipartite	True	False
+TSS_800_D39V_1662520_-_138_None		RpoD_Bipartite	False	False
+TSS_801_D39V_1663678_-_2_None		Orphan_or_Extended10	False	False
+TSS_802_D39V_1663984_+_29_SigA	SigA	RpoD_Bipartite	True	False
+TSS_803_D39V_1673779_-_0_None-LOWCONF		RpoD_Bipartite	False	False
+TSS_804_D39V_1674163_-_577_SigA	SigA	RpoD_Bipartite	True	False
+TSS_805_D39V_1675959_-_8_None		RpoD_Bipartite	False	False
+TSS_806_D39V_1678189_+_9_TreR		RpoD_Bipartite	False	False
+TSS_807_D39V_1679230_+_4_None		Orphan_or_Extended10	False	False
+TSS_808_D39V_1686994_-_777_SigA	SigA	RpoD_Bipartite	True	False
+TSS_809_D39V_1688888_-_0_SigA-LOWCONF	SigA	RpoD_Bipartite	True	False
+TSS_810_D39V_1696115_+_33_CcpA		RpoD_Bipartite	False	False
+TSS_811_D39V_1698864_-_50_None		Orphan_or_Extended10	False	False
+TSS_812_D39V_1698973_-_20_None		Orphan_or_Extended10	False	False
+TSS_813_D39V_1700068_-_3_None		Orphan_or_Extended10	False	False
+TSS_814_D39V_1700414_-_90_None		Orphan_or_Extended10	False	False
+TSS_815_D39V_1703496_-_44_None		Orphan_or_Extended10	False	False
+TSS_816_D39V_1705275_-_25_SigA	SigA	Orphan_or_Extended10	False	False
+TSS_817_D39V_1705315_-_828_SigA	SigA	RpoD_Bipartite	True	False
+TSS_818_D39V_1705508_-_4373_SigA	SigA	RpoD_Bipartite	True	False
+TSS_819_D39V_1706907_-_90_None		RpoD_Bipartite	False	False
+TSS_820_D39V_1706945_+_27_None		RpoD_Bipartite	False	False
+TSS_821_D39V_1707776_+_4358_None		Orphan_or_Extended10	False	False
+TSS_822_D39V_1708419_-_8_SigA	SigA	RpoD_Bipartite	True	False
+TSS_823_D39V_1709069_-_curated_None		RpoD_Bipartite	False	False
+TSS_824_D39V_1712375_-_420_SigA	SigA	RpoD_Bipartite	True	False
+TSS_825_D39V_1712849_-_10_SigX	SigX	RpoD_Bipartite	False	False
+TSS_826_D39V_1712878_-_10218_SigX	SigX	ComX	False	True
+TSS_827_D39V_1714982_-_537_SigA	SigA	RpoD_Bipartite	True	False
+TSS_828_D39V_1716820_-_47_None		RpoD_Bipartite	False	False
+TSS_829_D39V_1717798_-_41_SigA	SigA	RpoD_Bipartite	True	False
+TSS_830_D39V_1720614_-_4_None		Orphan_or_Extended10	False	False
+TSS_831_D39V_1721062_-_643_SigA	SigA	RpoD_Bipartite	True	False
+TSS_832_D39V_1724850_-_1974_None		Orphan_or_Extended10	False	False
+TSS_833_D39V_1724947_+_153_None		Orphan_or_Extended10	False	False
+TSS_834_D39V_1731264_-_266_None		RpoD_Bipartite	False	False
+TSS_835_D39V_1732125_+_10_SigX	SigX	ComX	False	True
+TSS_836_D39V_1732760_-_39_SigA	SigA	RpoD_Bipartite	True	False
+TSS_837_D39V_1734268_-_2_None		RpoD_Bipartite	False	False
+TSS_838_D39V_1734772_-_3_None		Orphan_or_Extended10	False	False
+TSS_839_D39V_1735554_-_324_SigX	SigX	ComX	False	True
+TSS_840_D39V_1737604_-_1642_SigA	SigA	RpoD_Bipartite	True	False
+TSS_841_D39V_1738327_-_248_SigA	SigA	RpoD_Bipartite	True	False
+TSS_842_D39V_1739584_-_228_SigA	SigA	RpoD_Bipartite	False	False
+TSS_843_D39V_1739722_+_35_None		RpoD_Bipartite	False	False
+TSS_844_D39V_1746991_+_2_None		RpoD_Bipartite	False	False
+TSS_845_D39V_1749122_+_11_SigA	SigA	RpoD_Bipartite	True	False
+TSS_846_D39V_1752214_-_660_None		RpoD_Bipartite	False	False
+TSS_847_D39V_1759868_-_855_SigA	SigA	RpoD_Bipartite	True	False
+TSS_848_D39V_1760032_+_16_SigA	SigA	RpoD_Bipartite	True	False
+TSS_849_D39V_1761663_-_283_None		RpoD_Bipartite	False	False
+TSS_850_D39V_1764446_-_299_None		Orphan_or_Extended10	False	False
+TSS_851_D39V_1766542_-_524_None		RpoD_Bipartite	False	False
+TSS_852_D39V_1767622_-_1763_None		RpoD_Bipartite	False	False
+TSS_853_D39V_1768422_-_1633_CiaR		RpoD_Bipartite	False	False
+TSS_854_D39V_1769190_-_161_SigA	SigA	RpoD_Bipartite	False	False
+TSS_855_D39V_1769191_+_74_SigA	SigA	RpoD_Bipartite	True	False
+TSS_856_D39V_1769551_+_616_None		RpoD_Bipartite	False	False
+TSS_857_D39V_1771403_-_1476_SigA	SigA	RpoD_Bipartite	True	False
+TSS_858_D39V_1773840_-_138_PurR		RpoD_Bipartite	False	False
+TSS_859_D39V_1776166_-_31_SigX	SigX	ComX	False	True
+TSS_860_D39V_1779169_-_352_SigA	SigA	RpoD_Bipartite	True	False
+TSS_861_D39V_1782350_-_7_SigA	SigA	RpoD_Bipartite	True	False
+TSS_862_D39V_1784845_-_285_None		Orphan_or_Extended10	False	False
+TSS_863_D39V_1786259_-_14894_SigA	SigA	RpoD_Bipartite	True	False
+TSS_864_D39V_1787574_-_376_SigA	SigA	RpoD_Bipartite	True	False
+TSS_865_D39V_1788033_-_12_None		RpoD_Bipartite	False	False
+TSS_866_D39V_1788137_+_548_None		RpoD_Bipartite	False	False
+TSS_867_D39V_1790062_-_692_SigA	SigA	RpoD_Bipartite	True	False
+TSS_868_D39V_1790074_+_332_None		Orphan_or_Extended10	False	False
+TSS_869_D39V_1792441_-_442_SigA	SigA	RpoD_Bipartite	True	False
+TSS_870_D39V_1794890_-_63_None		Orphan_or_Extended10	False	False
+TSS_871_D39V_1796461_-_10_SigA	SigA	RpoD_Bipartite	True	False
+TSS_872_D39V_1797653_-_22_None		Orphan_or_Extended10	False	False
+TSS_873_D39V_1797965_-_93_None		Orphan_or_Extended10	False	False
+TSS_874_D39V_1801047_-_45_None		Orphan_or_Extended10	False	False
+TSS_1004_D39V_1801133_+_100_None		Orphan_or_Extended10	False	False
+TSS_875_D39V_1802826_-_24_SigA	SigA	Orphan_or_Extended10	False	False
+TSS_876_D39V_1802866_-_828_SigA	SigA	RpoD_Bipartite	True	False
+TSS_877_D39V_1803059_-_5234_SigA	SigA	RpoD_Bipartite	True	False
+TSS_878_D39V_1803628_-_3112_SigA	SigA	Orphan_or_Extended10	False	False
+TSS_879_D39V_1804677_-_1389_SigA	SigA	RpoD_Bipartite	True	False
+TSS_880_D39V_1806913_-_186_SigA	SigA	RpoD_Bipartite	True	False
+TSS_881_D39V_1807000_+_172_None		Orphan_or_Extended10	False	False
+TSS_882_D39V_1809030_-_0_SigA-LOWCONF	SigA	RpoD_Bipartite	True	False
+TSS_883_D39V_1810350_-_2_None		Orphan_or_Extended10	False	False
+TSS_884_D39V_1810982_-_129_None		RpoD_Bipartite	False	False
+TSS_885_D39V_1812143_+_8_None		RpoD_Bipartite	False	False
+TSS_886_D39V_1814090_-_2371_SigX	SigX	ComX	False	True
+TSS_887_D39V_1815307_-_128_None		RpoD_Bipartite	False	False
+TSS_888_D39V_1815412_+_33_None		RpoD_Bipartite	False	False
+TSS_889_D39V_1822387_-_29_SigA	SigA	RpoD_Bipartite	True	False
+TSS_890_D39V_1823847_-_2528_None		RpoD_Bipartite	False	False
+TSS_891_D39V_1825962_-_207_None		RpoD_Bipartite	False	False
+TSS_892_D39V_1828945_-_2_None		Orphan_or_Extended10	False	False
+TSS_893_D39V_1836666_-_2489_SigA	SigA	RpoD_Bipartite	True	False
+TSS_894_D39V_1838009_-_191_SigA	SigA	RpoD_Bipartite	True	False
+TSS_895_D39V_1838986_-_175_None		Orphan_or_Extended10	False	False
+TSS_896_D39V_1843500_-_971_SigX	SigX	ComX	False	True
+TSS_897_D39V_1843947_-_8488_SigA	SigA	RpoD_Bipartite	True	False
+TSS_898_D39V_1845174_-_142_Rex		RpoD_Bipartite	False	False
+TSS_899_D39V_1846496_-_224_SigA	SigA	RpoD_Bipartite	True	False
+TSS_900_D39V_1848449_-_1258_None		RpoD_Bipartite	False	False
+TSS_901_D39V_1849792_+_114_None		RpoD_Bipartite	False	False
+TSS_902_D39V_1851334_-_52_None		RpoD_Bipartite	False	False
+TSS_903_D39V_1852230_-_8_None		RpoD_Bipartite	False	False
+TSS_904_D39V_1853683_-_623_None		Orphan_or_Extended10	False	False
+TSS_905_D39V_1857296_-_142_CodY		RpoD_Bipartite	False	False
+TSS_906_D39V_1858662_-_158_None		RpoD_Bipartite	False	False
+TSS_907_D39V_1858860_-_12_None		Orphan_or_Extended10	False	False
+TSS_908_D39V_1859051_-_5_None		Orphan_or_Extended10	False	False
+TSS_909_D39V_1859890_-_94_None		Orphan_or_Extended10	False	False
+TSS_910_D39V_1862972_-_43_None		Orphan_or_Extended10	False	False
+TSS_911_D39V_1864751_-_25_SigA	SigA	Orphan_or_Extended10	False	False
+TSS_912_D39V_1864791_-_816_SigA	SigA	RpoD_Bipartite	True	False
+TSS_913_D39V_1864984_-_4395_SigA	SigA	RpoD_Bipartite	False	False
+TSS_914_D39V_1865516_-_3_None		Orphan_or_Extended10	False	False
+TSS_915_D39V_1867032_-_406_SigA	SigA	RpoD_Bipartite	True	False
+TSS_916_D39V_1868491_-_519_SigA	SigA	RpoD_Bipartite	True	False
+TSS_917_D39V_1869356_-_2738_CmbR		RpoD_Bipartite	False	False
+TSS_918_D39V_1871302_+_2_None		Orphan_or_Extended10	False	False
+TSS_919_D39V_1873781_-_233_SigA	SigA	RpoD_Bipartite	True	False
+TSS_920_D39V_1876709_-_2210_None		RpoD_Bipartite	False	False
+TSS_921_D39V_1876941_-_1584_SigA	SigA	RpoD_Bipartite	True	False
+TSS_922_D39V_1877017_+_140_ArgR		RpoD_Bipartite	False	False
+TSS_923_D39V_1880144_+_393_None		RpoD_Bipartite	False	False
+TSS_924_D39V_1882318_+_curated_None		Orphan_or_Extended10	False	False
+TSS_925_D39V_1887682_+_423_None		Orphan_or_Extended10	False	False
+TSS_926_D39V_1892843_-_153_SigA	SigA	RpoD_Bipartite	True	False
+TSS_927_D39V_1893007_-_17405_None		RpoD_Bipartite	False	False
+TSS_928_D39V_1893960_-_1198_SigA	SigA	RpoD_Bipartite	True	False
+TSS_929_D39V_1896503_-_74_SigA	SigA	RpoD_Bipartite	True	False
+TSS_930_D39V_1896601_+_63_None		Orphan_or_Extended10	False	False
+TSS_931_D39V_1900324_-_1643_None		RpoD_Bipartite	False	False
+TSS_932_D39V_1900461_+_27_None		Orphan_or_Extended10	False	False
+TSS_933_D39V_1902053_-_curated_None		RpoD_Bipartite	False	False
+TSS_934_D39V_1902081_+_curated_None		RpoD_Bipartite	False	False
+TSS_935_D39V_1907590_-_38_SigA	SigA	RpoD_Bipartite	True	False
+TSS_936_D39V_1907665_-_24_None		RpoD_Bipartite	False	False
+TSS_937_D39V_1907921_-_curated_None		RpoD_Bipartite	False	False
+TSS_938_D39V_1908013_+_134_SigA	SigA	RpoD_Bipartite	True	False
+TSS_939_D39V_1911817_+_46_SigA	SigA	RpoD_Bipartite	True	False
+TSS_940_D39V_1916639_-_384_SigA	SigA	Orphan_or_Extended10	False	False
+TSS_941_D39V_1917209_-_2141_None		RpoD_Bipartite	False	False
+TSS_942_D39V_1919364_-_3_SigA	SigA	RpoD_Bipartite	True	False
+TSS_943_D39V_1919649_-_8_None		Orphan_or_Extended10	False	False
+TSS_944_D39V_1920972_-_575_None		RpoD_Bipartite	False	False
+TSS_945_D39V_1922314_-_2_None		Orphan_or_Extended10	False	False
+TSS_946_D39V_1923340_-_35_None		RpoD_Bipartite	False	False
+TSS_947_D39V_1923414_+_815_None		RpoD_Bipartite	False	False
+TSS_948_D39V_1925716_-_422_SigA	SigA	RpoD_Bipartite	True	False
+TSS_949_D39V_1931559_+_61_SigA	SigA	RpoD_Bipartite	True	False
+TSS_950_D39V_1932890_+_12723_None		RpoD_Bipartite	False	False
+TSS_951_D39V_1935947_-_56_None		RpoD_Bipartite	False	False
+TSS_952_D39V_1944731_-_11_None		Orphan_or_Extended10	False	False
+TSS_953_D39V_1944851_+_curated_None		RpoD_Bipartite	False	False
+TSS_954_D39V_1948974_-_7_SigA	SigA	RpoD_Bipartite	True	False
+TSS_955_D39V_1949385_+_179_SigA	SigA	RpoD_Bipartite	True	False
+TSS_956_D39V_1952941_+_curated_CcpA		RpoD_Bipartite	False	False
+TSS_957_D39V_1957234_-_25_None		Orphan_or_Extended10	False	False
+TSS_958_D39V_1958186_-_730_SigA	SigA	RpoD_Bipartite	True	False
+TSS_959_D39V_1972004_-_21_SigA	SigA	RpoD_Bipartite	True	False
+TSS_960_D39V_1972131_+_29_SigA	SigA	RpoD_Bipartite	True	False
+TSS_961_D39V_1973311_+_1640_None		RpoD_Bipartite	False	False
+TSS_962_D39V_1973570_-_50_None		RpoD_Bipartite	False	False
+TSS_963_D39V_1973654_+_254_None		RpoD_Bipartite	False	False
+TSS_964_D39V_1973728_-_22_None		Orphan_or_Extended10	False	False
+TSS_965_D39V_1973913_-_30_SigA	SigA	RpoD_Bipartite	True	False
+TSS_966_D39V_1977584_-_508_SigA	SigA	RpoD_Bipartite	True	False
+TSS_967_D39V_1982193_-_77_SigA	SigA	RpoD_Bipartite	True	False
+TSS_968_D39V_1982932_+_3_SigA	SigA	RpoD_Bipartite	True	False
+TSS_969_D39V_1983667_-_19_None		RpoD_Bipartite	False	False
+TSS_970_D39V_1991724_-_40_CcpA		RpoD_Bipartite	False	False
+TSS_971_D39V_1993288_-_84_None		Orphan_or_Extended10	False	False
+TSS_972_D39V_1993432_+_435_None		Orphan_or_Extended10	False	False
+TSS_973_D39V_1998234_-_159_None		Orphan_or_Extended10	False	False
+TSS_974_D39V_2003846_-_660_SigA	SigA	RpoD_Bipartite	True	False
+TSS_975_D39V_2006885_-_6486_SigA	SigA	RpoD_Bipartite	True	False
+TSS_976_D39V_2008356_-_166_SigX	SigX	ComX	False	True
+TSS_977_D39V_2008698_-_19_None		RpoD_Bipartite	False	False
+TSS_978_D39V_2009054_-_40_None		Orphan_or_Extended10	False	False
+TSS_979_D39V_2012502_-_646_None		Orphan_or_Extended10	False	False
+TSS_980_D39V_2013209_-_2215_SigA	SigA	RpoD_Bipartite	True	False
+TSS_981_D39V_2015211_-_594_SigX	SigX	ComX	False	True
+TSS_982_D39V_2015267_+_437_None		RpoD_Bipartite	False	False
+TSS_983_D39V_2016164_+_714_SigA	SigA	RpoD_Bipartite	True	False
+TSS_984_D39V_2020685_-_0_SigA-LOWCONF	SigA	RpoD_Bipartite	True	False
+TSS_985_D39V_2021071_-_3_None		Orphan_or_Extended10	False	False
+TSS_986_D39V_2022007_-_1874_None		Orphan_or_Extended10	False	False
+TSS_987_D39V_2027722_-_6_None		RpoD_Bipartite	False	False
+TSS_988_D39V_2029848_-_0_None-LOWCONF		RpoD_Bipartite	False	False
+TSS_989_D39V_2029972_+_89_None		RpoD_Bipartite	False	False
+TSS_990_D39V_2033031_-_939_SigA	SigA	RpoD_Bipartite	True	False
+TSS_991_D39V_2034182_-_1191_None		RpoD_Bipartite	False	False
+TSS_992_D39V_2034343_+_516_None		RpoD_Bipartite	False	False
+TSS_993_D39V_2040336_+_6_PipR		RpoD_Bipartite	False	False
+TSS_994_D39V_2041164_-_288_SigA	SigA	RpoD_Bipartite	True	False
+TSS_995_D39V_2041283_-_3_None		Orphan_or_Extended10	False	False
+TSS_996_D39V_2043461_-_0_SigA-LOWCONF	SigA	RpoD_Bipartite	True	False
+TSS_997_D39V_2043661_-_1233_None		RpoD_Bipartite	False	False
+TSS_998_D39V_2044180_-_406_None		RpoD_Bipartite	False	False
+TSS_999_D39V_2044320_+_7_CiaR		RpoD_Bipartite	False	False
+TSS_1001_D39V_2045602_+_116_None		RpoD_Bipartite	False	False
+TSS_1002_D39V_2046536_+_58_DnaA		RpoD_Bipartite	False	False
