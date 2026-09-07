@@ -27,8 +27,8 @@ def _tokenize_seq(s: str, dnabert_dir: str) -> dict:
 
 def main():
     p = argparse.ArgumentParser(description="iPro-MP sp12 (H. pylori)")
-    p.add_argument("--pos", required=True, help="Positive test FASTA")
-    p.add_argument("--neg", required=True, help="Negative test FASTA")
+    p.add_argument("--pos", default=None, help="Positive test FASTA (optional)")
+    p.add_argument("--neg", default=None, help="Negative test FASTA (optional)")
     p.add_argument("-o", "--output", default="output/predictions", help="Output dir")
     p.add_argument("-m", "--model-dir", default="tools/iPro-MP/07-final",
                     help="Model directory")
@@ -37,30 +37,23 @@ def main():
     p.add_argument("-s", "--species", type=int, default=12,
                    help="iPro-MP species ID (default 12 = H. pylori; 23 = B. subtilis)")
     args = p.parse_args()
+    if args.pos is None and args.neg is None:
+        p.error("at least one of --pos / --neg is required")
 
     out_base = Path(args.output)
     out_base.mkdir(parents=True, exist_ok=True)
 
-    combined_path = out_base / "bench_combined.fasta"
-    with open(combined_path, "w") as f_out:
-        for fasta in [args.pos, args.neg]:
-            with open(fasta) as f_in:
-                for line in f_in:
-                    f_out.write(line)
+    from Bio import SeqIO
+    import torch
 
     sys.path.insert(0, str(TOOLS_DIR / "iPro-MP"))
     from importlib.util import spec_from_file_location
     spec = spec_from_file_location("ip", str(TOOLS_DIR / "iPro-MP/iPro-MP_predict.py"))
     ip = spec.loader.load_module()
 
-    import torch
-
-    seqs = []
-    with open(combined_path) as f:
-        for line in f:
-            line = line.strip()
-            if line and not line.startswith(">"):
-                seqs.append(line.upper())
+    pos_recs = list(SeqIO.parse(args.pos, "fasta")) if args.pos else []
+    neg_recs = list(SeqIO.parse(args.neg, "fasta")) if args.neg else []
+    seqs = [str(r.seq).upper()[:81] for r in pos_recs + neg_recs]
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     models = []
@@ -98,7 +91,6 @@ def main():
     pd.DataFrame({"PRED": probs}).to_csv(
         out_ipromp / "ipromp_12_predictions.csv", sep="\t", index=False)
 
-    combined_path.unlink(missing_ok=True)
     print(f"iPro-MP: {len(seqs)} seqs in {elapsed:.3f}s")
 
 

@@ -37,18 +37,23 @@ def load_training():
 
 def main():
     p = argparse.ArgumentParser(description="MLDSPP XGBoost cross-species")
-    p.add_argument("--pos", required=True, help="Positive test FASTA")
-    p.add_argument("--neg", required=True, help="Negative test FASTA")
+    p.add_argument("--pos", default=None, help="Positive test FASTA (optional)")
+    p.add_argument("--neg", default=None, help="Negative test FASTA (optional)")
     p.add_argument("-o", "--output", default="output/predictions", help="Output dir")
     args = p.parse_args()
+    if args.pos is None and args.neg is None:
+        p.error("at least one of --pos / --neg is required")
 
     t0 = time.perf_counter()
     X_train, y_train = load_training()
-    pos = list(SeqIO.parse(args.pos, "fasta"))
-    neg = list(SeqIO.parse(args.neg, "fasta"))
-    X_pos = np.array([extract_aligned(str(r.seq)) for r in pos])
-    X_neg = np.array([extract_aligned(str(r.seq)) for r in neg])
-    X_test = np.vstack([X_pos, X_neg])
+    pos = list(SeqIO.parse(args.pos, "fasta")) if args.pos else []
+    neg = list(SeqIO.parse(args.neg, "fasta")) if args.neg else []
+    X_parts = []
+    if pos:
+        X_parts.append(np.array([extract_aligned(str(r.seq)) for r in pos]))
+    if neg:
+        X_parts.append(np.array([extract_aligned(str(r.seq)) for r in neg]))
+    X_test = np.vstack(X_parts)
 
     model = XGBClassifier(**MLDSPP_XGB_PARAMS,
                           n_jobs=int(os.environ.get("OMP_NUM_THREADS", "1") or 1))
@@ -61,10 +66,12 @@ def main():
 
     out_dir = Path(args.output)
     out_dir.mkdir(parents=True, exist_ok=True)
-    pd.DataFrame({"PRED": probs[:len(pos)]}).to_csv(
-        out_dir / "mldspp_pos.csv", sep="\t", index=False)
-    pd.DataFrame({"PRED": probs[len(pos):]}).to_csv(
-        out_dir / "mldspp_neg.csv", sep="\t", index=False)
+    if pos:
+        pd.DataFrame({"PRED": probs[:len(pos)]}).to_csv(
+            out_dir / "mldspp_pos.csv", sep="\t", index=False)
+    if neg:
+        pd.DataFrame({"PRED": probs[len(pos):]}).to_csv(
+            out_dir / "mldspp_neg.csv", sep="\t", index=False)
 
     print(f"MLDSPP: {len(pos) + len(neg)} seqs in {elapsed:.4f}s (train {train_s:.3f}s)")
 

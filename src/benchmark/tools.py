@@ -149,16 +149,6 @@ PROMOTER_TOOLS = {
         gpu_capable=False,
         notes="Official Prompt MLP model trained on B. subtilis 168.",
     ),
-    "evosnr": Tool(
-        name="EvoSNR-Prom (Lexicon)",
-        short_name="evosnr",
-        category="DL",
-        pixi_env=config.ipromp_dir / "pixi.toml",
-        outputs=[ROOT / "output/predictions/evosnr.tsv"],
-        model_paths=[ROOT / "tools/EvoSNR-Prom/data/Esch/fasttext_model/model.bin"],
-        gpu_capable=False,
-        notes="EvoSNR-Prom FastText lexicon model aggregated over 81 bp fragment.",
-    ),
 }
 
 

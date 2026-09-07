@@ -54,12 +54,15 @@ def main():
     n_chunks = max(1, int(os.environ.get("OMP_NUM_THREADS", "1") or 1))
     n_chunks = min(n_chunks, len(records))
     chunk_size = max(1, math.ceil(len(records) / n_chunks))
+    id_map = {}
     chunk_paths = []
     for i in range(0, len(records), chunk_size):
         cp = tmpdir / f"chunk_{i // chunk_size}.fa"
         with open(cp, "w") as f:
-            for r in records[i:i + chunk_size]:
-                SeqIO.write(r, f, "fasta")
+            for idx_in_rec, r in enumerate(records[i:i + chunk_size], start=i):
+                safe_id = f"s{idx_in_rec}"
+                id_map[safe_id] = r.id
+                f.write(f">{safe_id}\n{str(r.seq)}\n")
         chunk_paths.append(cp)
 
     t0 = time.perf_counter()
@@ -72,8 +75,9 @@ def main():
     for out in outs:
         from src.runners._shared import fimo_score_merge
         for s, nl in fimo_score_merge(out).items():
-            if s not in scores or nl > scores[s]:
-                scores[s] = nl
+            orig_id = id_map.get(s, s)
+            if orig_id not in scores or nl > scores[orig_id]:
+                scores[orig_id] = nl
 
     for r in pos + neg:
         if r.id not in scores:

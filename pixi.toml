@@ -33,6 +33,7 @@ mummer = ">=3.23,<4"
 xgboost = ">=3.2.0,<4"
 blast = ">=2.12,<3"
 artemis = "*"
+pytorch = ">=2.13.0,<3"
 
 [pypi-dependencies]
 nvidia-ml-py = "*"
