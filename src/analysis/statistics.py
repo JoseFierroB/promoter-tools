@@ -4,7 +4,6 @@ Provides bootstrap confidence intervals for AUC,
 DeLong test for pairwise AUC comparison, and N≥3 run aggregation.
 """
 import numpy as np
-from typing import Optional
 
 
 def bootstrap_auc_ci(y_true: np.ndarray, y_scores: np.ndarray,
@@ -48,23 +47,6 @@ def bootstrap_auc_ci(y_true: np.ndarray, y_scores: np.ndarray,
         "n_bootstrap": n_bootstrap,
         "auc_median": round(float(np.median(aucs)), 4),
     }
-
-
-def _midrank(x: np.ndarray) -> np.ndarray:
-    """Midranks of x (ties get the average rank), O(n log n)."""
-    order = np.argsort(x)
-    ranks_sorted = np.empty(len(x))
-    i = 0
-    while i < len(x):
-        j = i
-        xs = x[order]
-        while j < len(x) and xs[j] == xs[i]:
-            j += 1
-        ranks_sorted[i:j] = 0.5 * (i + j - 1) + 1
-        i = j
-    out = np.empty(len(x))
-    out[order] = ranks_sorted
-    return out
 
 
 def delong_test(y_true: np.ndarray, scores_a: np.ndarray,

@@ -3,7 +3,7 @@
 import sys
 from pathlib import Path
 
-from fimo import main as _fimo_main
+from src.runners.fimo import main as _fimo_main
 
 ECOLI_DB = Path(__file__).resolve().parent.parent.parent / "tools/meme/motif_databases/ecoli_combined.meme"
 

@@ -1,5 +1,5 @@
 """Slurm runner: execute tools via sbatch + sacct on HPC clusters."""
-import os, sys, subprocess, time
+import os, subprocess, time
 from pathlib import Path
 from typing import Optional
 
@@ -104,7 +104,7 @@ class SlurmRunner(Runner):
             n_seqs = _count_seqs(self.pos_fasta) + _count_seqs(self.neg_fasta)
             extra_args += f'  --timeout {_promotech_timeout(n_seqs)}'
         if tool.short_name == "mldspp_75":
-            from src.backend.local import _pick_mldspp_split, _count_seqs, _promotech_timeout
+            from src.backend.local import _pick_mldspp_split
             split = _pick_mldspp_split(self.pos_fasta)
             if split:
                 extra_args += f'  --split "{split}"'

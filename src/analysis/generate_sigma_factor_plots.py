@@ -13,7 +13,7 @@ Analyzes model predictions across functional classes:
   - True Negative Controls (CDS Intergenic-distal, N=1,000)
 
 Generates:
-  1. 3-Panel Master ROC Atlas by Sigma Factor (300 DPI)
+  1. 3-Panel ROC Atlas by Sigma Factor (300 DPI)
   2. Score Distribution & Class Separation Boxplots (300 DPI)
   3. Performance & Sensitivity Heatmap Summary (300 DPI)
 ================================================================================
@@ -178,7 +178,7 @@ def main():
     print(df_sigma.to_string(index=False))
     print("=" * 90)
     
-    # 2. Plot 1: 3-Panel Master ROC Atlas by Sigma Factor (300 DPI)
+    # 2. Plot 1: 3-Panel ROC Atlas by Sigma Factor (300 DPI)
     fig, axes = plt.subplots(1, 3, figsize=(20, 6.5), dpi=300)
     colors = ["#1f77b4", "#2ca02c", "#ff7f0e", "#d62728", "#9467bd", "#8c564b", "#7f7f7f"]
     

@@ -1,0 +1,3 @@
+file	n	length_bp	sources
+positives_81bp.fasta	989	81	data/benchmark/d39v/positives_81bp.fasta
+negatives_81bp.fasta	1000	81	data/benchmark/d39v/negatives_81bp.fasta

@@ -1,20 +1,23 @@
 #!/usr/bin/env python3
-"""
-Benchmark Plots Generator: Execution Time, RAM Usage, and Dataset Scaling.
-Location: src/analysis/generate_benchmark_plots.py
+"""Compute plots: per-tool time/RAM/throughput bars + within-run comparisons.
 
-Generates publication-quality individual benchmark plots across all hardware regimes:
+Usage:
+    python src/analysis/generate_compute_plots.py <run_dir>   # per-run mode
+    python src/analysis/generate_compute_plots.py --suite full  # legacy global suite
+
+Per-run mode reads <run_dir>/resource_metrics.tsv and writes
+<run_dir>/2_resources/{compute_time,peak_ram,throughput}.{png,pdf,svg}
+(one bar per tool = within-run comparison).
+
+Legacy --suite full mode reproduces the original global benchmark suite:
   1. 1_cpu/                    (Single-core baseline and scaling)
   2. 16_cpu/                   (Multi-core CPU scaling and speedup)
   3. gpu_vram/                 (GPU memory footprint and model weight comparison)
   4. combined_1cpu_16cpu_gpu/  (Multi-hardware comparative scaling curves)
   5. by_scale/scale_*_N*/      (Per-scale bar charts for all 9 dataset sizes)
-
-Outputs are saved in output/plots/organized/ in PNG (300 DPI), vector SVG, and vector PDF formats.
-If ~/Desktop/benchmark_plots_organized exists, it also mirrors outputs for interactive review.
+saved in output/plots/organized/ in PNG (300 DPI), vector SVG, and vector PDF.
 """
 
-import argparse
 import os
 import matplotlib; matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -42,7 +45,7 @@ df_16cpu_path = REPO_ROOT / "output" / "tables" / "scaling_dataset.tsv"
 df_16cpu = pd.read_csv(df_16cpu_path, sep="\t")
 df_16cpu = df_16cpu[df_16cpu["iteration"] != "smoke"].drop_duplicates(subset=["scale_N", "tool"])
 
-sp_file = REPO_ROOT / "output" / "tables" / "speedup_1hilo_vs_16cores.tsv"
+sp_file = REPO_ROOT / "output" / "tables" / "speedup_1cpu_vs_16cores.tsv"
 df_sp = pd.read_csv(sp_file, sep='\t')
 df_sp['scale_N'] = df_sp['iteration'] * 2
 
@@ -397,9 +400,9 @@ def generate_scaling_time_curves():
             if not sub.empty:
                 meta = PALETTE[tool_key]
                 if mode == "linear":
-                    ax.plot(sub['scale_N']/1000, sub['time_s_1hilo'], marker=meta['marker'], color=meta['color'], linewidth=2.2, markersize=7, label=f"{meta['short']} ({meta['method']})")
+                    ax.plot(sub['scale_N']/1000, sub['time_s_1cpu'], marker=meta['marker'], color=meta['color'], linewidth=2.2, markersize=7, label=f"{meta['short']} ({meta['method']})")
                 else:
-                    ax.plot(sub['scale_N'], sub['time_s_1hilo'], marker=meta['marker'], color=meta['color'], linewidth=2.2, markersize=7, label=f"{meta['short']} ({meta['method']})")
+                    ax.plot(sub['scale_N'], sub['time_s_1cpu'], marker=meta['marker'], color=meta['color'], linewidth=2.2, markersize=7, label=f"{meta['short']} ({meta['method']})")
         if mode == "log":
             ax.set_xscale("log"); ax.set_yscale("log")
             ax.set_xlabel("Total Sequences ($N$)", fontsize=12, fontweight="bold")
@@ -444,13 +447,13 @@ def generate_scaling_time_curves():
     sub_lcnn = df_sp[df_sp['tool'] == "PromoterLCNN"].sort_values('scale_N')
     sub_ipro = df_sp[df_sp['tool'] == "iPro-MP (H. pylori)"].sort_values('scale_N')
 
-    ax.plot(sub_mld['scale_N'], sub_mld['time_s_1hilo'], color=PALETTE["MLDSPP XGBoost"]["color"], linestyle=":", marker="o", linewidth=1.8, label="MLDSPP [1-CPU]")
+    ax.plot(sub_mld['scale_N'], sub_mld['time_s_1cpu'], color=PALETTE["MLDSPP XGBoost"]["color"], linestyle=":", marker="o", linewidth=1.8, label="MLDSPP [1-CPU]")
     ax.plot(sub_mld['scale_N'], sub_mld['time_s_16cores'], color=PALETTE["MLDSPP XGBoost"]["color"], linestyle="--", marker="^", linewidth=2.2, label="MLDSPP [16-CPU]")
-    ax.plot(sub_fimo['scale_N'], sub_fimo['time_s_1hilo'], color=PALETTE["FIMO + Prokaryote DB"]["color"], linestyle=":", marker="o", linewidth=1.8, label="FIMO [1-CPU]")
+    ax.plot(sub_fimo['scale_N'], sub_fimo['time_s_1cpu'], color=PALETTE["FIMO + Prokaryote DB"]["color"], linestyle=":", marker="o", linewidth=1.8, label="FIMO [1-CPU]")
     ax.plot(sub_fimo['scale_N'], sub_fimo['time_s_16cores'], color=PALETTE["FIMO + Prokaryote DB"]["color"], linestyle="--", marker="^", linewidth=2.2, label="FIMO [16-CPU]")
-    ax.plot(sub_lcnn['scale_N'], sub_lcnn['time_s_1hilo'], color=PALETTE["PromoterLCNN"]["color"], linestyle=":", marker="o", linewidth=1.8, label="PromoterLCNN [1-CPU]")
+    ax.plot(sub_lcnn['scale_N'], sub_lcnn['time_s_1cpu'], color=PALETTE["PromoterLCNN"]["color"], linestyle=":", marker="o", linewidth=1.8, label="PromoterLCNN [1-CPU]")
     ax.plot(sub_lcnn['scale_N'], sub_lcnn['time_s_16cores'], color=PALETTE["PromoterLCNN"]["color"], linestyle="-", marker="D", linewidth=2.5, label="PromoterLCNN [16-CPU+GPU]")
-    ax.plot(sub_ipro['scale_N'], sub_ipro['time_s_1hilo'], color=PALETTE["iPro-MP (H. pylori)"]["color"], linestyle="-.", marker="s", linewidth=2.2, label="iPro-MP [1-CPU Host+GPU]")
+    ax.plot(sub_ipro['scale_N'], sub_ipro['time_s_1cpu'], color=PALETTE["iPro-MP (H. pylori)"]["color"], linestyle="-.", marker="s", linewidth=2.2, label="iPro-MP [1-CPU Host+GPU]")
     ax.plot(sub_ipro['scale_N'], sub_ipro['time_s_16cores'], color=PALETTE["iPro-MP (H. pylori)"]["color"], linestyle="-", marker="D", linewidth=2.8, label="iPro-MP [16-CPU Host+GPU]")
 
     ax.set_xscale("log"); ax.set_yscale("log")
@@ -465,13 +468,13 @@ def generate_scaling_time_curves():
 
     # Combined All Modes Scaling (FULL LINEAR SCALE)
     fig, ax = plt.subplots(figsize=(11, 7), dpi=300)
-    ax.plot(sub_mld['scale_N']/1000, sub_mld['time_s_1hilo'], color=PALETTE["MLDSPP XGBoost"]["color"], linestyle=":", marker="o", linewidth=1.8, label="MLDSPP [1-CPU]")
+    ax.plot(sub_mld['scale_N']/1000, sub_mld['time_s_1cpu'], color=PALETTE["MLDSPP XGBoost"]["color"], linestyle=":", marker="o", linewidth=1.8, label="MLDSPP [1-CPU]")
     ax.plot(sub_mld['scale_N']/1000, sub_mld['time_s_16cores'], color=PALETTE["MLDSPP XGBoost"]["color"], linestyle="--", marker="^", linewidth=2.2, label="MLDSPP [16-CPU]")
-    ax.plot(sub_fimo['scale_N']/1000, sub_fimo['time_s_1hilo'], color=PALETTE["FIMO + Prokaryote DB"]["color"], linestyle=":", marker="o", linewidth=1.8, label="FIMO [1-CPU]")
+    ax.plot(sub_fimo['scale_N']/1000, sub_fimo['time_s_1cpu'], color=PALETTE["FIMO + Prokaryote DB"]["color"], linestyle=":", marker="o", linewidth=1.8, label="FIMO [1-CPU]")
     ax.plot(sub_fimo['scale_N']/1000, sub_fimo['time_s_16cores'], color=PALETTE["FIMO + Prokaryote DB"]["color"], linestyle="--", marker="^", linewidth=2.2, label="FIMO [16-CPU]")
-    ax.plot(sub_lcnn['scale_N']/1000, sub_lcnn['time_s_1hilo'], color=PALETTE["PromoterLCNN"]["color"], linestyle=":", marker="o", linewidth=1.8, label="PromoterLCNN [1-CPU]")
+    ax.plot(sub_lcnn['scale_N']/1000, sub_lcnn['time_s_1cpu'], color=PALETTE["PromoterLCNN"]["color"], linestyle=":", marker="o", linewidth=1.8, label="PromoterLCNN [1-CPU]")
     ax.plot(sub_lcnn['scale_N']/1000, sub_lcnn['time_s_16cores'], color=PALETTE["PromoterLCNN"]["color"], linestyle="-", marker="D", linewidth=2.5, label="PromoterLCNN [16-CPU+GPU]")
-    ax.plot(sub_ipro['scale_N']/1000, sub_ipro['time_s_1hilo'], color=PALETTE["iPro-MP (H. pylori)"]["color"], linestyle="-.", marker="s", linewidth=2.2, label="iPro-MP [1-CPU Host+GPU]")
+    ax.plot(sub_ipro['scale_N']/1000, sub_ipro['time_s_1cpu'], color=PALETTE["iPro-MP (H. pylori)"]["color"], linestyle="-.", marker="s", linewidth=2.2, label="iPro-MP [1-CPU Host+GPU]")
     ax.plot(sub_ipro['scale_N']/1000, sub_ipro['time_s_16cores'], color=PALETTE["iPro-MP (H. pylori)"]["color"], linestyle="-", marker="D", linewidth=2.8, label="iPro-MP [16-CPU Host+GPU]")
 
     ax.set_xlabel("Total Sequences (thousands, k)", fontsize=12, fontweight="bold")
@@ -485,13 +488,13 @@ def generate_scaling_time_curves():
 
     # Combined All Modes Scaling (LINEAR SCALE WITHOUT iPro-MP 1-CPU & 16-CPU PURE CPU)
     fig, ax = plt.subplots(figsize=(11, 7), dpi=300)
-    ax.plot(sub_mld['scale_N']/1000, sub_mld['time_s_1hilo'], color=PALETTE["MLDSPP XGBoost"]["color"], linestyle=":", marker="o", linewidth=1.8, label=f"MLDSPP [1-CPU: {sub_mld['time_s_1hilo'].iloc[-1]:.1f}s]")
+    ax.plot(sub_mld['scale_N']/1000, sub_mld['time_s_1cpu'], color=PALETTE["MLDSPP XGBoost"]["color"], linestyle=":", marker="o", linewidth=1.8, label=f"MLDSPP [1-CPU: {sub_mld['time_s_1cpu'].iloc[-1]:.1f}s]")
     ax.plot(sub_mld['scale_N']/1000, sub_mld['time_s_16cores'], color=PALETTE["MLDSPP XGBoost"]["color"], linestyle="--", marker="^", linewidth=2.2, label=f"MLDSPP [16-CPU: {sub_mld['time_s_16cores'].iloc[-1]:.1f}s]")
-    ax.plot(sub_fimo['scale_N']/1000, sub_fimo['time_s_1hilo'], color=PALETTE["FIMO + Prokaryote DB"]["color"], linestyle=":", marker="o", linewidth=1.8, label=f"FIMO [1-CPU: {sub_fimo['time_s_1hilo'].iloc[-1]:.1f}s]")
+    ax.plot(sub_fimo['scale_N']/1000, sub_fimo['time_s_1cpu'], color=PALETTE["FIMO + Prokaryote DB"]["color"], linestyle=":", marker="o", linewidth=1.8, label=f"FIMO [1-CPU: {sub_fimo['time_s_1cpu'].iloc[-1]:.1f}s]")
     ax.plot(sub_fimo['scale_N']/1000, sub_fimo['time_s_16cores'], color=PALETTE["FIMO + Prokaryote DB"]["color"], linestyle="--", marker="^", linewidth=2.2, label=f"FIMO [16-CPU: {sub_fimo['time_s_16cores'].iloc[-1]:.1f}s]")
-    ax.plot(sub_lcnn['scale_N']/1000, sub_lcnn['time_s_1hilo'], color=PALETTE["PromoterLCNN"]["color"], linestyle=":", marker="o", linewidth=1.8, label=f"LCNN [1-CPU: {sub_lcnn['time_s_1hilo'].iloc[-1]:.1f}s]")
+    ax.plot(sub_lcnn['scale_N']/1000, sub_lcnn['time_s_1cpu'], color=PALETTE["PromoterLCNN"]["color"], linestyle=":", marker="o", linewidth=1.8, label=f"LCNN [1-CPU: {sub_lcnn['time_s_1cpu'].iloc[-1]:.1f}s]")
     ax.plot(sub_lcnn['scale_N']/1000, sub_lcnn['time_s_16cores'], color=PALETTE["PromoterLCNN"]["color"], linestyle="-", marker="D", linewidth=2.5, label=f"LCNN [16-CPU+GPU: {sub_lcnn['time_s_16cores'].iloc[-1]:.1f}s]")
-    ax.plot(sub_ipro['scale_N']/1000, sub_ipro['time_s_1hilo'], color=PALETTE["iPro-MP (H. pylori)"]["color"], linestyle="-.", marker="s", linewidth=2.2, label="iPro-MP [1-CPU Host+GPU: 1478.400s / 24.64m]")
+    ax.plot(sub_ipro['scale_N']/1000, sub_ipro['time_s_1cpu'], color=PALETTE["iPro-MP (H. pylori)"]["color"], linestyle="-.", marker="s", linewidth=2.2, label="iPro-MP [1-CPU Host+GPU: 1478.400s / 24.64m]")
     ax.plot(sub_ipro['scale_N']/1000, sub_ipro['time_s_16cores'], color=PALETTE["iPro-MP (H. pylori)"]["color"], linestyle="-", marker="D", linewidth=2.8, label="iPro-MP [16-CPU Host+GPU: 700.800s / 11.68m]")
 
     ax.set_ylim(0, 6800)
@@ -507,12 +510,12 @@ def generate_scaling_time_curves():
 
     # Combined All Modes Scaling (ZOOMED LINEAR SCALE <= 1,600s / 25 min)
     fig, ax = plt.subplots(figsize=(11, 7), dpi=300)
-    ax.plot(sub_mld['scale_N']/1000, sub_mld['time_s_1hilo'], color=PALETTE["MLDSPP XGBoost"]["color"], linestyle=":", marker="o", linewidth=1.8, label="MLDSPP [1-CPU]")
+    ax.plot(sub_mld['scale_N']/1000, sub_mld['time_s_1cpu'], color=PALETTE["MLDSPP XGBoost"]["color"], linestyle=":", marker="o", linewidth=1.8, label="MLDSPP [1-CPU]")
     ax.plot(sub_mld['scale_N']/1000, sub_mld['time_s_16cores'], color=PALETTE["MLDSPP XGBoost"]["color"], linestyle="--", marker="^", linewidth=2.2, label="MLDSPP [16-CPU]")
     ax.plot(sub_fimo['scale_N']/1000, sub_fimo['time_s_16cores'], color=PALETTE["FIMO + Prokaryote DB"]["color"], linestyle="--", marker="^", linewidth=2.2, label=f"FIMO [16-CPU: {sub_fimo['time_s_16cores'].iloc[-1]:.1f}s]")
-    ax.plot(sub_lcnn['scale_N']/1000, sub_lcnn['time_s_1hilo'], color=PALETTE["PromoterLCNN"]["color"], linestyle=":", marker="o", linewidth=1.8, label=f"LCNN [1-CPU: {sub_lcnn['time_s_1hilo'].iloc[-1]:.1f}s]")
+    ax.plot(sub_lcnn['scale_N']/1000, sub_lcnn['time_s_1cpu'], color=PALETTE["PromoterLCNN"]["color"], linestyle=":", marker="o", linewidth=1.8, label=f"LCNN [1-CPU: {sub_lcnn['time_s_1cpu'].iloc[-1]:.1f}s]")
     ax.plot(sub_lcnn['scale_N']/1000, sub_lcnn['time_s_16cores'], color=PALETTE["PromoterLCNN"]["color"], linestyle="-", marker="D", linewidth=2.5, label=f"LCNN [16-CPU+GPU: {sub_lcnn['time_s_16cores'].iloc[-1]:.1f}s]")
-    ax.plot(sub_ipro['scale_N']/1000, sub_ipro['time_s_1hilo'], color=PALETTE["iPro-MP (H. pylori)"]["color"], linestyle="-.", marker="s", linewidth=2.2, label=f"iPro-MP [Host+GPU: {sub_ipro['time_s_1hilo'].iloc[-1]:.0f}s]")
+    ax.plot(sub_ipro['scale_N']/1000, sub_ipro['time_s_1cpu'], color=PALETTE["iPro-MP (H. pylori)"]["color"], linestyle="-.", marker="s", linewidth=2.2, label=f"iPro-MP [Host+GPU: {sub_ipro['time_s_1cpu'].iloc[-1]:.0f}s]")
     ax.plot(sub_ipro['scale_N']/1000, sub_ipro['time_s_16cores'], color=PALETTE["iPro-MP (H. pylori)"]["color"], linestyle="-", marker="D", linewidth=2.8, label=f"iPro-MP [16-CPU Host+GPU: {sub_ipro['time_s_16cores'].iloc[-1]:.0f}s]")
 
     ax.set_ylim(0, 1600)
@@ -536,7 +539,7 @@ def generate_scaling_memory_curves():
         sub = df_sp[df_sp['tool'] == tool_key].sort_values('scale_N')
         if not sub.empty:
             meta = PALETTE[tool_key]
-            ax.plot(sub['scale_N']/1000, sub['ram_mb_1hilo']/1024, marker=meta['marker'], color=meta['color'], linewidth=2.2, markersize=7, label=f"{meta['short']} ({meta['method']})")
+            ax.plot(sub['scale_N']/1000, sub['ram_mb_1cpu']/1024, marker=meta['marker'], color=meta['color'], linewidth=2.2, markersize=7, label=f"{meta['short']} ({meta['method']})")
     ax.set_xlabel("Total Sequences (thousands, k)", fontsize=12, fontweight="bold")
     ax.set_ylabel("Peak System RAM (GB)", fontsize=12, fontweight="bold")
     ax.set_title("Single-Core CPU Peak RAM Scaling (Linear Scale)", fontsize=13, fontweight="bold", pad=15)
@@ -603,7 +606,7 @@ def generate_grouped_bars():
     for j, scale in enumerate(KEY_SCALES):
         times = []
         for t in tools_4:
-            val = df_sp[(df_sp['tool'] == t['key']) & (df_sp['scale_N'] == scale)]['time_s_1hilo'].values
+            val = df_sp[(df_sp['tool'] == t['key']) & (df_sp['scale_N'] == scale)]['time_s_1cpu'].values
             times.append(val[0] if len(val) > 0 else 0.0)
         pos = indices + (j - (n_scales - 1) / 2) * bar_width
         bars = ax.bar(pos, times, bar_width, label=SCALE_LABELS[scale], color=SCALE_COLORS[scale], edgecolor="black", linewidth=0.7, zorder=3)
@@ -660,10 +663,10 @@ def generate_speedup_and_ram():
 
     # Speedup curves
     fig, ax = plt.subplots(figsize=(11, 7), dpi=300)
-    fimo_sp = sub_fimo['time_s_1hilo'] / sub_fimo['time_s_16cores']
-    lcnn_sp = sub_lcnn['time_s_1hilo'] / sub_lcnn['time_s_16cores']
-    mld_sp = sub_mld['time_s_1hilo'] / sub_mld['time_s_16cores']
-    ipro_host_sp = sub_ipro['time_s_1hilo'] / sub_ipro['time_s_16cores']
+    fimo_sp = sub_fimo['time_s_1cpu'] / sub_fimo['time_s_16cores']
+    lcnn_sp = sub_lcnn['time_s_1cpu'] / sub_lcnn['time_s_16cores']
+    mld_sp = sub_mld['time_s_1cpu'] / sub_mld['time_s_16cores']
+    ipro_host_sp = sub_ipro['time_s_1cpu'] / sub_ipro['time_s_16cores']
 
     ax.plot(sub_fimo['scale_N']/1000, fimo_sp, color=PALETTE["FIMO + Prokaryote DB"]["color"], marker="^", linestyle="--", linewidth=2.3, markersize=7, label="FIMO: 16-CPU vs 1-CPU (6.989x to 13.087x OpenMP)")
     ax.plot(sub_lcnn['scale_N']/1000, lcnn_sp, color=PALETTE["PromoterLCNN"]["color"], marker="D", linestyle="-", linewidth=2.3, markersize=7, label="PromoterLCNN: 16-CPU+GPU vs 1-CPU (0.963x to 5.596x)")
@@ -686,7 +689,7 @@ def generate_speedup_and_ram():
     for tool_key in ["MLDSPP XGBoost", "FIMO + Prokaryote DB", "PromoterLCNN", "iPro-MP (H. pylori)"]:
         meta = PALETTE[tool_key]
         sub = df_sp[df_sp['tool'] == tool_key].sort_values('scale_N')
-        ax.plot(sub['scale_N']/1000, sub['ram_mb_1hilo']/1024, color=meta['color'], marker=meta['marker'], linestyle=":", linewidth=1.8, label=f"{meta['short']} [1-CPU]")
+        ax.plot(sub['scale_N']/1000, sub['ram_mb_1cpu']/1024, color=meta['color'], marker=meta['marker'], linestyle=":", linewidth=1.8, label=f"{meta['short']} [1-CPU]")
         ax.plot(sub['scale_N']/1000, sub['ram_mb_16cores']/1024, color=meta['color'], marker=meta['marker'], linestyle="--", linewidth=2.3, label=f"{meta['short']} [16-CPU / Host]")
 
     ax.set_xlabel("Total Sequences (thousands, k)", fontsize=12, fontweight="bold")
@@ -708,13 +711,13 @@ def generate_by_scale_plots():
         scale_dir_comb = DIR_COMBINED / "by_scale" / folder_name
         scale_dir_comb.mkdir(parents=True, exist_ok=True)
 
-        mld_1cpu = df_sp[(df_sp['tool'] == "MLDSPP XGBoost") & (df_sp['scale_N'] == scale)]['time_s_1hilo'].values[0]
+        mld_1cpu = df_sp[(df_sp['tool'] == "MLDSPP XGBoost") & (df_sp['scale_N'] == scale)]['time_s_1cpu'].values[0]
         mld_16cpu = df_sp[(df_sp['tool'] == "MLDSPP XGBoost") & (df_sp['scale_N'] == scale)]['time_s_16cores'].values[0]
 
-        lcnn_1cpu = df_sp[(df_sp['tool'] == "PromoterLCNN") & (df_sp['scale_N'] == scale)]['time_s_1hilo'].values[0]
+        lcnn_1cpu = df_sp[(df_sp['tool'] == "PromoterLCNN") & (df_sp['scale_N'] == scale)]['time_s_1cpu'].values[0]
         lcnn_16gpu = df_sp[(df_sp['tool'] == "PromoterLCNN") & (df_sp['scale_N'] == scale)]['time_s_16cores'].values[0]
 
-        fimo_1cpu = df_sp[(df_sp['tool'] == "FIMO + Prokaryote DB") & (df_sp['scale_N'] == scale)]['time_s_1hilo'].values[0]
+        fimo_1cpu = df_sp[(df_sp['tool'] == "FIMO + Prokaryote DB") & (df_sp['scale_N'] == scale)]['time_s_1cpu'].values[0]
         fimo_16cpu = df_sp[(df_sp['tool'] == "FIMO + Prokaryote DB") & (df_sp['scale_N'] == scale)]['time_s_16cores'].values[0]
 
         # PromoTech e iPro-MP: solo valores medidos (sin proyecciones fabricadas)
@@ -729,7 +732,7 @@ def generate_by_scale_plots():
         pt_measured = _from_metrics("scale_db_promotech", "PromoTech RF-HOT (PG Max)")
 
         ipro_1cpu_gpu_row = df_sp[(df_sp['tool'] == "iPro-MP (H. pylori)") & (df_sp['scale_N'] == scale)]
-        ipro_1cpu_gpu = float(ipro_1cpu_gpu_row['time_s_1hilo'].values[0]) if not ipro_1cpu_gpu_row.empty else None
+        ipro_1cpu_gpu = float(ipro_1cpu_gpu_row['time_s_1cpu'].values[0]) if not ipro_1cpu_gpu_row.empty else None
         ipro_16cpu_gpu = float(ipro_1cpu_gpu_row['time_s_16cores'].values[0]) if not ipro_1cpu_gpu_row.empty else None
 
         time_tools_config = [
@@ -796,18 +799,18 @@ def generate_by_scale_plots():
         plt.close(fig)
 
         # Plot peak_ram for this scale
-        mld_ram_1cpu = df_sp[(df_sp['tool'] == "MLDSPP XGBoost") & (df_sp['scale_N'] == scale)]['ram_mb_1hilo'].values[0]
+        mld_ram_1cpu = df_sp[(df_sp['tool'] == "MLDSPP XGBoost") & (df_sp['scale_N'] == scale)]['ram_mb_1cpu'].values[0]
         mld_ram_16cpu = df_sp[(df_sp['tool'] == "MLDSPP XGBoost") & (df_sp['scale_N'] == scale)]['ram_mb_16cores'].values[0]
 
-        lcnn_ram_1cpu = df_sp[(df_sp['tool'] == "PromoterLCNN") & (df_sp['scale_N'] == scale)]['ram_mb_1hilo'].values[0]
+        lcnn_ram_1cpu = df_sp[(df_sp['tool'] == "PromoterLCNN") & (df_sp['scale_N'] == scale)]['ram_mb_1cpu'].values[0]
         lcnn_ram_16gpu = df_sp[(df_sp['tool'] == "PromoterLCNN") & (df_sp['scale_N'] == scale)]['ram_mb_16cores'].values[0]
 
-        fimo_ram_1cpu = df_sp[(df_sp['tool'] == "FIMO + Prokaryote DB") & (df_sp['scale_N'] == scale)]['ram_mb_1hilo'].values[0]
+        fimo_ram_1cpu = df_sp[(df_sp['tool'] == "FIMO + Prokaryote DB") & (df_sp['scale_N'] == scale)]['ram_mb_1cpu'].values[0]
         fimo_ram_16cpu = df_sp[(df_sp['tool'] == "FIMO + Prokaryote DB") & (df_sp['scale_N'] == scale)]['ram_mb_16cores'].values[0]
 
         pt_measured_ram = _from_metrics_ram("scale_db_promotech", "PromoTech RF-HOT (PG Max)")
 
-        ipro_ram_1cpu = df_sp[(df_sp['tool'] == "iPro-MP (H. pylori)") & (df_sp['scale_N'] == scale)]['ram_mb_1hilo'].values[0]
+        ipro_ram_1cpu = df_sp[(df_sp['tool'] == "iPro-MP (H. pylori)") & (df_sp['scale_N'] == scale)]['ram_mb_1cpu'].values[0]
         ipro_ram_16cpu = df_sp[(df_sp['tool'] == "iPro-MP (H. pylori)") & (df_sp['scale_N'] == scale)]['ram_mb_16cores'].values[0]
 
         ram_tools_config = [
@@ -880,5 +883,74 @@ def main():
     print("=" * 75)
 
 
+def _short_label(tool_name: str) -> str:
+    meta = PALETTE.get(tool_name)
+    if meta:
+        return f"{meta['short']}\n({meta['method']})"
+    return tool_name
+
+
+def main_run(run_dir: Path):
+    """Per-run compute plots from the run's resource_metrics.tsv."""
+    run_dir = Path(run_dir)
+    metrics = run_dir / "resource_metrics.tsv"
+    if not metrics.exists():
+        print(f"ERROR: no resource_metrics.tsv in {run_dir}")
+        raise SystemExit(2)
+    df = pd.read_csv(metrics, sep="\t")
+    df = df[df["success"] == True] if "success" in df.columns else df
+    if df.empty:
+        print("  [compute] no successful tool rows, nothing to plot")
+        return
+    out = run_dir / "2_resources"
+    out.mkdir(parents=True, exist_ok=True)
+    name = run_dir.parent.name if run_dir.name in (
+        "1cpu", "16cpu", "1cpu-gpu", "16cpu-gpu") else run_dir.name
+
+    specs = [
+        ("wall_seconds", "Execution Time (s)", f"Compute time — {name}"),
+        ("peak_ram_mb", "Peak RAM (MB)", f"Peak RAM — {name}"),
+        ("throughput_seq_s", "Sequences / second", f"Throughput — {name}"),
+    ]
+    for col, ylabel, title in specs:
+        if col not in df.columns:
+            continue
+        sub = df[pd.to_numeric(df[col], errors="coerce").notna()]
+        if sub.empty:
+            continue
+        labels = [_short_label(t) for t in sub["tool"]]
+        colors = [PALETTE.get(t, {}).get("color", "#333333") for t in sub["tool"]]
+        vals = sub[col].astype(float).tolist()
+        fig, ax = plt.subplots(figsize=(max(8, len(sub) * 1.4), 6), dpi=300)
+        bars = ax.bar(range(len(sub)), vals, color=colors, edgecolor="black", linewidth=0.8)
+        for b, v in zip(bars, vals):
+            ax.annotate(f"{v:.3g}", (b.get_x() + b.get_width() / 2, v),
+                        xytext=(0, 4), textcoords="offset points",
+                        ha="center", va="bottom", fontsize=9.0, fontweight="bold")
+        ax.set_xticks(range(len(sub)))
+        ax.set_xticklabels(labels, fontsize=10.5, fontweight="bold")
+        ax.set_ylabel(ylabel, fontsize=12, fontweight="bold")
+        ax.set_title(title, fontsize=13, fontweight="bold", pad=12)
+        ax.grid(True, axis="y", linestyle="--", alpha=0.5, zorder=0)
+        for spine in ("top", "right"):
+            ax.spines[spine].set_visible(False)
+        plt.tight_layout()
+        stem = {"wall_seconds": "compute_time", "peak_ram_mb": "peak_ram",
+                "throughput_seq_s": "throughput"}[col]
+        for ext in ("png", "pdf", "svg"):
+            fig.savefig(out / f"{stem}.{ext}", dpi=300, bbox_inches="tight")
+        plt.close(fig)
+        print(f"  [compute] saved 2_resources/{stem}.png/.pdf/.svg")
+
+
 if __name__ == "__main__":
-    main()
+    import sys as _sys
+    if _sys.argv[1:] in (["-h"], ["--help"]):
+        print(__doc__)
+    elif len(_sys.argv) >= 3 and _sys.argv[1] == "--suite" and _sys.argv[2] == "full":
+        main()
+    elif len(_sys.argv) == 2 and not _sys.argv[1].startswith("-"):
+        main_run(Path(_sys.argv[1]))
+    else:
+        print(__doc__)
+        _sys.exit(2)

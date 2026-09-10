@@ -11,7 +11,6 @@ Produces dict keys:
 import re
 import subprocess
 import time
-from pathlib import Path
 
 _pynvml = None
 _nvml_initialized = False

@@ -1,7 +1,5 @@
 """Base runner: abstract interface for tool execution backends."""
 from abc import ABC, abstractmethod
-from pathlib import Path
-from typing import Optional
 
 from src.benchmark.tools import Tool
 

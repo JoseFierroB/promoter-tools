@@ -1,7 +1,6 @@
 """Declarative tool definitions for the unified benchmark."""
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Callable, Optional
 
 from src.config import config
 

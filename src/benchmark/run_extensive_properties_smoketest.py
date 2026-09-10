@@ -17,7 +17,6 @@ Properties Tested:
 """
 
 import sys
-import time
 from pathlib import Path
 import numpy as np
 import pandas as pd
@@ -25,7 +24,6 @@ import torch
 import torch.nn as nn
 from Bio import SeqIO
 from Bio.Seq import Seq
-from sklearn.metrics import roc_auc_score
 
 ROOT_DIR = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(ROOT_DIR))
@@ -168,14 +166,14 @@ def evaluate_models_on_conditions(conditions):
         gc_vals = [(s.count('G') + s.count('C')) / len(s) * 100 for s in seqs]
         
         results.append({
-            "Condición / Propiedad": cond_name,
+            "Condition / Property": cond_name,
             "N": len(seqs),
-            "GC_Media%": round(float(np.mean(gc_vals)), 1),
-            "ProkBERT_Media": round(float(np.mean(pk_scores)), 3),
+            "GC_Mean%": round(float(np.mean(gc_vals)), 1),
+            "ProkBERT_Mean": round(float(np.mean(pk_scores)), 3),
             "ProkBERT_Std": round(float(np.std(pk_scores)), 3),
-            "Prompt_Media": round(float(np.mean(pr_scores)), 3),
+            "Prompt_Mean": round(float(np.mean(pr_scores)), 3),
             "Prompt_Std": round(float(np.std(pr_scores)), 3),
-            "EvoSNR_Media": round(float(np.mean(evo_scores)), 3),
+            "EvoSNR_Mean": round(float(np.mean(evo_scores)), 3),
             "EvoSNR_Std": round(float(np.std(evo_scores)), 3),
         })
         
@@ -194,7 +192,7 @@ def main():
     df_res.to_csv(DESK_DIR / "extensive_properties_smoke_test.tsv", sep="\t", index=False)
     
     print("\n" + "=" * 110)
-    print("AUDITORÍA EXTENSIVA DE PROPIEDADES BIOLÓGICAS Y MATRICES DE SENSIBILIDAD")
+    print("EXTENSIVE AUDIT OF BIOLOGICAL PROPERTIES AND SENSITIVITY MATRICES")
     print("=" * 110)
     print(df_res.to_string(index=False))
     print("=" * 110)

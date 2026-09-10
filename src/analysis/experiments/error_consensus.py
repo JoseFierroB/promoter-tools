@@ -127,17 +127,17 @@ for sname, sset in SETS:
     if sname == "d39v":
         prof = meta.iloc[:npos].copy()
         prof["hard"] = fn_intersection
-        print(f"\n=== {sname} {sset}: positivos que fallan TODAS las tools: {fn_intersection.sum()} ===")
+        print(f"\n=== {sname} {sset}: positives failing ALL tools: {fn_intersection.sum()} ===")
         if fn_intersection.sum() > 0:
             h = prof[prof["hard"]]
             print(f"  sigma: {h['Sigma_Factor'].fillna('None').value_counts().to_dict()}")
-            print(f"  clase: {h['class_cons'].value_counts().to_dict()}")
-            print(f"  GC hard: {h['GC'].mean():.1f}% vs resto {prof[~prof['hard']]['GC'].mean():.1f}%")
-        print(f"  negativos FP de todas: {fp_intersection.sum()}")
+            print(f"  class: {h['class_cons'].value_counts().to_dict()}")
+            print(f"  GC hard: {h['GC'].mean():.1f}% vs rest {prof[~prof['hard']]['GC'].mean():.1f}%")
+        print(f"  negatives FP from all: {fp_intersection.sum()}")
 
 df = pd.DataFrame(summary)
 df.to_csv(OUT/"consensus_analysis.tsv", sep="\t", index=False)
-print("\n=== CONSENSO (AUC) por set ===")
+print("\n=== CONSENSUS (AUC) per set ===")
 cols = ["strain","set"] + [k for k in df.columns if k not in ("strain","set")]
 print(df[cols].to_string(index=False))
-print("\nGuardado:", OUT/"consensus_analysis.tsv")
+print("\nSaved:", OUT/"consensus_analysis.tsv")

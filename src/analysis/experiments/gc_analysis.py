@@ -55,22 +55,7 @@ igr = pd.read_csv(ROOT/"output/intergenic/d39v/D39V_igrs.tsv", sep="\t")
 igr = igr.sort_values("start")
 val = pd.read_csv(ROOT/"output/tables/conserved_igrs_tss_validation.tsv", sep="\t")
 hit_igrs = set(val["query_d39v"].astype(str)) | set(val["target_tigr4"].astype(str))
-# CDS intervals
-import re
-cds_int = []
-for line in open(ROOT/"data/reference/D39V.gff3"):
-    if line.startswith("#"): continue
-    parts = line.split("\t")
-    if len(parts) < 9: continue
-    if "CDS" in parts[2] or "gene" == parts[2]:
-        cds_int.append((int(parts[3])-1, int(parts[4]), parts[6]))
 meta = pd.read_csv(ROOT/"data/benchmark/d39v/positives_81bp_metadata.tsv", sep="\t")
-
-def in_cds(pos):
-    for s, e, st in cds_int:
-        if s <= pos < e:
-            return True
-    return False
 
 from src.analysis.experiments._conservation import build_conservation_classes
 meta = build_conservation_classes(Path(__file__).resolve().parents[3] / "data/benchmark/d39v/positives_81bp_metadata.tsv")
@@ -148,7 +133,7 @@ def delong_var(y, s):
             v10[i] = np.mean(ss < pos_s) + 0.5*np.mean(ss == pos_s)
     return v10
 
-print("\n=== A4: DeLong pareado (d39v cds vs gc30), Holm corregido ===")
+print("\n=== A4: paired DeLong (d39v cds vs gc30), Holm corrected ===")
 rows = []
 root_c = Path("/home/fierro/Desktop/d39v_gc/cds/predictions")
 root_g = Path("/home/fierro/Desktop/d39v_gc/gc30/predictions")
@@ -189,7 +174,7 @@ for k, (la, lb, p) in enumerate(pvals_sorted):
     prev = max((adj[(pvals_sorted[i][0], pvals_sorted[i][1])] for i in range(k)), default=0.0)
     adj[(la, lb)] = max(min(1.0, p * (m - k)), prev)
 for la, lb, p in pvals_sorted:
-    print(f"  Δ(ΔAUC) {la} vs {lb}: diff={round((data[la][2][0]>0 and True) or 0, 3)}, p_holm={adj[(la,lb)]:.4f}" if False else f"  {la} vs {lb}: p_raw={p:.5f}  p_holm={adj[(la,lb)]:.4f}")
+    print(f"  {la} vs {lb}: p_raw={p:.5f}  p_holm={adj[(la,lb)]:.4f}")
 
 # ── A5: duplicados sensibilidad ──
 print("\n=== A5: duplicates — AUC 972 unique vs 988 (d39v cds) ===")
@@ -210,7 +195,7 @@ for key, lab in TOOLS:
     a_uniq = roc_auc_score(np.r_[np.ones(keep.sum()), np.zeros(len(neg))], np.r_[pos[keep], neg])
     print(f"  {lab:<11} AUC 988={a_all:.4f}  AUC 972 unique={a_uniq:.4f}  Δ={a_uniq-a_all:+.4f}")
 
-print("\n=== A6: AUC por Sigma_Factor (d39v cds y gc30) ===")
+print("\n=== A6: AUC by Sigma_Factor (d39v cds and gc30) ===")
 sig = meta["Sigma_Factor"].fillna("None").values
 for sset in ["cds", "gc30"]:
     root = Path("/home/fierro/Desktop")/f"d39v_gc/{sset}/predictions"
@@ -231,4 +216,4 @@ for sset in ["cds", "gc30"]:
             out.append(f"{cls}({idx.sum()})={roc_auc_score(yc, sc):.4f}")
         print(f"  {lab:<11} " + "  ".join(out))
 
-print("\nGuardado:", OUT)
+print("\nSaved:", OUT)
