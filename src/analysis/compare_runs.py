@@ -372,9 +372,10 @@ def compare_runs(run_dirs, out_dir: Path, dataset_label: str = None):
             print(f"  [SAVED] 2_resources/{stem}")
 
     # --- GPU VRAM: weights vs peak (GPU tools only) ---
+    GPU_TOOLS = {"PromoterLCNN [CNN]", "ProkBERT-mini [gLM]", "iPro-MP [gLM]"}
     if {"model_size_mb", "peak_vram_mb"} <= set(res_all.columns):
         vsub = res_all[(pd.to_numeric(res_all["peak_vram_mb"],
-                                      errors="coerce").fillna(0) > 0)]
+                                      errors="coerce").fillna(0) > 0) & (res_all["Tool"].isin(GPU_TOOLS))]
         if not vsub.empty:
             order_idx = {t: i for i, t in enumerate(CANONICAL_ORDER)}
             vtools = sorted([t for t in tools_res if t in set(vsub["Tool"])],
