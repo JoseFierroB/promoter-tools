@@ -178,9 +178,12 @@ def main():
     print(df_sigma.to_string(index=False))
     print("=" * 90)
     
-    # 2. Plot 1: 3-Panel ROC Atlas by Sigma Factor (300 DPI)
+    # 2. Plot 1: 3-Panel ROC Atlas by Sigma Factor (300 DPI) — canonical palette/order
+    try:
+        from bench_labels import PALETTE as _PAL, TOOL_ORDER as _TO
+    except Exception:
+        from src.analysis.bench_labels import PALETTE as _PAL, TOOL_ORDER as _TO
     fig, axes = plt.subplots(1, 3, figsize=(20, 6.5), dpi=300)
-    colors = ["#1f77b4", "#2ca02c", "#ff7f0e", "#d62728", "#9467bd", "#8c564b", "#7f7f7f"]
     
     panels = [
         ("SigA", f"Canonical $\sigma^A$ Promoters (N={sig_counts.get('SigA', 0)} vs 1,000 Neg)"),
@@ -190,10 +193,12 @@ def main():
     
     for ax_idx, (sig_key, title) in enumerate(panels):
         ax = axes[ax_idx]
-        sorted_tools = sorted(roc_data[sig_key].items(), key=lambda x: x[1][2], reverse=True)
-        
-        for i, (tool_name, (fpr, tpr, auc)) in enumerate(sorted_tools):
-            ax.plot(fpr, tpr, color=colors[i % len(colors)], lw=2.2, label=f"{tool_name} (AUC = {auc:.3f})")
+        order_idx = {t: i for i, t in enumerate(_TO)}
+        # canonical TOOL_ORDER (BDT→RF→CNN→NN→gLM→motif), not sorted by AUC
+        sorted_tools = sorted(roc_data[sig_key].items(), key=lambda x: order_idx.get(x[0], 999))
+        for tool_name, (fpr, tpr, auc) in sorted_tools:
+            style = _PAL.get(tool_name, {"color": "#333333", "ls": "-", "lw": 2.2})
+            ax.plot(fpr, tpr, color=style["color"], linestyle=style["ls"], linewidth=style["lw"], label=f"{tool_name} (AUC = {auc:.3f})")
             
         ax.plot([0, 1], [0, 1], color="grey", lw=1.2, linestyle="--", label="Chance (0.500)")
         ax.set_xlim([-0.01, 1.01])
@@ -242,9 +247,9 @@ def main():
     plt.savefig(DESK_DIR / "score_distributions_by_sigma_factor.png", dpi=300)
     plt.close()
     
-    # 4. Plot 3: Heatmap Summary of AUC across Sigma Factors (300 DPI)
+    # 4. Plot 3: Heatmap Summary of AUC across Sigma Factors (300 DPI) — canonical TOOL_ORDER rows
     pivot_auc = df_sigma.pivot(index="Tool", columns="Sigma_Factor", values="ROC_AUC")[["SigA", "SigX", "Unassigned"]]
-    pivot_auc = pivot_auc.sort_values("SigA", ascending=False)
+    pivot_auc = pivot_auc.reindex([t for t in _TO if t in pivot_auc.index])
     
     plt.figure(figsize=(8, 6), dpi=300)
     plt.imshow(pivot_auc.values, cmap="YlGnBu", aspect="auto", vmin=0.45, vmax=1.0)

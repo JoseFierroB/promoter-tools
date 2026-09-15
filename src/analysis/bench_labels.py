@@ -25,6 +25,40 @@ DS_DISPLAY = {
     "15_d39v_cds_tigr4_cds_all": "D39V+TIGR4 CDS all",
 }
 
+# ---------------------------------------------------------------------------
+# Canonical tool palette & order — single source of truth for all plots.
+# Grouped by method family (BDT → RF → CNN → NN → gLM → motif/PWM)
+# so bars/lines/legends are always in the same, non-metric order.
+# ---------------------------------------------------------------------------
+TOOL_ORDER = [
+    "MLDSPP 0% [BDT]",
+    "MLDSPP 75% [BDT]",
+    "PromoTech RF-HOT [RF]",
+    "PromoterLCNN [CNN]",
+    "prompt [NN]",
+    "ProkBERT-mini [gLM]",
+    "iPro-MP [gLM]",
+    "FIMO ProkDB [PWMs]",
+    "STREME+FIMO [motif]",
+]
+
+# exhaustive style map (color + line style for ROC, color for bars)
+PALETTE = {
+    "MLDSPP 0% [BDT]":       {"color": "#880E4F", "ls": "-",  "lw": 1.8, "method": "BDT"},
+    "MLDSPP 75% [BDT]":      {"color": "#C2185B", "ls": "-",  "lw": 1.8, "method": "BDT"},
+    "PromoTech RF-HOT [RF]": {"color": "#EF6C00", "ls": "-",  "lw": 1.9, "method": "RF"},
+    "PromoterLCNN [CNN]":    {"color": "#2E7D32", "ls": "-",  "lw": 1.9, "method": "CNN"},
+    "prompt [NN]":           {"color": "#0288D1", "ls": "-",  "lw": 1.8, "method": "NN"},
+    "ProkBERT-mini [gLM]":   {"color": "#D81B60", "ls": "-",  "lw": 2.3, "method": "gLM"},
+    "iPro-MP [gLM]":         {"color": "#7E57C2", "ls": "-",  "lw": 2.1, "method": "gLM"},
+    "FIMO ProkDB [PWMs]":    {"color": "#00897B", "ls": "--", "lw": 1.7, "method": "PWMs"},
+    "STREME+FIMO [motif]":   {"color": "#795548", "ls": ":",  "lw": 1.7, "method": "motif"},
+}
+
+# flat color map for bar plots (subset of PALETTE)
+TOOL_COLORS = {k: v["color"] for k, v in PALETTE.items()}
+
+
 def run_date() -> str:
     """YYMMDD prefix for output directories (run date, never hardcoded)."""
     return date.today().strftime("%y%m%d")

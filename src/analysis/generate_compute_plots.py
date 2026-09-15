@@ -49,14 +49,18 @@ sp_file = REPO_ROOT / "output" / "tables" / "speedup_1cpu_vs_16cores.tsv"
 df_sp = pd.read_csv(sp_file, sep='\t')
 df_sp['scale_N'] = df_sp['iteration'] * 2
 
-# Tool palette
+# Tool palette — aligned to canonical bench_labels.PALETTE (BDT→RF→CNN→NN→gLM→motif)
+# Hex values are the same as analyze_run/compare_runs single source; only keys differ (legacy names).
 PALETTE = {
-    "MLDSPP XGBoost":           {"short": "MLDSPP",      "method": "BDT",   "color": "#942C76", "marker": "v"},
-    "MLDSPP XGBoost (75% spn)": {"short": "MLDSPP 75%",  "method": "BDT",   "color": "#942C76", "marker": "^"},
-    "PromoterLCNN":             {"short": "PromoterLCNN","method": "CNN",   "color": "#228B22", "marker": "s"},
-    "FIMO + Prokaryote DB":     {"short": "FIMO",        "method": "motif", "color": "#00ACC1", "marker": "D"},
-    "PromoTech RF-HOT (PG Max)":{"short": "PromoTech",   "method": "RF",    "color": "#E07614", "marker": "P"},
-    "iPro-MP (H. pylori)":      {"short": "iPro-MP",     "method": "gLM",   "color": "#7E57C2", "marker": "o"},
+    "MLDSPP XGBoost":                {"short": "MLDSPP",      "method": "BDT",   "color": "#880E4F", "marker": "v"},
+    "MLDSPP XGBoost (75% spn)":      {"short": "MLDSPP 75%",  "method": "BDT",   "color": "#C2185B", "marker": "^"},
+    "PromoterLCNN":                  {"short": "PromoterLCNN","method": "CNN",   "color": "#2E7D32", "marker": "s"},
+    "FIMO + Prokaryote DB":          {"short": "FIMO",        "method": "PWMs",  "color": "#00897B", "marker": "D"},
+    "PromoTech RF-HOT (PG Max)":     {"short": "PromoTech",   "method": "RF",    "color": "#EF6C00", "marker": "P"},
+    "iPro-MP (H. pylori)":           {"short": "iPro-MP",     "method": "gLM",   "color": "#7E57C2", "marker": "o"},
+    "MEME Suite (STREME+FIMO)":      {"short": "MEME",        "method": "motif", "color": "#795548", "marker": "o"},
+    "Prompt MLP (B. subtilis 168)":  {"short": "Prompt",      "method": "NN",    "color": "#0288D1", "marker": "p"},
+    "ProkBERT-mini (NeuralBioInfo)": {"short": "ProkBERT-mini", "method": "gLM", "color": "#D81B60", "marker": "h"},
 }
 
 SCALES_ALL = sorted(df_sp['scale_N'].unique())
@@ -109,10 +113,9 @@ def save_plot(fig, regime_dir, filename):
         dest.mkdir(parents=True, exist_ok=True)
         (dest / "graph_png").mkdir(parents=True, exist_ok=True)
         fig.savefig(dest / f"{filename}.png", dpi=300, bbox_inches="tight")
-        fig.savefig(dest / f"{filename}.svg", dpi=300, bbox_inches="tight")
         fig.savefig(dest / f"{filename}.pdf", dpi=300, bbox_inches="tight")
         fig.savefig(dest / "graph_png" / f"{filename}.png", dpi=300, bbox_inches="tight")
-    print(f"  [Saved] {regime_dir.name}/{filename}.png, .svg, and .pdf")
+    print(f"  [Saved] {regime_dir.name}/{filename}.png and .pdf")
 
 
 # =============================================================================
@@ -163,10 +166,10 @@ def generate_baseline_time():
         tools_1cpu.append({"name": f"{meta['short']}\n({meta['method']})", "time": t, "color": meta["color"]})
     if not tools_1cpu:
         tools_1cpu = [
-            {"name": "MLDSPP\n(BDT)", "time": 0.427, "color": "#942C76"},
-            {"name": "PromoterLCNN\n(CNN)", "time": 1.856, "color": "#228B22"},
-            {"name": "FIMO\n(motif)", "time": 31.844, "color": "#00ACC1"},
-            {"name": "PromoTech\n(RF)", "time": 106.000, "color": "#E07614"},
+            {"name": "MLDSPP\n(BDT)", "time": 0.427, "color": "#880E4F"},
+            {"name": "PromoterLCNN\n(CNN)", "time": 1.856, "color": "#2E7D32"},
+            {"name": "FIMO\n(motif)", "time": 31.844, "color": "#00897B"},
+            {"name": "PromoTech\n(RF)", "time": 106.000, "color": "#EF6C00"},
             {"name": "iPro-MP\n(gLM)", "time": 395.350, "color": "#7E57C2"},
         ]
     fig, ax = plt.subplots(figsize=(10, 6.5), dpi=300)
@@ -202,10 +205,10 @@ def generate_baseline_time():
         tools_16cpu.append({"name": f"{meta['short']}\n({meta['method']})", "time": t, "color": meta["color"]})
     if not tools_16cpu:
         tools_16cpu = [
-            {"name": "MLDSPP\n(BDT)", "time": 0.240, "color": "#942C76"},
-            {"name": "PromoterLCNN\n(CNN)", "time": 1.928, "color": "#228B22"},
-            {"name": "FIMO\n(motif)", "time": 4.556, "color": "#00ACC1"},
-            {"name": "PromoTech\n(RF)", "time": 48.200, "color": "#E07614"},
+            {"name": "MLDSPP\n(BDT)", "time": 0.240, "color": "#880E4F"},
+            {"name": "PromoterLCNN\n(CNN)", "time": 1.928, "color": "#2E7D32"},
+            {"name": "FIMO\n(motif)", "time": 4.556, "color": "#00897B"},
+            {"name": "PromoTech\n(RF)", "time": 48.200, "color": "#EF6C00"},
             {"name": "iPro-MP\n(gLM)", "time": 197.675, "color": "#7E57C2"},
         ]
     fig, ax = plt.subplots(figsize=(10, 6.5), dpi=300)
@@ -229,11 +232,11 @@ def generate_baseline_time():
 
     # Combined 1-CPU vs 16-CPU vs GPU Baseline (4 canonical tools, no PromoTech, no MLDSPP 75%)
     tools_all_info = [
-        {"name": "MLDSPP\n(BDT)", "color": "#942C76",
+        {"name": "MLDSPP\n(BDT)", "color": "#880E4F",
          "bars": [("1-CPU", 0.427, "//"), ("16-CPU", 0.240, "\\\\")]},
-        {"name": "PromoterLCNN\n(CNN)", "color": "#228B22",
+        {"name": "PromoterLCNN\n(CNN)", "color": "#2E7D32",
          "bars": [("1-CPU", 1.856, "//"), ("16-CPU", 1.928, "\\\\"), ("1-CPU+GPU", 1.856, ".."), ("16-CPU+GPU", 1.928, "")]},
-        {"name": "FIMO\n(motif)", "color": "#00ACC1",
+        {"name": "FIMO\n(motif)", "color": "#00897B",
          "bars": [("1-CPU", 31.844, "//"), ("16-CPU", 4.556, "\\\\")]},
         {"name": "iPro-MP\n(gLM)", "color": "#7E57C2",
          "bars": [("1-CPU", 395.350, "//"), ("16-CPU", 197.675, "\\\\"), ("1-CPU+GPU", 6.866, ".."), ("16-CPU+GPU", 3.504, "")]},
@@ -293,10 +296,10 @@ def generate_baseline_memory():
         tools_1cpu.append({"name": f"{meta['short']}\n({meta['method']})", "ram": ram, "color": meta["color"]})
     if not tools_1cpu:
         tools_1cpu = [
-            {"name": "MLDSPP\n(BDT)", "ram": 149.0, "color": "#942C76"},
-            {"name": "FIMO\n(motif)", "ram": 87.2, "color": "#00ACC1"},
-            {"name": "PromoTech\n(RF)", "ram": 6827.2, "color": "#E07614"},
-            {"name": "PromoterLCNN\n(CNN)", "ram": 1839.9, "color": "#228B22"},
+            {"name": "MLDSPP\n(BDT)", "ram": 149.0, "color": "#880E4F"},
+            {"name": "FIMO\n(motif)", "ram": 87.2, "color": "#00897B"},
+            {"name": "PromoTech\n(RF)", "ram": 6827.2, "color": "#EF6C00"},
+            {"name": "PromoterLCNN\n(CNN)", "ram": 1839.9, "color": "#2E7D32"},
             {"name": "iPro-MP\n(gLM)", "ram": 1302.6, "color": "#7E57C2"},
         ]
     fig, ax = plt.subplots(figsize=(10, 6.5), dpi=300)
@@ -330,11 +333,11 @@ def generate_baseline_memory():
         tools_16cpu.append({"name": f"{meta['short']}\n({meta['method']})", "ram": ram, "color": meta["color"]})
     if not tools_16cpu:
         tools_16cpu = [
-            {"name": "MLDSPP\n(BDT)", "ram": 187.1, "color": "#942C76"},
-            {"name": "FIMO\n(motif)", "ram": 203.4, "color": "#00ACC1"},
-            {"name": "PromoTech\n(RF)", "ram": 7298.0, "color": "#E07614"},
+            {"name": "MLDSPP\n(BDT)", "ram": 187.1, "color": "#880E4F"},
+            {"name": "FIMO\n(motif)", "ram": 203.4, "color": "#00897B"},
+            {"name": "PromoTech\n(RF)", "ram": 7298.0, "color": "#EF6C00"},
             {"name": "iPro-MP\n(gLM)", "ram": 1307.4, "color": "#7E57C2"},
-            {"name": "PromoterLCNN\n(CNN)", "ram": 1859.1, "color": "#228B22"},
+            {"name": "PromoterLCNN\n(CNN)", "ram": 1859.1, "color": "#2E7D32"},
         ]
     fig, ax = plt.subplots(figsize=(10, 6.5), dpi=300)
     x = np.arange(len(tools_16cpu))
@@ -369,7 +372,7 @@ def generate_baseline_memory():
         return
     fig, ax = plt.subplots(figsize=(9, 6), dpi=300)
     x = np.arange(len(gpu_models)); w = 0.35
-    b1 = ax.bar(x - w/2, weights_size_mb, w, label="Model Weights (Disk/RAM)", color="#455A64", edgecolor="black", linewidth=0.8, zorder=3)
+    b1 = ax.bar(x - w/2, weights_size_mb, w, label="Model Weights (Disk/RAM)", color="#795548", edgecolor="black", linewidth=0.8, zorder=3)
     b2 = ax.bar(x + w/2, inference_vram_mb, w, label="Peak Inference VRAM", color="#7E57C2", edgecolor="black", linewidth=0.8, zorder=3)
     for bar in b1:
         h = bar.get_height()
@@ -736,13 +739,13 @@ def generate_by_scale_plots():
         ipro_16cpu_gpu = float(ipro_1cpu_gpu_row['time_s_16cores'].values[0]) if not ipro_1cpu_gpu_row.empty else None
 
         time_tools_config = [
-            {"tool_label": "MLDSPP\n(BDT)", "color": "#942C76",
+            {"tool_label": "MLDSPP\n(BDT)", "color": "#880E4F",
              "bars": [("1-CPU", mld_1cpu, "//"), ("16-CPU", mld_16cpu, "\\\\")]},
-            {"tool_label": "PromoterLCNN\n(CNN)", "color": "#228B22",
+            {"tool_label": "PromoterLCNN\n(CNN)", "color": "#2E7D32",
              "bars": [("1-CPU", lcnn_1cpu, "//"), ("16-CPU", lcnn_16gpu, "\\\\"), ("1-CPU Host+GPU", lcnn_1cpu, ".."), ("16-CPU Host+GPU", lcnn_16gpu, "")]},
-            {"tool_label": "FIMO\n(PWM)", "color": "#00ACC1",
+            {"tool_label": "FIMO\n(PWM)", "color": "#00897B",
              "bars": [("1-CPU", fimo_1cpu, "//"), ("16-CPU", fimo_16cpu, "\\\\")]},
-            {"tool_label": "PromoTech\n(RF)", "color": "#E07614",
+            {"tool_label": "PromoTech\n(RF)", "color": "#EF6C00",
              "bars": ([("measured", pt_measured, "//")] if pt_measured else [])},
             {"tool_label": "iPro-MP\n(gLM)", "color": "#7E57C2",
              "bars": ([("1-CPU Host+GPU", ipro_1cpu_gpu, ".."), ("16-CPU Host+GPU", ipro_16cpu_gpu, "")])},
@@ -794,7 +797,6 @@ def generate_by_scale_plots():
             dest = base / "combined_1cpu_16cpu_gpu" / "by_scale" / folder_name
             dest.mkdir(parents=True, exist_ok=True)
             fig.savefig(dest / "compute_time.png", dpi=300, bbox_inches="tight")
-            fig.savefig(dest / "compute_time.svg", dpi=300, bbox_inches="tight")
             fig.savefig(dest / "compute_time.pdf", dpi=300, bbox_inches="tight")
         plt.close(fig)
 
@@ -814,13 +816,13 @@ def generate_by_scale_plots():
         ipro_ram_16cpu = df_sp[(df_sp['tool'] == "iPro-MP (H. pylori)") & (df_sp['scale_N'] == scale)]['ram_mb_16cores'].values[0]
 
         ram_tools_config = [
-            {"tool_label": "MLDSPP\n(BDT)", "color": "#942C76",
+            {"tool_label": "MLDSPP\n(BDT)", "color": "#880E4F",
              "bars": [("1-CPU", mld_ram_1cpu, "//"), ("16-CPU", mld_ram_16cpu, "\\\\")]},
-            {"tool_label": "PromoterLCNN\n(CNN)", "color": "#228B22",
+            {"tool_label": "PromoterLCNN\n(CNN)", "color": "#2E7D32",
              "bars": [("1-CPU", lcnn_ram_1cpu, "//"), ("16-CPU + GPU", lcnn_ram_16gpu, "")]},
-            {"tool_label": "FIMO\n(PWM)", "color": "#00ACC1",
+            {"tool_label": "FIMO\n(PWM)", "color": "#00897B",
              "bars": [("1-CPU", fimo_ram_1cpu, "//"), ("16-CPU", fimo_ram_16cpu, "\\\\")]},
-            {"tool_label": "PromoTech\n(RF)", "color": "#E07614",
+            {"tool_label": "PromoTech\n(RF)", "color": "#EF6C00",
              "bars": ([("measured", pt_measured_ram, "//")] if pt_measured_ram else [])},
             {"tool_label": "iPro-MP\n(gLM)", "color": "#7E57C2",
              "bars": [("1-CPU Host", ipro_ram_1cpu, "//"), ("16-CPU Host+GPU", ipro_ram_16cpu, "")]},
@@ -859,7 +861,6 @@ def generate_by_scale_plots():
             dest = base / "combined_1cpu_16cpu_gpu" / "by_scale" / folder_name
             dest.mkdir(parents=True, exist_ok=True)
             fig.savefig(dest / "peak_ram.png", dpi=300, bbox_inches="tight")
-            fig.savefig(dest / "peak_ram.svg", dpi=300, bbox_inches="tight")
             fig.savefig(dest / "peak_ram.pdf", dpi=300, bbox_inches="tight")
         plt.close(fig)
 
@@ -887,13 +888,33 @@ def _short_label(tool_name: str) -> str:
     meta = PALETTE.get(tool_name)
     if meta:
         return f"{meta['short']}\n({meta['method']})"
-    return tool_name
+    fallback = {
+        "MEME Suite (STREME+FIMO)": "MEME\n(STREME+FIMO)",
+        "Prompt MLP (B. subtilis 168)": "Prompt\n(MLP)",
+        "ProkBERT-mini (NeuralBioInfo)": "ProkBERT-mini\n(gLM)",
+    }
+    return fallback.get(tool_name, tool_name.replace(" ", "\n", 1))
+
+
+def _format_run_value(column: str, value: float) -> str:
+    """Readable annotation for per-run resource bars."""
+    if column == "wall_seconds":
+        return f"{value:.2f} s" if value < 10 else f"{value:.1f} s"
+    if column == "peak_ram_mb":
+        if value >= 1024:
+            return f"{value:,.1f} MB\n({value / 1024:.2f} GB)"
+        return f"{value:,.1f} MB"
+    if column == "throughput_seq_s":
+        return f"{value:,.1f} seq/s"
+    return f"{value:,.3g}"
 
 
 def main_run(run_dir: Path):
     """Per-run compute plots from the run's resource_metrics.tsv."""
     run_dir = Path(run_dir)
-    metrics = run_dir / "resource_metrics.tsv"
+    metrics = run_dir / "resources" / "resource_metrics.tsv"
+    if not metrics.exists():
+        metrics = run_dir / "resource_metrics.tsv"
     if not metrics.exists():
         print(f"ERROR: no resource_metrics.tsv in {run_dir}")
         raise SystemExit(2)
@@ -902,15 +923,91 @@ def main_run(run_dir: Path):
     if df.empty:
         print("  [compute] no successful tool rows, nothing to plot")
         return
-    out = run_dir / "2_resources"
-    out.mkdir(parents=True, exist_ok=True)
-    name = run_dir.parent.name if run_dir.name in (
-        "1cpu", "16cpu", "1cpu-gpu", "16cpu-gpu") else run_dir.name
-
+    # canonical capsule: 2_resources, with legacy symlink resources -> 2_resources
+    try:
+        from run_layout import RunLayout as _RL  # type: ignore
+    except ImportError:
+        try:
+            from src.analysis.run_layout import RunLayout as _RL  # type: ignore
+        except ImportError:
+            _RL = None
+    if _RL is not None:
+        try:
+            layout = _RL(run_dir)
+            out = layout.resources
+            out.mkdir(parents=True, exist_ok=True)
+            # legacy compat: resources -> 2_resources
+            legacy_res = run_dir / "resources"
+            if not legacy_res.exists() and not legacy_res.is_symlink():
+                try:
+                    legacy_res.symlink_to(out.name)
+                except Exception:
+                    pass
+        except Exception:
+            out = run_dir / "2_resources"
+            out.mkdir(parents=True, exist_ok=True)
+    else:
+        out = run_dir / "2_resources"
+        out.mkdir(parents=True, exist_ok=True)
+    # also ensure 3_tables has resource_metrics copy
+    try:
+        if _RL is not None:
+            tbl = _RL(run_dir).tables
+        else:
+            tbl = run_dir / "3_tables"
+        tbl.mkdir(parents=True, exist_ok=True)
+        dst_tbl = tbl / "resource_metrics.tsv"
+        if not dst_tbl.exists():
+            try:
+                dst_tbl.symlink_to(Path("../resource_metrics.tsv"))
+            except Exception:
+                import shutil as _sh
+                _sh.copy2(metrics, dst_tbl)
+        # also metrics_rows.tsv to tables
+        for src_name in ["metrics_rows.tsv", "benchmark_metrics.tsv"]:
+            src = run_dir / src_name
+            if src.exists():
+                dst = tbl / src_name
+                if not dst.exists():
+                    try:
+                        dst.symlink_to(Path("..") / src_name)
+                    except Exception:
+                        import shutil as _sh2
+                        _sh2.copy2(src, dst)
+            # also from 1_inference
+            src2 = run_dir / "1_inference" / src_name
+            if src2.exists() and not (tbl / src_name).exists():
+                try:
+                    (tbl / src_name).symlink_to(Path("../1_inference") / src_name)
+                except Exception:
+                    pass
+    except Exception:
+        pass
+    if "configuration" in df.columns and not df["configuration"].dropna().empty:
+        config = str(df["configuration"].dropna().iloc[0])
+        config_disp = {"1cpu": "1CPU", "16cpu": "16CPU", "1cpu-gpu": "1CPU+GPU", "16cpu-gpu": "16CPU+GPU"}.get(config, config)
+    else:
+        config_disp = run_dir.parent.name if run_dir.name in (
+            "1cpu", "4cpu", "16cpu", "1cpu-gpu", "4cpu-gpu", "16cpu-gpu") else run_dir.name
+        config = config_disp
+    # dataset always declared (from metrics `name` or run_dir path)
+    try:
+        from bench_labels import DS_DISPLAY as _DS
+    except Exception:
+        _DS = {}
+    if "name" in df.columns and not df["name"].dropna().empty:
+        ds_raw = str(df["name"].dropna().iloc[0])
+    elif run_dir.parent.name not in ("1cpu", "4cpu", "16cpu", "1cpu-gpu", "4cpu-gpu", "16cpu-gpu"):
+        ds_raw = run_dir.parent.name
+    else:
+        ds_raw = run_dir.name
+    ds_disp = _DS.get(ds_raw, ds_raw)
+    total_n = int(pd.to_numeric(df.get("n_sequences", pd.Series([0])), errors="coerce").fillna(0).max()) if "n_sequences" in df.columns else 0
+    n_tag = f", N={total_n:,}" if total_n else ""
+    # throughput not needed for single-run capsule (only for scaling suite)
     specs = [
-        ("wall_seconds", "Execution Time (s)", f"Compute time — {name}"),
-        ("peak_ram_mb", "Peak RAM (MB)", f"Peak RAM — {name}"),
-        ("throughput_seq_s", "Sequences / second", f"Throughput — {name}"),
+        ("wall_seconds", "Execution Time (s)", f"Compute time — {ds_disp} (N={total_n:,}, {config_disp})" if total_n else f"Compute time — {ds_disp} ({config_disp})"),
+        ("peak_ram_mb", "Peak RAM (MB)", f"Peak RAM — {ds_disp} (N={total_n:,}, {config_disp})" if total_n else f"Peak RAM — {ds_disp} ({config_disp})"),
     ]
     for col, ylabel, title in specs:
         if col not in df.columns:
@@ -918,29 +1015,62 @@ def main_run(run_dir: Path):
         sub = df[pd.to_numeric(df[col], errors="coerce").notna()]
         if sub.empty:
             continue
+        # Canonical TOOL_ORDER (BDT→RF→CNN→NN→gLM→motif) so bars line up
+        # across configurations and match ROC/benchmark legends.
+        try:
+            from bench_labels import TOOL_ORDER as _TO
+            _legacy_to_canonical = {
+                "MLDSPP XGBoost": "MLDSPP 0% [BDT]",
+                "MLDSPP XGBoost (75% spn)": "MLDSPP 75% [BDT]",
+                "PromoTech RF-HOT (PG Max)": "PromoTech RF-HOT [RF]",
+                "PromoterLCNN": "PromoterLCNN [CNN]",
+                "Prompt MLP (B. subtilis 168)": "prompt [NN]",
+                "ProkBERT-mini (NeuralBioInfo)": "ProkBERT-mini [gLM]",
+                "iPro-MP (H. pylori)": "iPro-MP [gLM]",
+                "FIMO + Prokaryote DB": "FIMO ProkDB [PWMs]",
+                "MEME Suite (STREME+FIMO)": "STREME+FIMO [motif]",
+            }
+            def _tool_key(t):
+                c = _legacy_to_canonical.get(t, t)
+                try:
+                    return _TO.index(c)
+                except ValueError:
+                    return 999
+            sub = sub.assign(_tool_sort=sub["tool"].map(_tool_key))
+            sub = sub.sort_values(["_tool_sort", "tool"], kind="stable")
+        except Exception:
+            sub = sub.assign(_tool_sort=sub["tool"].astype(str).str.casefold())
+            sub = sub.sort_values(["_tool_sort", "tool"], kind="stable")
         labels = [_short_label(t) for t in sub["tool"]]
-        colors = [PALETTE.get(t, {}).get("color", "#333333") for t in sub["tool"]]
+        colors = [PALETTE.get(t, {}).get("color", "#455A64") for t in sub["tool"]]
         vals = sub[col].astype(float).tolist()
-        fig, ax = plt.subplots(figsize=(max(8, len(sub) * 1.4), 6), dpi=300)
+        # Wide, fixed layout prevents long tool names from colliding when all
+        # tools are present in a run (especially MEME and ProkBERT-mini).
+        fig, ax = plt.subplots(figsize=(max(13.5, len(sub) * 1.65), 7), dpi=300)
         bars = ax.bar(range(len(sub)), vals, color=colors, edgecolor="black", linewidth=0.8)
         for b, v in zip(bars, vals):
-            ax.annotate(f"{v:.3g}", (b.get_x() + b.get_width() / 2, v),
-                        xytext=(0, 4), textcoords="offset points",
-                        ha="center", va="bottom", fontsize=9.0, fontweight="bold")
+            ax.annotate(_format_run_value(col, v),
+                        (b.get_x() + b.get_width() / 2, v),
+                        xytext=(0, 5), textcoords="offset points",
+                        ha="center", va="bottom", fontsize=9.5,
+                        fontweight="bold", clip_on=False)
         ax.set_xticks(range(len(sub)))
-        ax.set_xticklabels(labels, fontsize=10.5, fontweight="bold")
+        ax.set_xticklabels(labels, fontsize=10.5, fontweight="bold",
+                           rotation=22, ha="right", rotation_mode="anchor")
         ax.set_ylabel(ylabel, fontsize=12, fontweight="bold")
         ax.set_title(title, fontsize=13, fontweight="bold", pad=12)
         ax.grid(True, axis="y", linestyle="--", alpha=0.5, zorder=0)
+        ymax = max(vals) if vals else 1
+        ax.set_ylim(0, ymax * 1.18 if ymax > 0 else 1)
         for spine in ("top", "right"):
             ax.spines[spine].set_visible(False)
-        plt.tight_layout()
+        fig.subplots_adjust(left=0.08, right=0.985, bottom=0.24, top=0.90)
         stem = {"wall_seconds": "compute_time", "peak_ram_mb": "peak_ram",
                 "throughput_seq_s": "throughput"}[col]
-        for ext in ("png", "pdf", "svg"):
+        for ext in ("png", "pdf"):
             fig.savefig(out / f"{stem}.{ext}", dpi=300, bbox_inches="tight")
         plt.close(fig)
-        print(f"  [compute] saved 2_resources/{stem}.png/.pdf/.svg")
+        print(f"  [compute] saved resources/{stem}.png/.pdf")
 
 
 if __name__ == "__main__":

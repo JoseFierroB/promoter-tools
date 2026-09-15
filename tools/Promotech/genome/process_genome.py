@@ -182,6 +182,18 @@ def predictGenomeSequences(
       Path(model_path).stat().st_size  / 1000000
     ), log_file) 
     model = joblib.load(model_path)
+    # LOCAL PATCH (promoter-tools): the pickled estimator has n_jobs=None
+    # (=1 process) and verbose=2 baked in; honor thread env and silence it.
+    try:
+        _nj = int(os.environ.get("OMP_NUM_THREADS", "1") or 1)
+    except ValueError:
+        _nj = 1
+    for _est in (model, getattr(model, "best_estimator_", None)):
+        if _est is not None:
+            try:
+                _est.set_params(n_jobs=_nj, verbose=0)
+            except Exception:
+                pass
   if model_type == "GRU" or model_type == "LSTM":
     model_version = "0" if model_type == "GRU" else "3"
     model_path = os.path.join(_research_models, "{}-{}.h5".format(model_type, model_version))

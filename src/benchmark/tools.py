@@ -17,6 +17,10 @@ class Tool:
     pixi_env: Path                     # path to pixi.toml
     outputs: list[Path] = field(default_factory=list)
     model_paths: list[Path] = field(default_factory=list)
+    # Explicit weight files actually loaded at inference (files and/or globs).
+    # If set, model_size_mb() sums these instead of whole model_paths dirs,
+    # so the number reflects resident weights, not unrelated dir contents.
+    model_files: list[str] = field(default_factory=list)
     gpu_capable: bool = False
     gpu_id: str = ""                     # CUDA_VISIBLE_DEVICES value for local runs ("" = CPU)
     n_sequences: int = 1988
@@ -24,24 +28,43 @@ class Tool:
     notes: str = ""
 
     def model_size_mb(self) -> float:
-        key = str(id(self)) + ":" + ",".join(str(p) for p in self.model_paths)
+        key = self.short_name + ":" + ",".join(str(p) for p in self.model_paths)
         if key in _TOOL_SIZE_CACHE:
             return _TOOL_SIZE_CACHE[key]
         total = 0
-        for p in self.model_paths:
-            pp = Path(p)
+
+        def _add(path: Path):
+            nonlocal total
             try:
-                if pp.is_file():
-                    total += pp.stat().st_size
-                elif pp.is_dir():
-                    for f in pp.rglob("*"):
+                if path.is_file():
+                    total += path.stat().st_size
+                elif path.is_dir():
+                    for f in path.rglob("*"):
                         if f.is_file():
                             total += f.stat().st_size
             except OSError:
-                continue
+                pass
+
+        if self.model_files:
+            import glob as _glob
+            for pattern in self.model_files:
+                for match in _glob.glob(pattern):
+                    _add(Path(match))
+        else:
+            for p in self.model_paths:
+                _add(Path(p))
         result = round(total / (1024 * 1024), 2)
         _TOOL_SIZE_CACHE[key] = result
         return result
+
+
+def _hf_cache_blobs(repo_id: str) -> str:
+    """Glob for weight blobs of a HuggingFace Hub cached repo (no network)."""
+    import os
+    cache = os.environ.get(
+        "HF_HOME", os.path.join(os.path.expanduser("~"), ".cache", "huggingface"))
+    return os.path.join(cache, "hub",
+                        "models--" + repo_id.replace("/", "--"), "blobs", "*")
 
 
 # ════════════════════════════════════════════════════════════════
@@ -123,6 +146,11 @@ PROMOTER_TOOLS = {
         pixi_env=config.ipromp_dir / "pixi.toml",
         outputs=[ROOT / "output/predictions/ipromp/ipromp_12_predictions.csv"],
         model_paths=[config.ipromp_model_dir, config.dnabert_dir],
+        # Per-fold weights (1 fold) for comparability with single-model
+        # references. NOTE: inference actually holds all 5 folds at once
+        # (ensemble, ~5x this value resident). DNABERT-6 dir only provides
+        # config/tokenizer (weights overwritten, strict=False).
+        model_files=[str(config.ipromp_model_dir / "12_fold_1.pth")],
         gpu_capable=True,
         gpu_id="0",                      # GPU 0 = RTX 3090 (PCI_BUS_ID): misma que LCNN; torch cu128 soporta sm_86
         notes="DNABERT-6 transformer. Heavy on CPU, fast on GPU.",
@@ -134,6 +162,8 @@ PROMOTER_TOOLS = {
         pixi_env=config.ipromp_dir / "pixi.toml",
         outputs=[ROOT / "output/predictions/prokbert.tsv"],
         model_paths=[],
+        # Weights come from the HuggingFace Hub cache (no local file).
+        model_files=[_hf_cache_blobs("neuralbioinfo/prokbert-mini-promoter")],
         gpu_capable=True,
         gpu_id="0",
         notes="Official fine-tuned ProkBERT-mini-promoter gLM transformer.",

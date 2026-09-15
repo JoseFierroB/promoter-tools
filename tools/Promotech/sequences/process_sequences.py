@@ -52,6 +52,18 @@ def predictSequencesFromString(sequences_str, print_fn=print_fn, out_dir="RF-HOT
     model_path = os.path.join(_research_models, "{}.model".format(model_type))
     print_fn("\n\n LOADING ML MODEL {}".format(model_path), log_file) 
     model = joblib.load(model_path)
+    # LOCAL PATCH (promoter-tools): the pickled estimator has n_jobs=None
+    # (=1 process) and verbose=2 baked in; honor thread env and silence it.
+    try:
+        _nj = int(os.environ.get("OMP_NUM_THREADS", "1") or 1)
+    except ValueError:
+        _nj = 1
+    for _est in (model, getattr(model, "best_estimator_", None)):
+        if _est is not None:
+            try:
+                _est.set_params(n_jobs=_nj, verbose=0)
+            except Exception:
+                pass
   if model_type == "GRU" or model_type == "LSTM":
     import tensorflow as tf  # lazy import: only needed for deep learning models
     model_version = "0" if model_type == "GRU" else "3"

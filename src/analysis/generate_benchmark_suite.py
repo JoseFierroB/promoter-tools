@@ -28,9 +28,11 @@ from sklearn.metrics import roc_curve, auc
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(ROOT / "src" / "analysis"))
-from analyze_run import TOOLS, FAM, PALETTE, load_tool  # noqa: E402
+from analyze_run import TOOLS, FAM, PALETTE, TOOL_ORDER, load_tool  # noqa: E402
 try:
-    from bench_labels import DS_DISPLAY
+    from bench_labels import DS_DISPLAY, PALETTE as _BL_PALETTE, TOOL_ORDER as _BL_ORDER
+    PALETTE = _BL_PALETTE
+    TOOL_ORDER = _BL_ORDER
 except Exception:
     DS_DISPLAY = {}
 
@@ -58,12 +60,29 @@ def _display(db: str) -> str:
 
 
 def dataset_curves(pred_pool: Path, db: str):
+    # two-pass to fix iPro-MP odd-N split (no LABEL column)
     curves, rows = [], []
+    tmp = {}
     for key, (label, _kind) in TOOLS.items():
-        loaded = load_tool(pred_pool, db, key)
-        if loaded is None:
+        if key == "ipromp_sp12":
             continue
-        y_true, y_score = loaded
+        loaded = load_tool(pred_pool, db, key)
+        if loaded is not None:
+            tmp[key] = (label, loaded)
+    n_pos_hint = None
+    if tmp:
+        counts = [int(v[1][0].sum()) for v in tmp.values()]
+        n_pos_hint = max(set(counts), key=counts.count)
+    # insert iPro-MP with hint
+    if "ipromp_sp12" in TOOLS:
+        loaded = load_tool(pred_pool, db, "ipromp_sp12", n_pos_hint)
+        if loaded is not None:
+            tmp["ipromp_sp12"] = (TOOLS["ipromp_sp12"][0], loaded)
+    # emit in canonical TOOLS order (now = TOOL_ORDER)
+    for key in TOOLS:
+        if key not in tmp:
+            continue
+        label, (y_true, y_score) = tmp[key]
         n_pos = int(y_true.sum())
         if np.all(y_score == y_score[0]):
             fpr, tpr, a = np.array([0.0, 1.0]), np.array([0.0, 1.0]), 0.500
@@ -89,19 +108,47 @@ def _roc_axes(ax, title):
 
 
 def _save(fig, path: Path):
-    for ext in ("png", "pdf", "svg"):
+    for ext in ("png", "pdf"):
         fig.savefig(path.with_suffix(f".{ext}"), dpi=300, bbox_inches="tight")
     plt.close(fig)
 
 
-def main(pred_pool: Path, out: Path, datasets=None, metrics_tsv: Path = None):
+def main(pred_pool: Path, out: Path, datasets=None, metrics_tsv: Path = None,
+         source_runs: list = None):
     pred_pool, out = Path(pred_pool), Path(out)
+    # default output to canonical benchmarks root if no absolute path given and not exists
+    try:
+        try:
+            from run_layout import BENCHMARKS_ROOT  # type: ignore
+        except ImportError:
+            from src.analysis.run_layout import BENCHMARKS_ROOT  # type: ignore
+        if not out.is_absolute() and not str(out).startswith("output/"):
+            # keep as is for explicit paths
+            pass
+    except Exception:
+        pass
     if datasets:
         dbs = datasets
     else:
         dbs = detect_datasets(pred_pool)
     (out / "roc").mkdir(parents=True, exist_ok=True)
     (out / "atlas").mkdir(parents=True, exist_ok=True)
+    # reversible symlinks between canonical and legacy benchmark locations
+    try:
+        from pathlib import Path as _P
+        # if canonical, create legacy symlink
+        if out.parent == _P("output/benchmarks") or str(out).startswith("output/benchmarks/"):
+            legacy_bm = _P("output") / out.name
+            if not legacy_bm.exists() and not legacy_bm.is_symlink():
+                legacy_bm.symlink_to(out.resolve())
+        # if legacy, create canonical symlink
+        elif out.parent == _P("output") and not str(out).startswith("output/benchmarks"):
+            canon_bm = _P("output/benchmarks") / out.name
+            if not canon_bm.exists() and not canon_bm.is_symlink():
+                canon_bm.parent.mkdir(parents=True, exist_ok=True)
+                canon_bm.symlink_to(out.resolve())
+    except Exception:
+        pass
 
     all_rows = []
     per_db = {}
@@ -114,14 +161,15 @@ def main(pred_pool: Path, out: Path, datasets=None, metrics_tsv: Path = None):
         all_rows.extend(rows)
         n = rows[0]["n_pos"] + rows[0]["n_neg"]
         fig, ax = plt.subplots(figsize=(8.5, 7.5), dpi=300)
-        for cname, fpr, tpr, a in sorted(curves, key=lambda x: x[3], reverse=True):
+        order_idx = {t: i for i, t in enumerate(TOOL_ORDER)}
+        for cname, fpr, tpr, a in sorted(curves, key=lambda x: order_idx.get(x[0], 999)):
             style = PALETTE.get(cname, {"color": "#333333", "ls": "-", "lw": 1.8})
             ax.plot(fpr, tpr, color=style["color"], linestyle=style["ls"],
                     linewidth=style["lw"], label=f"{cname} (AUC = {a:.3f})")
-        _roc_axes(ax, f"Receiver Operating Characteristic (ROC)\nROC {_display(db)} (N={n:,})")
+        _roc_axes(ax, f"Receiver Operating Characteristic (ROC)\n{_display(db)} (N={n:,})")
         plt.tight_layout()
         _save(fig, out / "roc" / f"roc_auc_{db}")
-        print(f"  [suite] ROC saved: roc/roc_auc_{db}.png/.pdf/.svg")
+        print(f"  [suite] ROC saved: roc/roc_auc_{db}.png/.pdf")
 
     met = pd.DataFrame(all_rows)
     if metrics_tsv and Path(metrics_tsv).exists():
@@ -132,8 +180,8 @@ def main(pred_pool: Path, out: Path, datasets=None, metrics_tsv: Path = None):
         return met
     met.to_csv(out / "benchmark_metrics.tsv", sep="\t", index=False)
 
-    # heatmap datasets x tools
-    order = [t for _, (t, _k) in TOOLS.items()]
+    # heatmap datasets x tools — canonical TOOL_ORDER (BDT→RF→CNN→NN→gLM→motif)
+    order = TOOL_ORDER
     piv = met.pivot_table(index="dataset", columns="tool", values="auc", aggfunc="max")
     piv = piv[[c for c in order if c in piv.columns]]
     fig, ax = plt.subplots(figsize=(max(10, len(piv.columns) * 1.3),
@@ -158,12 +206,13 @@ def main(pred_pool: Path, out: Path, datasets=None, metrics_tsv: Path = None):
     _save(fig, out / "atlas" / "auc_matrix_heatmap")
     print("  [suite] atlas/auc_matrix_heatmap saved")
 
-    # 6-panel atlas (first 6 datasets with curves)
+    # 6-panel atlas (first 6 datasets with curves) — canonical order
     panels = [db for db in dbs if db in per_db][:6]
     if panels:
+        order_idx = {t: i for i, t in enumerate(TOOL_ORDER)}
         fig, axes = plt.subplots(2, 3, figsize=(18, 11), dpi=300)
         for axi, db in zip(axes.flatten(), panels):
-            for cname, fpr, tpr, a in per_db[db]:
+            for cname, fpr, tpr, a in sorted(per_db[db], key=lambda x: order_idx.get(x[0], 999)):
                 style = PALETTE.get(cname, {"color": "#333333", "ls": "-", "lw": 1.6})
                 axi.plot(fpr, tpr, color=style["color"], linestyle=style["ls"],
                          lw=style["lw"], label=f"{cname} ({a:.3f})")
@@ -181,6 +230,16 @@ def main(pred_pool: Path, out: Path, datasets=None, metrics_tsv: Path = None):
         plt.tight_layout()
         _save(fig, out / "atlas" / "roc_atlas_6panel")
         print("  [suite] atlas/roc_atlas_6panel saved")
+    # lightweight benchmark MANIFEST (no data duplication) — reversible
+    try:
+        try:
+            from run_layout import RunLayout  # type: ignore
+        except ImportError:
+            from src.analysis.run_layout import RunLayout  # type: ignore
+        RunLayout(out).write_benchmark_manifest(out, source_runs=source_runs or [str(pred_pool.resolve())],
+                                                datasets=dbs, n_tools=len(order))
+    except Exception:
+        pass
     return met
 
 

@@ -16,33 +16,42 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import roc_curve, auc
 
-PALETTE = {
-    "ProkBERT-mini [gLM]": {"color": "#D81B60", "ls": "-", "lw": 2.3},
-    "iPro-MP [gLM]":       {"color": "#7E57C2", "ls": "-", "lw": 2.1},
-    "PromoterLCNN [CNN]":  {"color": "#2E7D32", "ls": "-", "lw": 1.9},
-    "PromoTech RF-HOT [RF]": {"color": "#EF6C00", "ls": "-",  "lw": 1.9},
-    "prompt [NN]":         {"color": "#0288D1", "ls": "-", "lw": 1.8},
-    "MLDSPP 0% [BDT]":     {"color": "#880E4F", "ls": "-", "lw": 1.8},
-    "MLDSPP 75% [BDT]":    {"color": "#C2185B", "ls": "-", "lw": 1.8},
-    "FIMO ProkDB [PWMs]":  {"color": "#00897B", "ls": "--", "lw": 1.7},
-    "STREME+FIMO [motif]": {"color": "#795548", "ls": ":", "lw": 1.7},
-}
+try:
+    from bench_labels import PALETTE, TOOL_ORDER  # canonical (single source)
+except Exception:  # fallback when run as script without package context
+    PALETTE = {
+        "MLDSPP 0% [BDT]":       {"color": "#880E4F", "ls": "-",  "lw": 1.8, "method": "BDT"},
+        "MLDSPP 75% [BDT]":      {"color": "#C2185B", "ls": "-",  "lw": 1.8, "method": "BDT"},
+        "PromoTech RF-HOT [RF]": {"color": "#EF6C00", "ls": "-",  "lw": 1.9, "method": "RF"},
+        "PromoterLCNN [CNN]":    {"color": "#2E7D32", "ls": "-",  "lw": 1.9, "method": "CNN"},
+        "prompt [NN]":           {"color": "#0288D1", "ls": "-",  "lw": 1.8, "method": "NN"},
+        "ProkBERT-mini [gLM]":   {"color": "#D81B60", "ls": "-",  "lw": 2.3, "method": "gLM"},
+        "iPro-MP [gLM]":         {"color": "#7E57C2", "ls": "-",  "lw": 2.1, "method": "gLM"},
+        "FIMO ProkDB [PWMs]":    {"color": "#00897B", "ls": "--", "lw": 1.7, "method": "PWMs"},
+        "STREME+FIMO [motif]":   {"color": "#795548", "ls": ":",  "lw": 1.7, "method": "motif"},
+    }
+    TOOL_ORDER = [
+        "MLDSPP 0% [BDT]", "MLDSPP 75% [BDT]", "PromoTech RF-HOT [RF]",
+        "PromoterLCNN [CNN]", "prompt [NN]", "ProkBERT-mini [gLM]",
+        "iPro-MP [gLM]", "FIMO ProkDB [PWMs]", "STREME+FIMO [motif]",
+    ]
 
-# registry key -> (display label, loader kind)
+# registry key -> (display label, loader kind) — insertion order = TOOL_ORDER above
 TOOLS = {
-    "prokbert": ("ProkBERT-mini [gLM]", "single_tsv"),
-    "ipromp_sp12": ("iPro-MP [gLM]", "ipromp_dir"),
-    "lcnn": ("PromoterLCNN [CNN]", "posneg_dir"),
-    "promotech_hot": ("PromoTech RF-HOT [RF]", "posneg_dir"),
-    "prompt": ("prompt [NN]", "single_tsv"),
     "mldspp": ("MLDSPP 0% [BDT]", "posneg_dir"),
     "mldspp_75": ("MLDSPP 75% [BDT]", "posneg_dir"),
+    "promotech_hot": ("PromoTech RF-HOT [RF]", "posneg_dir"),
+    "lcnn": ("PromoterLCNN [CNN]", "posneg_dir"),
+    "prompt": ("prompt [NN]", "single_tsv"),
+    "prokbert": ("ProkBERT-mini [gLM]", "single_tsv"),
+    "ipromp_sp12": ("iPro-MP [gLM]", "ipromp_dir"),
     "fimo_prok": ("FIMO ProkDB [PWMs]", "fimo_dir"),
     "meme": ("STREME+FIMO [motif]", "meme_dir"),
 }
-FAM = {"prokbert": "prokbert", "ipromp_sp12": "ipromp", "lcnn": "lcnn",
-       "promotech_hot": "promotech", "prompt": "prompt", "mldspp": "mldspp",
-       "mldspp_75": "mldspp_75", "fimo_prok": "fimo", "meme": "meme"}
+FAM = {"mldspp": "mldspp", "mldspp_75": "mldspp_75",
+       "promotech_hot": "promotech", "lcnn": "lcnn", "prompt": "prompt",
+       "prokbert": "prokbert", "ipromp_sp12": "ipromp",
+       "fimo_prok": "fimo", "meme": "meme"}
 
 
 def _posneg(p, n):
@@ -168,10 +177,34 @@ def analyze_run(pred_root: Path, name: str, out_dir: Path) -> pd.DataFrame:
         print("  [analyze] no predictions found, skipping plots")
         return pd.DataFrame(rows)
 
-    plots = out_dir / "plots"
-    plots.mkdir(parents=True, exist_ok=True)
+    # canonical: 1_inference for ROC, 3_tables for metrics
+    try:
+        from run_layout import RunLayout as _RL
+    except ImportError:
+        try:
+            from src.analysis.run_layout import RunLayout as _RL
+        except ImportError:
+            _RL = None
+    if _RL is not None:
+        try:
+            layout = _RL(out_dir)
+            plots = layout.inference
+            plots.mkdir(parents=True, exist_ok=True)
+            tables = layout.tables
+            tables.mkdir(parents=True, exist_ok=True)
+        except Exception:
+            plots = out_dir / "1_inference"
+            plots.mkdir(parents=True, exist_ok=True)
+            tables = out_dir / "3_tables"
+            tables.mkdir(parents=True, exist_ok=True)
+    else:
+        plots = out_dir / "1_inference"
+        plots.mkdir(parents=True, exist_ok=True)
+        tables = out_dir / "3_tables"
+        tables.mkdir(parents=True, exist_ok=True)
     fig, ax = plt.subplots(figsize=(8.5, 7.5), dpi=300)
-    for cname, fpr, tpr, a in sorted(curves, key=lambda x: x[3], reverse=True):
+    order_idx = {t: i for i, t in enumerate(TOOL_ORDER)}
+    for cname, fpr, tpr, a in sorted(curves, key=lambda x: order_idx.get(x[0], 999)):
         style = PALETTE.get(cname, {"color": "#333333", "ls": "-", "lw": 1.8})
         ax.plot(fpr, tpr, color=style["color"], linestyle=style["ls"],
                 linewidth=style["lw"], label=f"{cname} (AUC = {a:.3f})")
@@ -181,19 +214,45 @@ def analyze_run(pred_root: Path, name: str, out_dir: Path) -> pd.DataFrame:
     ax.set_xlabel("False Positive Rate (1 - Specificity)", fontsize=12, fontweight="bold")
     ax.set_ylabel("True Positive Rate (Sensitivity)", fontsize=12, fontweight="bold")
     n_pos, n_neg = rows[0]["n_pos"], rows[0]["n_neg"]
-    ax.set_title(f"Receiver Operating Characteristic (ROC)\nROC {name} (N={n_pos + n_neg:,})",
-                 fontsize=13, fontweight="bold", pad=12)
+    # dataset and configuration always declared
+    try:
+        from bench_labels import DS_DISPLAY as _DS
+    except Exception:
+        _DS = {}
+    import re as _re
+    ds_disp = _DS.get(name, name)
+    cfg = Path(out_dir).name if _re.match(r"^\d+cpu(-gpu)?$", Path(out_dir).name) else ""
+    cfg_disp = {"1cpu": "1CPU", "16cpu": "16CPU", "1cpu-gpu": "1CPU+GPU", "16cpu-gpu": "16CPU+GPU"}.get(cfg, cfg)
+    title = f"Receiver Operating Characteristic (ROC)\n{ds_disp} (N={n_pos + n_neg:,})" + (f" — {cfg_disp}" if cfg_disp else "")
+    ax.set_title(title, fontsize=13, fontweight="bold", pad=12)
     ax.legend(loc="lower right", fontsize=9.2, frameon=True, framealpha=0.95)
     ax.grid(True, linestyle=":", alpha=0.6)
     plt.tight_layout()
-    for ext in ("png", "pdf", "svg"):
+    for ext in ("png", "pdf"):
         fig.savefig(plots / f"roc_auc_{name}.{ext}", bbox_inches="tight")
     plt.close(fig)
-    print(f"  [analyze] ROC saved: plots/roc_auc_{name}.png/.pdf/.svg")
+    print(f"  [analyze] ROC saved: 1_inference/roc_auc_{name}.png/.pdf")
 
     met = pd.DataFrame(rows)
-    met.to_csv(out_dir / "metrics_rows.tsv", sep="\t", index=False)
-    print(f"  [analyze] metrics: {len(met)} tool rows -> metrics_rows.tsv")
+    # canonical tables location
+    try:
+        met_path = tables / "metrics_rows.tsv"
+    except NameError:
+        met_path = out_dir / "3_tables" / "metrics_rows.tsv"
+    met_path.parent.mkdir(parents=True, exist_ok=True)
+    met.to_csv(met_path, sep="\t", index=False)
+    print(f"  [analyze] metrics: {len(met)} tool rows -> 3_tables/metrics_rows.tsv")
+    # legacy compat: also keep root metrics_rows for old readers (symlink if possible)
+    try:
+        legacy = out_dir / "metrics_rows.tsv"
+        if not legacy.exists() and met_path.exists():
+            try:
+                legacy.symlink_to(Path("3_tables") / "metrics_rows.tsv")
+            except Exception:
+                import shutil as _sh
+                _sh.copy2(met_path, legacy)
+    except Exception:
+        pass
     return met
 
 

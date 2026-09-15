@@ -128,7 +128,28 @@ def read_status(target: Path):
 
 def prepare_run_dir(base: Path, configuration: str, tool_keys, n_pos, n_neg, sha,
                       pos_src: str = "", neg_src: str = ""):
-    """Bump / quarantine / resume logic. Returns (run_root, resumed)."""
+    """Bump / quarantine / resume logic. Returns (run_root, resumed).
+
+    Also creates canonical capsule layout via run_layout (with legacy symlink).
+    """
+    try:
+        from run_layout import RunLayout, canonical_run_dir, legacy_run_dir  # type: ignore
+    except ImportError:
+        try:
+            from src.analysis.run_layout import RunLayout, canonical_run_dir, legacy_run_dir  # type: ignore
+        except ImportError:
+            RunLayout = None  # type: ignore
+    # derive date/name from base (legacy helper) for manifest
+    # base is like output/<YYMMDD>_runs/<name>  -> date from parent, name from base.name
+    try:
+        parent_name = Path(base).parent.name
+        if "_" in parent_name and parent_name[0].isdigit():
+            date = parent_name.split("_")[0]
+        else:
+            date = time.strftime("%y%m%d")
+        name_token = Path(base).name
+    except Exception:
+        date, name_token = time.strftime("%y%m%d"), ""
     i, candidate = 1, base
     while True:
         target = candidate / configuration
@@ -151,6 +172,12 @@ def prepare_run_dir(base: Path, configuration: str, tool_keys, n_pos, n_neg, sha
                 target.rename(q)
                 print(f"  [quarantine] incomplete/stale run moved to {q.parent.name}/{configuration}/")
         target.mkdir(parents=True, exist_ok=True)
+        # ensure capsule subdirs (new layout) — reversible, no data move
+        try:
+            layout = RunLayout(target)
+            layout.ensure_dirs()
+        except Exception:
+            pass
         (target / "STATUS.json").write_text(json.dumps({
             "status": "running",
             "started": time.strftime("%Y-%m-%dT%H:%M:%S"),
@@ -159,6 +186,45 @@ def prepare_run_dir(base: Path, configuration: str, tool_keys, n_pos, n_neg, sha
             "input_sha": sha, "configuration": configuration,
             "pos_src": pos_src, "neg_src": neg_src,
         }, indent=1))
+        # also write canonical MANIFEST (lightweight, reversible)
+        try:
+            # date/name for manifest: prefer base-derived
+            manifest_date = date or time.strftime("%y%m%d")
+            # name_token may be empty when base is .../_runs/<name> — extract correctly
+            # base = output/<YYMMDD>_runs/<name>  -> name = base.name
+            try:
+                manifest_name = Path(base).name
+                # if base is output/<YYMMDD>_runs, then manifest_name is the date_runs token, not dataset
+                # need to handle both: if base parent ends with _runs, then name is not in base
+                if manifest_name.endswith("_runs") or manifest_name == "output":
+                    manifest_name = "results"
+            except Exception:
+                manifest_name = "results"
+            # try to get better name from pos_src parent if available
+            layout = RunLayout(target)
+            layout.write_manifest(
+                date=manifest_date, name=manifest_name, config=configuration,
+                input_sha=sha, pos_src=pos_src, neg_src=neg_src,
+                n_pos=n_pos, n_neg=n_neg, tools=tool_keys,
+                legacy_path=str(target), canonical_path=str(target),
+            )
+            # create canonical view symlink output/runs/<YYMMDD>_<name>_<config> -> legacy (reversible)
+            try:
+                try:
+                    from run_layout import canonical_run_dir as _canon  # type: ignore
+                except ImportError:
+                    from src.analysis.run_layout import canonical_run_dir as _canon  # type: ignore
+                _canon_path = _canon(manifest_date, manifest_name, configuration)
+                if not _canon_path.exists() and not _canon_path.is_symlink():
+                    _canon_path.parent.mkdir(parents=True, exist_ok=True)
+                    try:
+                        _canon_path.symlink_to(target.resolve())
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+        except Exception:
+            pass
         return target, resumed
 
 
@@ -215,7 +281,22 @@ def cmd_run(args):
         base = ROOT / "output" / f"{date}_results"
     run_root, resumed = prepare_run_dir(base, configuration, args.tools, n_pos, n_neg, sha,
                                           str(pos_fasta.resolve()), str(neg_fasta.resolve()))
-    pred_root = Path(args.output_dir) if args.output_dir else run_root / "predictions"
+    # canonical predictions lives inside 1_inference/predictions
+    if args.output_dir:
+        pred_root = Path(args.output_dir)
+    else:
+        # use new canonical if layout version >=1.0, else legacy fallback will be resolved by RunLayout
+        try:
+            from run_layout import RunLayout as _RLc  # type: ignore
+        except ImportError:
+            try:
+                from src.analysis.run_layout import RunLayout as _RLc  # type: ignore
+            except ImportError:
+                _RLc = None
+        if _RLc is not None:
+            pred_root = _RLc(run_root).inference / "predictions"
+        else:
+            pred_root = run_root / "1_inference" / "predictions"
     pred_root.mkdir(parents=True, exist_ok=True)
     print(f"Run dir: {run_root} (name={token}, configuration={configuration}"
           f"{', resumed' if resumed else ''})")
@@ -250,7 +331,21 @@ def cmd_run(args):
     df["name"] = token
     df["configuration"] = configuration
     df["run_date"] = run_date()
-    out_tsv = args.output or str(run_root / "resource_metrics.tsv")
+    # canonical resource metrics lives in 2_resources/resource_metrics.tsv, with legacy copy at root for compat (will be phased out)
+    if args.output:
+        out_tsv = args.output
+    else:
+        try:
+            from run_layout import RunLayout as _RLm  # type: ignore
+        except ImportError:
+            try:
+                from src.analysis.run_layout import RunLayout as _RLm  # type: ignore
+            except ImportError:
+                _RLm = None
+        if _RLm is not None:
+            out_tsv = str(_RLm(run_root).resources / "resource_metrics.tsv")
+        else:
+            out_tsv = str(run_root / "2_resources" / "resource_metrics.tsv")
     if Path(out_tsv).exists() and not args.output:
         prev = pd.read_csv(out_tsv, sep="\t")
         if "tool" in prev.columns and set(prev["tool"]) != set(df["tool"]):
@@ -265,10 +360,69 @@ def cmd_run(args):
     st.update({"status": "complete" if all(r.get("success") for r in results) else "failed",
                "finished": time.strftime("%Y-%m-%dT%H:%M:%S")})
     (run_root / "STATUS.json").write_text(json.dumps(st, indent=1))
+    # update MANIFEST with final status (reversible)
+    try:
+        try:
+            from run_layout import RunLayout as _RL  # type: ignore
+        except ImportError:
+            from src.analysis.run_layout import RunLayout as _RL  # type: ignore
+        layout = _RL(run_root)
+        if layout.manifest_path.exists():
+            import json as _json
+            m = _json.loads(layout.manifest_path.read_text())
+            m["status"] = st.get("status", "complete")
+            m["finished"] = st.get("finished", "")
+            layout.manifest_path.write_text(_json.dumps(m, indent=2))
+    except Exception:
+        pass
 
     if args.plots:
         from analyze_run import analyze_run
         analyze_run(pred_root, token, run_root)
+        # generate per-run compute plots into 2_resources (reversible)
+        try:
+            from generate_compute_plots import main_run as _gen_compute  # type: ignore
+        except ImportError:
+            try:
+                from src.analysis.generate_compute_plots import main_run as _gen_compute  # type: ignore
+            except ImportError:
+                _gen_compute = None
+        if _gen_compute is not None:
+            try:
+                _gen_compute(run_root)
+            except SystemExit:
+                pass
+            except Exception as e:
+                print(f"  [warn] compute plots failed: {e}")
+        # also mirror plots -> 1_inference for capsule consistency
+        try:
+            try:
+                from run_layout import RunLayout as _RL2  # type: ignore
+            except ImportError:
+                from src.analysis.run_layout import RunLayout as _RL2  # type: ignore
+            layout = _RL2(run_root)
+            # analyze_run writes to run_root/plots; ensure 1_inference has same content via symlink/copy
+            import shutil as _shutil
+            src_plots = layout.plots
+            dst_inf = layout.inference
+            if src_plots.exists() and dst_inf.exists() and src_plots.resolve() != dst_inf.resolve():
+                for p in src_plots.glob("roc_auc_*.*"):
+                    if not (dst_inf / p.name).exists():
+                        try:
+                            (dst_inf / p.name).symlink_to(Path("../plots") / p.name)
+                        except Exception:
+                            _shutil.copy2(p, dst_inf / p.name)
+                # also ensure metrics_rows in 3_tables
+                for f in ["metrics_rows.tsv", "resource_metrics.tsv"]:
+                    src = run_root / f
+                    dst = layout.tables / f
+                    if src.exists() and not dst.exists():
+                        try:
+                            dst.symlink_to(Path("..") / f)
+                        except Exception:
+                            _shutil.copy2(src, dst)
+        except Exception:
+            pass
 
 
 def main():
@@ -305,17 +459,19 @@ def main():
     p_cmp.add_argument("runs", nargs="+",
                        help="Run dirs (output/<date>_runs/<name>/<config>/)")
     p_cmp.add_argument("-o", "--output", default=None,
-                       help="Comparison dir (default: output/<YYMMDD>_comparison)")
+                       help="Comparison dir (default: inherited date+names from input runs)")
+    p_cmp.add_argument("--dataset", default=None,
+                       help="Dataset display name for plot titles")
 
     args = parser.parse_args()
 
     if args.command == "run":
         cmd_run(args)
     elif args.command == "compare":
-        from datetime import date
-        from compare_runs import compare_runs
+        from compare_runs import compare_runs, default_comparison_dir
         compare_runs(args.runs, Path(args.output) if args.output
-                     else Path(f"output/{date.today().strftime('%y%m%d')}_comparison"))
+                     else default_comparison_dir(args.runs),
+                     dataset_label=args.dataset)
     else:
         parser.print_help()
 
