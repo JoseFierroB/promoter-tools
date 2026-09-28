@@ -2,10 +2,9 @@
 """Analyze one CLI run: ROC + AUC rows for a single dataset.
 
 Agnostic: works on any run dir produced by `src/cli.py run`. Reads the
-canonical layout predictions/{name}_{fam}[.tsv] (new) with fallback to the
-legacy predictions/{name}_{fam}_{fam}[.tsv] layout, and writes
-plots/roc_auc_{name}.{png,svg,pdf} + metrics_rows.tsv into the run dir.
-No dependency on canonical dataset names (no DS_DISPLAY lookup).
+primary 1_inference/predictions/{name}_{fam}[.tsv] with legacy fallback.
+Writes a title-free 1_inference/roc_auc_{name}.{png,pdf} and
+3_tables/metrics_rows.tsv. No root-level copies or SVG exports.
 """
 from pathlib import Path
 
@@ -17,18 +16,18 @@ import pandas as pd
 from sklearn.metrics import roc_curve, auc
 
 try:
-    from bench_labels import PALETTE, TOOL_ORDER  # canonical (single source)
+    from bench_labels import PALETTE, TOOL_ORDER  # primary (single source)
 except Exception:  # fallback when run as script without package context
     PALETTE = {
-        "MLDSPP 0% [BDT]":       {"color": "#880E4F", "ls": "-",  "lw": 1.8, "method": "BDT"},
-        "MLDSPP 75% [BDT]":      {"color": "#C2185B", "ls": "-",  "lw": 1.8, "method": "BDT"},
-        "PromoTech RF-HOT [RF]": {"color": "#EF6C00", "ls": "-",  "lw": 1.9, "method": "RF"},
-        "PromoterLCNN [CNN]":    {"color": "#2E7D32", "ls": "-",  "lw": 1.9, "method": "CNN"},
-        "prompt [NN]":           {"color": "#0288D1", "ls": "-",  "lw": 1.8, "method": "NN"},
-        "ProkBERT-mini [gLM]":   {"color": "#D81B60", "ls": "-",  "lw": 2.3, "method": "gLM"},
-        "iPro-MP [gLM]":         {"color": "#7E57C2", "ls": "-",  "lw": 2.1, "method": "gLM"},
-        "FIMO ProkDB [PWMs]":    {"color": "#00897B", "ls": "--", "lw": 1.7, "method": "PWMs"},
-        "STREME+FIMO [motif]":   {"color": "#795548", "ls": ":",  "lw": 1.7, "method": "motif"},
+        "MLDSPP 0% [BDT]":       {"color": "#F81D54", "ls": "-",  "lw": 1.8, "method": "BDT"},
+        "MLDSPP 75% [BDT]":      {"color": "#55001C", "ls": "-",  "lw": 1.8, "method": "BDT"},
+        "PromoTech RF-HOT [RF]": {"color": "#F1A52B", "ls": "-",  "lw": 1.9, "method": "RF"},
+        "PromoterLCNN [CNN]":    {"color": "#973C04", "ls": "-",  "lw": 1.9, "method": "CNN"},
+        "prompt [NN]":           {"color": "#0060E6", "ls": "-",  "lw": 1.8, "method": "NN"},
+        "ProkBERT-mini [gLM]":   {"color": "#2D004D", "ls": "-",  "lw": 2.3, "method": "gLM"},
+        "iPro-MP [gLM]":         {"color": "#BA9CEE", "ls": "-",  "lw": 2.1, "method": "gLM"},
+        "FIMO ProkDB [PWMs]":    {"color": "#002616", "ls": "--", "lw": 1.7, "method": "PWMs"},
+        "STREME+FIMO [motif]":   {"color": "#18974C", "ls": ":",  "lw": 1.7, "method": "motif"},
     }
     TOOL_ORDER = [
         "MLDSPP 0% [BDT]", "MLDSPP 75% [BDT]", "PromoTech RF-HOT [RF]",
@@ -159,25 +158,36 @@ def load_all(pred_root: Path, name: str, only=None):
     return {k: scored[k] for k in keys if k in scored}
 
 
-def analyze_run(pred_root: Path, name: str, out_dir: Path) -> pd.DataFrame:
-    """ROC plot + metrics rows for one run dir. Returns metrics DataFrame."""
-    curves, rows = [], []
-    for key, (label, y_true, y_score) in load_all(pred_root, name).items():
+def analyze_run(pred_root: Path, name: str, out_dir: Path, only=None) -> pd.DataFrame:
+    """ROC plot + metrics rows for one run dir. Returns metrics DataFrame.
+
+    Tools with constant scores are BROKEN (no ROC, no AUC): they get a
+    status=BROKEN row and, after the healthy tools are processed,
+    SystemExit(1) lists them. Never silently 0.500.
+    """
+    curves, rows, broken = [], [], []
+    for key, (label, y_true, y_score) in load_all(pred_root, name, only).items():
         n_pos = int(y_true.sum())
         if np.all(y_score == y_score[0]):
-            fpr, tpr, a = np.array([0.0, 1.0]), np.array([0.0, 1.0]), 0.500
-        else:
-            fpr, tpr, _ = roc_curve(y_true, y_score)
-            a = auc(fpr, tpr)
+            print(f"  [analyze] BROKEN: {label} constant scores — skipped")
+            broken.append(label)
+            rows.append({"dataset": name, "tool": label,
+                         "n_pos": n_pos, "n_neg": len(y_true) - n_pos,
+                         "auc": None, "status": "BROKEN"})
+            continue
+        fpr, tpr, _ = roc_curve(y_true, y_score)
+        a = auc(fpr, tpr)
         curves.append((label, fpr, tpr, a))
         rows.append({"dataset": name, "tool": label,
                      "n_pos": n_pos, "n_neg": len(y_true) - n_pos,
-                     "auc": round(float(a), 4)})
+                     "auc": round(float(a), 4), "status": "ok"})
     if not curves:
-        print("  [analyze] no predictions found, skipping plots")
-        return pd.DataFrame(rows)
+        if not rows:
+            print("  [analyze] no predictions found, skipping plots")
+            return pd.DataFrame(rows)
+        print("  [analyze] all tools BROKEN, skipping plots")
 
-    # canonical: 1_inference for ROC, 3_tables for metrics
+    # primary: 1_inference for ROC, 3_tables for metrics
     try:
         from run_layout import RunLayout as _RL
     except ImportError:
@@ -213,18 +223,7 @@ def analyze_run(pred_root: Path, name: str, out_dir: Path) -> pd.DataFrame:
     ax.set_ylim([-0.02, 1.02])
     ax.set_xlabel("False Positive Rate (1 - Specificity)", fontsize=12, fontweight="bold")
     ax.set_ylabel("True Positive Rate (Sensitivity)", fontsize=12, fontweight="bold")
-    n_pos, n_neg = rows[0]["n_pos"], rows[0]["n_neg"]
-    # dataset and configuration always declared
-    try:
-        from bench_labels import DS_DISPLAY as _DS
-    except Exception:
-        _DS = {}
-    import re as _re
-    ds_disp = _DS.get(name, name)
-    cfg = Path(out_dir).name if _re.match(r"^\d+cpu(-gpu)?$", Path(out_dir).name) else ""
-    cfg_disp = {"1cpu": "1CPU", "16cpu": "16CPU", "1cpu-gpu": "1CPU+GPU", "16cpu-gpu": "16CPU+GPU"}.get(cfg, cfg)
-    title = f"Receiver Operating Characteristic (ROC)\n{ds_disp} (N={n_pos + n_neg:,})" + (f" — {cfg_disp}" if cfg_disp else "")
-    ax.set_title(title, fontsize=13, fontweight="bold", pad=12)
+    # Dataset/configuration live in filenames and the manifest, not a plot title.
     ax.legend(loc="lower right", fontsize=9.2, frameon=True, framealpha=0.95)
     ax.grid(True, linestyle=":", alpha=0.6)
     plt.tight_layout()
@@ -234,25 +233,13 @@ def analyze_run(pred_root: Path, name: str, out_dir: Path) -> pd.DataFrame:
     print(f"  [analyze] ROC saved: 1_inference/roc_auc_{name}.png/.pdf")
 
     met = pd.DataFrame(rows)
-    # canonical tables location
-    try:
-        met_path = tables / "metrics_rows.tsv"
-    except NameError:
-        met_path = out_dir / "3_tables" / "metrics_rows.tsv"
+    met_path = tables / "metrics_rows.tsv"
     met_path.parent.mkdir(parents=True, exist_ok=True)
     met.to_csv(met_path, sep="\t", index=False)
     print(f"  [analyze] metrics: {len(met)} tool rows -> 3_tables/metrics_rows.tsv")
-    # legacy compat: also keep root metrics_rows for old readers (symlink if possible)
-    try:
-        legacy = out_dir / "metrics_rows.tsv"
-        if not legacy.exists() and met_path.exists():
-            try:
-                legacy.symlink_to(Path("3_tables") / "metrics_rows.tsv")
-            except Exception:
-                import shutil as _sh
-                _sh.copy2(met_path, legacy)
-    except Exception:
-        pass
+    if broken:
+        print(f"ERROR: broken runners (constant scores): {broken}")
+        raise SystemExit(1)
     return met
 
 

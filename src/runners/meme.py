@@ -30,7 +30,9 @@ def main():
     p.add_argument("-o", "--output", default="output/predictions", help="Output dir")
     args = p.parse_args()
 
-    random.seed(42)
+    # Isolated RNG (seed 42): never touches global random state,
+    # so this runner is deterministic without affecting other code.
+    rng = random.Random(42)
 
     # Original FASTA order is preserved for output alignment; only the CV
     # fold assignment uses the shuffled copies.
@@ -38,13 +40,13 @@ def main():
     neg_recs = list(SeqIO.parse(args.neg, "fasta"))
     pos_order = [(r.id, str(r.seq)) for r in pos_recs]
     neg_order = [(r.id, str(r.seq)) for r in neg_recs]
-    random.shuffle(pos_recs)
-    random.shuffle(neg_recs)
+    rng.shuffle(pos_recs)
+    rng.shuffle(neg_recs)
     mid_pos = len(pos_recs) // 2
     mid_neg = len(neg_recs) // 2
 
-    t0 = time.perf_counter()
     all_scores = {}
+    train_s = infer_s = 0.0
 
     for fold in range(2):
         if fold == 0:
@@ -66,15 +68,18 @@ def main():
             for r in test_neg:
                 SeqIO.write(r, f, "fasta")
 
+        t_train = time.perf_counter()
         res = subprocess.run(
             ["streme", "-oc", str(tmpdir / "streme"), "-dna", "-minw", "10", "-maxw", "20",
              "-seed", "42", "-p", str(train_pf), "-n", str(train_nf)],
             capture_output=True, text=True,
             timeout=max(300, int((len(train_pos) + len(train_neg)) / 40.0 * 3)))
+        train_s += time.perf_counter() - t_train
         if res.returncode != 0:
             shutil.rmtree(tmpdir, ignore_errors=True)
             continue
 
+        t_infer = time.perf_counter()
         res = subprocess.run(
             ["fimo", "--text", "--skip-matched-sequence",
              str(tmpdir / "streme" / "streme.txt"), str(test_fa)],
@@ -85,6 +90,7 @@ def main():
         for s, nl in fimo_score_merge(res.stdout).items():
             if s not in all_scores or nl > all_scores[s]:
                 all_scores[s] = nl
+        infer_s += time.perf_counter() - t_infer
 
         shutil.rmtree(tmpdir, ignore_errors=True)
 
@@ -92,7 +98,6 @@ def main():
         if r_id not in all_scores:
             all_scores[r_id] = 0.0
 
-    elapsed = time.perf_counter() - t0
     n_total = len(pos_order) + len(neg_order)
 
     out_dir = Path(args.output)
@@ -105,7 +110,7 @@ def main():
     pd.DataFrame({"PRED": [all_scores[r_id] for r_id, _ in neg_order]}).to_csv(
         out_dir / "meme_neg.csv", sep="\t", index=False)
 
-    print(f"MEME: {n_total} seqs in {elapsed:.3f}s")
+    print(f"MEME: {n_total} seqs (train {train_s:.3f}s / infer {infer_s:.3f}s)")
 
 
 if __name__ == "__main__":

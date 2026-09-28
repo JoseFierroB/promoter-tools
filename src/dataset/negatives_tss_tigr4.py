@@ -3,7 +3,7 @@
 TIGR4 Negative TSS Sequence Extractor (Master Pool Approach).
 
 Parses CDS gene boundaries (Locus_start to Locus_end) and experimental TSS positions
-from S1_TSS.xlsx (Aprianto et al., 2018) against the TIGR4 genome (NC_003028.fasta).
+from S1_TSS.tsv (exported once from S1_TSS.xlsx, Aprianto et al., 2018) against the TIGR4 genome (NC_003028.fasta).
 
 Features:
 - Builds a complete Master Pool of clean non-promoter k-mers located strictly inside CDS regions.
@@ -12,7 +12,7 @@ Features:
 
 Usage:
     pixi run python src/dataset/negatives_tss_tigr4.py \
-      --xlsx data/tigr4/S1_TSS.xlsx \
+      --tsv data/tigr4/S1_TSS.tsv \
       --fasta data/reference/NC_003028.fasta \
       --tier high_conf_primary \
       --limit 738 \
@@ -31,18 +31,75 @@ from typing import Dict, List, Tuple
 
 import numpy as np
 import pandas as pd
-import sys
-from pathlib import Path as _Path
-sys.path.insert(0, str(_Path(__file__).resolve().parents[2]))
 
 from Bio import SeqIO
 from Bio.Seq import Seq
 
-from src.dataset._tigr4_common import load_genome, write_dataset_files, compute_gc_statistics
-
-from src.dataset._tigr4_common import load_genome, write_dataset_files, compute_gc_statistics
-
 _RC_TRANS = str.maketrans("ACGT", "TGCA")
+
+
+# ── TIGR4 helpers (inlined: each extraction script is self-contained) ──
+
+def load_genome(fasta_path: Path) -> Tuple[str, Seq, int]:
+    """Load the first record of a FASTA genome file."""
+    if not fasta_path.exists():
+        alt_fasta = fasta_path.parent / "TIGR4.fasta"
+        if alt_fasta.exists():
+            fasta_path = alt_fasta
+        else:
+            print(f"[ERROR] FASTA file not found at {fasta_path}", file=sys.stderr)
+            sys.exit(1)
+
+    genome_dict = SeqIO.to_dict(SeqIO.parse(fasta_path, "fasta"))
+    if not genome_dict:
+        print(f"[ERROR] Could not parse FASTA from {fasta_path}", file=sys.stderr)
+        sys.exit(1)
+
+    chrom_id = list(genome_dict.keys())[0]
+    seq = genome_dict[chrom_id].seq
+    print(f"[INFO] Loaded genome '{chrom_id}' (length: {len(seq):,} bp) from {fasta_path.name}")
+    return chrom_id, seq, len(seq)
+
+
+def write_dataset_files(records: List[Dict], out_prefix: Path) -> Tuple[Path, Path]:
+    """Write records as .fasta + .tsv (metadata without Sequence column)."""
+    out_prefix.parent.mkdir(parents=True, exist_ok=True)
+    fasta_out = out_prefix.with_suffix(".fasta")
+    tsv_out = out_prefix.with_suffix(".tsv")
+
+    with open(fasta_out, "w") as f:
+        for r in records:
+            f.write(f">{r['Sequence_ID']}\n{r['Sequence']}\n")
+
+    df_meta = pd.DataFrame(records)
+    if "Sequence" in df_meta.columns:
+        df_meta = df_meta.drop(columns=["Sequence"])
+    df_meta.to_csv(tsv_out, sep="\t", index=False)
+    return fasta_out, tsv_out
+
+
+def compute_gc_statistics(records: List[Dict], genome_seq: Seq) -> Dict:
+    """Compute GC content statistics for sampled records vs genome background."""
+    if not records:
+        return {}
+
+    sampled_gc = [r["GC_Content"] for r in records]
+    mean_gc = float(np.mean(sampled_gc))
+    stdev_gc = float(np.std(sampled_gc, ddof=1)) if len(sampled_gc) > 1 else 0.0
+
+    gen_seq_str = str(genome_seq).upper()
+    gc_gen_count = gen_seq_str.count("G") + gen_seq_str.count("C")
+    gen_gc_mean = (gc_gen_count / len(gen_seq_str)) * 100.0
+
+    n = len(sampled_gc)
+    std_error = stdev_gc / math.sqrt(n) if n > 0 and stdev_gc > 0 else 1.0
+    z_score = (mean_gc - gen_gc_mean) / std_error if std_error > 0 else 0.0
+    cohen_d = (mean_gc - gen_gc_mean) / stdev_gc if stdev_gc > 0 else 0.0
+
+    return {
+        "n_samples": n, "mean_gc": mean_gc, "stdev_gc": stdev_gc,
+        "genome_gc_mean": gen_gc_mean, "z_score": z_score, "cohen_d": cohen_d,
+    }
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -51,9 +108,9 @@ def parse_arguments() -> argparse.Namespace:
     )
 
     parser.add_argument(
-        "--xlsx",
-        default="data/tigr4/S1_TSS.xlsx",
-        help="Path to TIGR4 S1_TSS.xlsx file.",
+        "--tsv",
+        default="data/tigr4/S1_TSS.tsv",
+        help="Path to TIGR4 S1_TSS.tsv file (exported once from S1_TSS.xlsx).",
     )
     parser.add_argument(
         "--fasta",
@@ -134,21 +191,15 @@ def parse_arguments() -> argparse.Namespace:
 
 
 def load_cds_and_tss_tables(
-    xlsx_path: Path, tier: str
+    tsv_path: Path, tier: str
 ) -> Tuple[pd.DataFrame, List[int], List[int]]:
-    if not xlsx_path.exists():
-        print(f"[ERROR] Excel file not found at {xlsx_path}", file=sys.stderr)
+    if not tsv_path.exists():
+        print(f"[ERROR] TSV file not found at {tsv_path}", file=sys.stderr)
         sys.exit(1)
 
-    xl = pd.ExcelFile(xlsx_path)
-
-    # Always load all sheet entries to extract CDS gene boundaries
-    all_dfs = []
-    for sheet in xl.sheet_names:
-        df_s = pd.read_excel(xlsx_path, sheet_name=sheet)
-        all_dfs.append(df_s)
-
-    combined_df = pd.concat(all_dfs, ignore_index=True)
+    # The combined TSV holds all sheets (with _Source_Sheet); load once
+    # to extract CDS gene boundaries and exclusion masking.
+    combined_df = pd.read_csv(tsv_path, sep="\t")
 
     # Extract all TSS positions for exclusion masking
     pos_tss = []
@@ -369,7 +420,7 @@ def main():
     sample_limit = args.limit if args.limit > 0 else tier_limits.get(args.tier, 738)
 
     chrom_id, genome_seq, seq_len = load_genome(Path(args.fasta))
-    df_cds, pos_tss, neg_tss = load_cds_and_tss_tables(Path(args.xlsx), args.tier)
+    df_cds, pos_tss, neg_tss = load_cds_and_tss_tables(Path(args.tsv), args.tier)
 
     master_pool, exclusion_stats = build_master_pool(
         df_cds,

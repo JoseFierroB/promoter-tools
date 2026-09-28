@@ -1,14 +1,58 @@
 # Promoter-Tools — Memory & Key Findings
 
-> Project: Benchmark of 7 tools (9 runners) for promoter prediction in S. pneumoniae D39V vs TIGR4
-> Report date: August 2026
-> Estado: ~85% completado
+> Project: Benchmark of 9 tools for promoter prediction in S. pneumoniae D39V+TIGR4 high
+> Report date: September 2026 (260928). Canonical dataset N=3,465 (1,727 pos + 1,738 neg),
+> canonical regime 16cpu-gpu (RTX 5090), run 260917. All AUCs re-verified from prediction TSVs.
+> Operating points: per-tool Youden thresholds (`3_tables/operating_point_metrics{,_sigma,_strain}.tsv`).
+> Historical sections (§4–§6b, August 2026 IGR era) kept unchanged below.
+> Estado: benchmark consolidado; pendiente deck rebuild + scale_200k.
 
 ---
 
-## 1. BENCHMARK: AUC per tool and dataset
+## 1. BENCHMARK: AUC per tool (D39V+TIGR4 high, N=3,465, 16cpu-gpu 260917)
 
-### Global AUC (6 datasets, 6 main tools)
+| Tool | AUC | F1 (Youden) | MCC (Youden) |
+|------|-----|-------------|--------------|
+| ProkBERT-mini [gLM] | 0.9493 | 0.9226 | 0.8531 |
+| MLDSPP 75% [BDT] | 0.9410 | 0.8773 | 0.7590 |
+| iPro-MP [gLM] | 0.9358 | 0.9121 | 0.8381 |
+| PromoterLCNN [CNN] | 0.9286 | 0.8918 | 0.7961 |
+| PromoTech RF-HOT [RF] | 0.9267 | 0.8904 | 0.7960 |
+| STREME+FIMO [motif] | 0.8544 | 0.8141 | 0.6510 |
+| prompt [NN] | 0.8516 | 0.7655 | 0.5647 |
+| MLDSPP 0% [BDT] | 0.8447 | 0.7746 | 0.5437 |
+| FIMO ProkDB [PWMs] | 0.7533 | 0.6727 | 0.3754 |
+
+4-regime congruence (1cpu/16cpu/1cpu-gpu/16cpu-gpu): AUC spread 0.000000 on all 9 tools.
+
+### By sigma (16cpu-gpu 260917)
+
+| Tool | SigA (675) | ComX (27) | None (1025) |
+|------|-----------|-----------|-------------|
+| ProkBERT-mini [gLM] | 0.9911 | 0.9419 | 0.9220 |
+| PromoterLCNN [CNN] | 0.9906 | 0.8822 | 0.8890 |
+| iPro-MP [gLM] | 0.9884 | 0.9011 | 0.9021 |
+| MLDSPP 75% [BDT] | 0.9758 | 0.9002 | 0.9191 |
+| PromoTech RF-HOT [RF] | 0.9287 | 0.8725 | 0.9268 |
+
+ComX n=27: wide confidence intervals apply.
+
+### By strain (Youden OP cuts, 16cpu-gpu 260917)
+
+| Tool | D39V AUC (989/1000) | TIGR4 AUC (738/738) |
+|------|--------------------|--------------------|
+| ProkBERT-mini [gLM] | 0.9700 | 0.9209 |
+| MLDSPP 75% [BDT] | 0.9533 | 0.9246 |
+| iPro-MP [gLM] | 0.9594 | 0.9037 |
+| PromoterLCNN [CNN] | 0.9481 | 0.9027 |
+| PromoTech RF-HOT [RF] | 0.9095 | 0.9481 |
+
+Note: PromoTech numbers differ from the August snapshot below (0.943/0.908) —
+model/code changed since; current values verified from prediction TSVs.
+
+### August 2026 snapshot (superseded, kept for reference)
+
+Global AUC (6 datasets, 6 main tools)
 
 | Tool | D39V | T4 hi | T4+sec | T4 ext | T4 all | MIX |
 |------|------|-------|--------|--------|--------|-----|
@@ -23,9 +67,15 @@
 
 ---
 
-## 2. CONFUSION MATRIX — Best threshold (Youden's J)
+## 2. CONFUSION MATRIX — Best threshold (Youden's J), 260928 regeneration
 
-### D39V (989 pos, 1000 neg)
+Current: `output/260917_runs/4_d39v_tigr4_high_sigma/16cpu-gpu/3_tables/`
+`operating_point_metrics.tsv` (global) + `_sigma.tsv` (27 rows) + `_strain.tsv`
+(18 rows: D39V 989/1000, TIGR4 738/738). All thresholds re-verified
+(recomputed F1/MCC from the stored threshold match exactly). See §1 tables above.
+August snapshot below kept for reference.
+
+### D39V (989 pos, 1000 neg) — August snapshot
 
 | Tool | AUC | TP | FN | FP | TN | Sens | Spec | F1 | Balance |
 |------|-----|----|----|----|----|------|------|-----|---------|
@@ -138,7 +188,7 @@
 
 ## 6b. IGR BENCHMARK — EXPERIMENTAL (not consolidated)
 
-> **Status: experimental.** Parallel extension of the canonical benchmark; same
+> **Status: experimental.** Parallel extension of the project benchmark; same
 > runners and CLI, only the dataset changes. Preliminary results subject to change.
 
 | Dataset | Pos/Neg | Content |
@@ -156,7 +206,16 @@
 
 ---
 
-## 7. PENDING (to close out the project)
+## 7. PENDING (260928)
+
+| # | Tarea | Estado |
+|---|-------|--------|
+| 1 | Deck rebuild sobre outputs verificados | pendiente |
+| 2 | scale_200k (valida proyeccion ~5 min GPU) | pendiente (datos generados, seed 42) |
+| 3 | Bootstrap CIs (fase 2, tras limpieza) | aparcado |
+| 4 | `--runs 3` en futuras campanas (backend lo soporta) | decision: seguir en n=1 |
+
+Old August list below kept for reference.
 
 | # | Tarea | Esfuerzo |
 |---|-------|----------|
@@ -168,7 +227,23 @@
 
 ---
 
-## 8. TOOLS AND THEIR STATUS
+## 8. TOOLS AND THEIR STATUS (260928: 9/9 con scores D39V+TIGR4 high)
+
+| # | Tool | D39V+TIGR4 high | Runner | Type |
+|---|------|----------------|--------|------|
+| 1 | MEME (STREME+FIMO) | ✅ 0.8544 | `meme.py` | Motif (2-fold CV, seed 42, train/infer split) |
+| 2 | FIMO + Prok DB | ✅ 0.7533 | `fimo.py` | Motif (838 PWMs, `--norc`) |
+| 3 | MLDSPP XGBoost (0%) | ✅ 0.8447 | `mldspp.py` | ML |
+| 4 | MLDSPP XGBoost (75%) | ✅ 0.9410 | `mldspp_75.py` | ML (split versionado seed 42) |
+| 5 | PromoterLCNN | ✅ 0.9286 | `lcnn.py` | DL (Keras/TF 2.6) |
+| 6 | PromoTech RF-HOT | ✅ 0.9267 | `promotech_hot.py` | ML |
+| 7 | prompt (MLP) | ✅ 0.8516 | `prompt.py` | NN |
+| 8 | ProkBERT-mini | ✅ 0.9493 | `prokbert_mini.py` | gLM (kmer 6, prefetch128 disponible) |
+| 9 | iPro-MP (DNABERT-6) | ✅ 0.9358 | `ipromp_sp12.py` | gLM |
+
+Contract: `docs/RUNNER_CONTRACT.md`. Tests: `tests/test_runners_contract.py` (7 passed + 9 subtests).
+
+### August snapshot (kept for reference)
 
 | # | Tool | D39V scores | TIGR4 scores | Runner | Type |
 |---|------|------------|-------------|--------|------|

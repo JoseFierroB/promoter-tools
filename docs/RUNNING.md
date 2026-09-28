@@ -54,18 +54,19 @@ pixi run python src/cli.py run promotech_hot
 
 # iPro-MP sp12 (H. pylori, DNABERT-6) — GPU strongly recommended
 pixi run python src/cli.py run ipromp_sp12
+
+# Prompt MLP (B. subtilis 168)
+pixi run python src/cli.py run prompt
+
+# ProkBERT-mini promoter gLM
+pixi run python src/cli.py run prokbert
 ```
 
-These 7 tools form the final benchmark. Two extra tools are registered but
-**excluded from the analysis** (kept for reference only):
+These 9 tools form the final benchmark. Two extra runners were retired to
+`archive/legacy_dead/` (reconstructible from git history if needed):
 
-```bash
-# FIMO + E. coli DB (zero-shot) — excluded: no S. pneumoniae training data
-pixi run python src/cli.py run fimo_db
-
-# PromoTech RF-TETRA — excluded: RF-HOT performs better
-pixi run python src/cli.py run promotech_tetra
-```
+- FIMO + E. coli DB (`fimo_db`) — excluded: no S. pneumoniae training data.
+- PromoTech RF-TETRA (`promotech_tetra`) — excluded: RF-HOT performs better.
 
 Runners are at `src/runners/{tool}.py` and can also be executed standalone:
 
@@ -76,9 +77,9 @@ pixi run --manifest-path tools/meme/pixi.toml python src/runners/meme.py \
   -o output/predictions
 ```
 
-## Dataset Generation (canonical commands)
+## Dataset Generation (project commands)
 
-Regenerating the canonical datasets from the reference annotations. All commands
+Regenerating the project datasets from the reference annotations. All commands
 run from the repo root with `pixi run python`. Reference inputs live in
 `data/reference/` (D39V) and `data/tigr4/` (TIGR4).
 
@@ -107,28 +108,32 @@ pixi run python src/dataset/negatives_tss_d39v.py \
 
 ```bash
 pixi run python src/dataset/positive_tss_tigr4.py \
-  --xlsx data/tigr4/S1_TSS.xlsx --fasta data/reference/NC_003028.fasta \
+  --tsv data/tigr4/S1_TSS.tsv --fasta data/reference/NC_003028.fasta \
   --tier high_conf_primary -o data/tigr4/positives_high_81bp
 
 pixi run python src/dataset/negatives_tss_tigr4.py \
-  --xlsx data/tigr4/S1_TSS.xlsx --fasta data/reference/NC_003028.fasta \
+  --tsv data/tigr4/S1_TSS.tsv --fasta data/reference/NC_003028.fasta \
   --tier high_conf_primary --limit 738 --dedup-rc \
   -o data/tigr4/negatives_high_81bp
 ```
 
 ### MLDSPP 75% splits (stage 4)
 
-Pre-built 75/25 train/test index splits (seed 42) matched by positive count.
-The canonical d39v split and all scale_db sizes are already committed; regenerate
-any missing size with:
+Pre-built 75/25 train/test index splits (seed 42) matched by positive count:
+
+| Split file | n_pos | Dataset |
+|---|---|---|
+| `mldspp_75_split_1_d39v.npz` | 989 | `datasets/1_d39v` |
+| `mldspp_75_split_2_d39v_tigr4_high.npz` | 1727 | `datasets/2_d39v_tigr4_high` (+ sigma variant) |
+| `mldspp_75_split_3_d39v_tigr4_all.npz` | 1998 | `datasets/3_d39v_tigr4_all` |
+| `mldspp_75_split_scale_{10k,30k,60k,100k,200k}.npz` | 5000/15000/30000/50000/100000 | `scale_db` ladder |
+| `mldspp_75_split_benchmark_igr.npz` | 723 | IGR experiment |
+
+Regenerate any missing size with an explicit name:
 
 ```bash
-pixi run python src/dataset/make_mldspp_75_splits.py --n-pos 989 1976 4940 9880 19760 29640 49400 98800 197600
+pixi run python src/dataset/make_mldspp_75_splits.py --n-pos 5000 --name mldspp_75_split_scale_10k.npz
 ```
-
-> The 989 split (`mldspp_75_split_scale_db_989.npz`, seed 42, 741 train / 248 test)
-> matches the current canonical D39V dataset (TSS 1801133 included). The 988 npz
-> is historical (pre-Axel dataset).
 
 The runner (`mldspp_75`) matches splits to the FASTA by size; if none matches,
 the tool is skipped with a message listing the available splits.
@@ -142,13 +147,39 @@ the tool is skipped with a message listing the available splits.
 # 4. MLDSPP splits: make_mldspp_75_splits.py (npz index) +
 #    export_mldspp_75_fastas.py (npz → data/benchmark/splits/*.fasta)
 # 5. Benchmark: pixi run python src/cli.py run <tools> [--threads N] [--runs N]
-# 6. Analysis: benchmark_statistics / benchmark_confusion / generate_master_roc /
-#              resource_plots / scaling_analysis / generate_master_plots
+# 6. Analysis (per run dir): generate_auc_plots / generate_compute_plots /
+#              compute_metrics (legacy predecessors in archive/analysis_legacy/)
 # 7. Experiments (consensus / features): src/analysis/experiments/*.py
 ```
 
 An orchestrator for stages 2-6 lives in `pipeline/run_pipeline.sh` (separate
-folder, does not touch canonical source).
+folder, does not touch project source).
+
+## Measurement methodology
+
+Definitions of every column in `2_resources/resource_metrics.tsv`
+(code: `src/utils/metrics.py`, sampler: `src/backend/local.py`):
+
+| Column | Meaning | Method | Caveats |
+|---|---|---|---|
+| `wall_seconds` | Full process wall (load + compute) | `perf_counter` around the tool subprocess | Includes model loading (~3 s ProkBERT, ~40 s PromoTech forest) |
+| `time_s` | Runner self-reported compute | Regex over runner stdout (`"N seqs in Xs"`) | Definition varies per runner; `None` → falls back to wall. Excludes load by convention |
+| `cpu_seconds` | CPU time consumed | Derived: `mean_cpu_pct/100 × wall` (same semantics as Slurm `CPUTimeRAW`) | Not sampled directly |
+| `mean_cpu_pct` | Mean CPU load | 0.2 s samples of summed per-process `cpu_percent()` over the process tree, arithmetic mean | 100% = 1 core (1600% possible); startup dilutes; blind to steal/iowait |
+| `peak_ram_mb` | Peak host RAM | Max PSS over 0.2 s samples (`/proc/pid/smaps_rollup`) | High-water mark (allocators retain freed pages); misses <0.2 s spikes; RSS-sum fallback double-counts shared libs |
+| `peak_vram_mb` | Peak device VRAM attributed to our PIDs | NVML per-process accounting filtered to our process tree; `nvidia-smi pid` fallback | Still includes own CUDA context + allocator cache; `gpu_util_pct` stays device-level |
+| `model_size_mb` | Weight bytes on disk | File sizes (`Tool.model_size_mb()`) | Disk size, not VRAM residency |
+| `throughput_seq_s` | Throughput | `n / time_s` from runner output | Inherits `time_s` fragility |
+
+Conventions: single runs (`--runs 1`, no dispersion); `success=False` rows
+(timeouts write wall=timeout and zeros) are excluded from comparisons;
+per-run `harness` (threads, cpu-only/gpu/no-timeout flags, per-tool
+`gpu_id` + effective device) is recorded in `STATUS.json`. Runner batch
+sizes and worker counts live with each runner: ProkBERT 64 serial,
+iPro-MP batch 128 + `ProcessPool(threads)` tokenize-ahead, prompt batch 128
+serial (always CPU), LCNN batch 10000 (TF session), MLDSPP all-at-once
+(`n_jobs=threads`), PromoTech 4 sequential subprocesses (RF `n_jobs` patch),
+FIMO chunks=threads + thread pool over the binary, MEME 2 serial folds.
 
 ## Non-default Datasets (e.g. TIGR4)
 
@@ -170,9 +201,9 @@ pixi run python src/cli.py run lcnn \
 ## IGR Benchmark & Specialized Niches (experimental)
 
 > **Status: experimental** — datasets and results are preliminary and subject
-> to change. Same runners and pipeline as the canonical benchmark; only the
+> to change. Same runners and pipeline as the project benchmark; only the
 > dataset changes. No dedicated code — everything below reuses the unified CLI
-> (`src/cli.py`) plus canonical `src/dataset/` builders and `src/analysis/`.
+> (`src/cli.py`) plus `src/dataset/` builders and `src/analysis/`.
 
 ### 1. Build IGR datasets (once, ~1 min)
 
@@ -224,9 +255,11 @@ python experiments/igr/process_results.py        # AUC/ACC/MCC + ROC from predic
 python experiments/igr/cluster_igrs.py                         # cross-strain IGR clusters (2,247) tables
 python experiments/igr/sigma_roc.py                 # ROC stratified by SigA/None/SigX
 
-# Confusion matrices for the canonical benchmark (reuse existing analysis code)
-python src/analysis/benchmark_confusion.py
-python src/analysis/generate_benchmark_plots.py             # canonical 119-figure suite
+# Per-run metrics + plots (replaces legacy benchmark_confusion.py and
+# the archived 119-figure suite; originals in archive/analysis_legacy/)
+python src/analysis/compute_metrics.py <run_dir>            # confusion @Youden + bootstrap CI + DeLong
+python src/analysis/generate_auc_plots.py <run_dir>         # title-free ROC overlay
+python src/analysis/generate_compute_plots.py <run_dir>     # title-free time/RAM bars
 ```
 
 **Dataset lineage (D39V)**: GFF 1003 TSS (Victor + Axel) → 989 curated
@@ -235,11 +268,11 @@ python src/analysis/generate_benchmark_plots.py             # canonical 119-figu
 ## Batch Benchmarks
 
 ```bash
-# The full 7-tool benchmark, locally
-pixi run python src/cli.py run meme fimo_prok mldspp mldspp_75 lcnn promotech_hot ipromp_sp12
+# The full 9-tool benchmark, locally
+pixi run python src/cli.py run meme fimo_prok mldspp mldspp_75 lcnn promotech_hot ipromp_sp12 prompt prokbert
 
-# The full 7-tool benchmark on Slurm (one job per tool)
-pixi run python src/cli.py run --slurm meme fimo_prok mldspp mldspp_75 lcnn promotech_hot ipromp_sp12
+# The full 9-tool benchmark on Slurm (one job per tool)
+pixi run python src/cli.py run --slurm meme fimo_prok mldspp mldspp_75 lcnn promotech_hot ipromp_sp12 prompt prokbert
 
 # Single tool on Slurm
 pixi run python src/cli.py run --slurm lcnn
@@ -259,15 +292,15 @@ pixi run python src/cli.py run <tools> [flags]
 | `--runs N` | Independent runs; N≥3 recommended (reports mean ± SD). N=1 returns the raw run. |
 | `--pos / --neg` | Custom FASTA pair (default: d39v confirmed positives/negatives). |
 | `--output-dir` | Where per-tool prediction CSVs are written. |
-| `-o` | Path of the metrics TSV (time, RAM, VRAM, CPU%, GPU%). |
+| `-o` | Additional metrics TSV export; the run keeps its own primary metrics. |
 | `--no-timeout` | Disable per-tool timeouts. |
 
 Environment extras:
 
 ```bash
 PROMOTER_TOOLS_LCNN_BATCH=0|1 pixi run python src/cli.py run lcnn ...   # LCNN inference batch (default 10000; 0 = all at once, 1 = one by one)
+PROMOTER_TOOLS_PROKBERT_BATCH=128 PROMOTER_TOOLS_PROKBERT_PREFETCH=16 pixi run python src/cli.py run prokbert ...   # ProkBERT batch (default 64) + prefetch workers (default 0 = serial)
 IPROMP_SPECIES=23             pixi run python src/cli.py run ipromp_sp12 ...   # iPro-MP species (default 12 = H. pylori; 23 = B. subtilis)
-PROMOTER_DATA_DIR=/path       pixi run python src/analysis/*.py ...      # base dir for analysis campaign folders
 ```
 
 > **`time_s` semantics**: runners report *pure compute time* — model loading,
@@ -292,40 +325,55 @@ PROMOTER_DATA_DIR=/path       pixi run python src/analysis/*.py ...      # base 
 ## Analysis
 
 ```bash
-# Master ROC (combined, all tools)
-pixi run python src/analysis/generate_master_roc.py
+# Automatically export ROC, AUC rows, time and RAM after scoring
+pixi run python src/cli.py run prompt lcnn --input-dir <dataset_dir> --threads 1 --gpu --plots
 
-# Bootstrap CIs + DeLong pairwise tests
-pixi run python src/analysis/benchmark_statistics.py
+# Regenerate plots from an existing run (no model execution)
+pixi run python src/analysis/generate_auc_plots.py <run_dir>
+pixi run python src/analysis/generate_compute_plots.py <run_dir>
 
-# Confusion matrices (D39V + TIGR4)
-pixi run python src/analysis/benchmark_confusion.py
+# Optional confusion matrices, bootstrap CIs and DeLong tests
+pixi run python src/analysis/compute_metrics.py <run_dir>
 
-# Resource plots (compute time + peak RAM + VRAM if available)
-pixi run python src/analysis/resource_plots.py
+# Compare selected runs; each metric is a separate figure, with a title
+pixi run python src/cli.py compare <run_dir1> <run_dir2> --dataset "D39V+TIGR4 high"
 
-# Canonical publication figure suite — 119 figures (time/RAM) across hardware
-# regimes (1_cpu, 16_cpu, gpu_vram, combined, by_scale x 9) in PNG/SVG/PDF
-pixi run python src/analysis/generate_benchmark_plots.py
-
-# ROC/AUC curves for N = 1,976 and N = 59,280 (PNG/SVG/PDF)
-pixi run python src/analysis/generate_auc_plots.py
+# Per-run compute plots (opt-in, not executed without --plots):
+pixi run python src/analysis/generate_compute_plots.py <run_dir>
+# (via harness: src/cli.py run ... --plots [--no-compute-plots to skip these])
 ```
 
 ## Output Files
 
+Individual run figures (ROC, sigma ROC, time and RAM) have no title; axes,
+legends, tool colors and method order remain. Comparison figures keep titles.
+The per-run/compare workflow exports PNG and PDF only, one plot per file.
+
+The CLI stores a run in `output/<YYMMDD>_runs/<dataset>/<config>/` and exposes
+a primary alias in `output/runs/`. A completed repeat gets a separate `_02`
+directory and alias, without changing its logical dataset/prediction prefix.
+
 | File | Content |
 |------|---------|
-| `output/tables/resource_metrics.tsv` | Time, RAM, VRAM per tool (auto-generated by CLI) |
-| `output/tables/benchmark_statistics.tsv` | AUC + 95% CI + DeLong tests |
-| `output/plots/benchmark/master_benchmark_roc.{svg,png}` | 7-curve ROC |
-| `output/plots/benchmark/compute_time.{svg,png}` | Resource bar chart |
-| `output/plots/benchmark/ram.{svg,png}` | RAM bar chart |
-| `output/plots/benchmark/vram.{svg,png}` | VRAM bar chart (GPU tools) |
-| `output/plots/meme/` | All MEME plots |
-| `output/predictions/` | Per-tool prediction CSVs (incl. `ipromp/`, `promotech/`, `mldspp_75spn_*`) |
->
-> **Legacy scripts** (unused, kept for reference): `pipeline/legacy/`
-> (`make_scale_fastas.sh` — scale-db FASTA generation by duplication;
-> `test_all_tools.sh` — early smoke loop). Superseded by the unified CLI
+| `<run_dir>/1_inference/predictions/` | Per-tool predictions |
+| `<run_dir>/1_inference/roc_auc_{name}.{png,pdf}` | Title-free ROC overlay |
+| `<run_dir>/1_inference/sigma/roc_{class}_{name}.{png,pdf}` | Optional sigma ROC (`sigma_stratify.py`) |
+| `<run_dir>/2_resources/resource_metrics.tsv` | Recorded time, RAM and VRAM per tool |
+| `<run_dir>/2_resources/{compute_time,peak_ram}.{png,pdf}` | Title-free resource bars |
+| `<run_dir>/3_tables/resource_metrics.tsv` | Link to the actual resource metrics |
+| `<run_dir>/3_tables/metrics_rows.tsv` | AUC per tool |
+| `<run_dir>/3_tables/metrics_table.tsv` | Optional confusion, CI and DeLong table |
+| `<run_dir>/STATUS.json`, `MANIFEST.json` | Dataset, configuration, inputs and run identity |
+| `output/comparisons/<comparison>/2_resources/compare_{time,ram,speedup,vram}.{png,pdf}` | Comparison figures (available metrics only) |
+| `output/comparisons/<comparison>/3_tables/resources_compare.tsv` | Successful measurements with distinct source-run identities |
+
+Readers accept legacy locations, but new exports do not add root-level
+`plots/`, `resources/` or metric copies. `--output-dir` explicitly overrides
+the prediction destination and is recorded in the manifest. Existing legacy
+files are not deleted or moved automatically. VRAM is attributed to our
+process tree when PIDs are known, else device-global (see table above).
+
+> **Legacy scripts**: `pipeline/legacy/` (`make_scale_fastas.sh`,
+> `test_all_tools.sh`) was moved out of the repo
+> (`~/Desktop/promoter-attic/pipeline_legacy/`). Superseded by the unified CLI
 > and `pipeline/run_pipeline.sh`.

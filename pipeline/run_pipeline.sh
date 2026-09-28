@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # ---------------------------------------------------------------------------
 # pipeline/run_pipeline.sh — end-to-end orchestrator (stages 2-6).
-# Lives OUTSIDE the canonical src/ tree; nothing here is imported by the
+# Lives OUTSIDE the main src/ tree; nothing here is imported by the
 # pipeline. Stages: datasets | splits | benchmark | analysis | all
 #
 # Usage:
-#   ./pipeline/run_pipeline.sh datasets          # regenerate canonical datasets
+#   ./pipeline/run_pipeline.sh datasets          # regenerate project datasets
 #   ./pipeline/run_pipeline.sh datasets --gc     # + GC-matched negative sets
 #   ./pipeline/run_pipeline.sh splits
-#   ./pipeline/run_pipeline.sh benchmark         # 7 canonical tools, d39v
+#   ./pipeline/run_pipeline.sh benchmark         # 9 tools, d39v
 #   ./pipeline/run_pipeline.sh benchmark --threads 16 --runs 3
 #   ./pipeline/run_pipeline.sh analysis
 #   ./pipeline/run_pipeline.sh all
@@ -34,7 +34,7 @@ stage_datasets() {
   local gff_tss="$DATA_DIR/reference/D39V_annotation_TSS_Victor.gff"
   local genome="$DATA_DIR/reference/D39V.fna"
   local gff_cds="$DATA_DIR/reference/D39V.gff3"
-  local tigr_xlsx="$DATA_DIR/tigr4/S1_TSS.xlsx"
+  local tigr_tsv="$DATA_DIR/tigr4/S1_TSS.tsv"
   local tigr_fa="$DATA_DIR/reference/NC_003028.fasta"
 
   ensure_new "$DATA_DIR/benchmark/d39v/positives_81bp.fasta" \
@@ -42,9 +42,9 @@ stage_datasets() {
   ensure_new "$DATA_DIR/benchmark/d39v/negatives_81bp.fasta" \
     "$PY src/dataset/negatives_tss_d39v.py --gff-cds $gff_cds --fasta $genome --gff-tss $gff_tss --dedup-rc --limit 1000 -o $DATA_DIR/benchmark/d39v/negatives_81bp"
   ensure_new "$DATA_DIR/tigr4/positives_high_81bp.fasta" \
-    "$PY src/dataset/positive_tss_tigr4.py --xlsx $tigr_xlsx --fasta $tigr_fa --tier high_conf_primary -o $DATA_DIR/tigr4/positives_high_81bp"
+    "$PY src/dataset/positive_tss_tigr4.py --tsv $tigr_tsv --fasta $tigr_fa --tier high_conf_primary -o $DATA_DIR/tigr4/positives_high_81bp"
   ensure_new "$DATA_DIR/tigr4/negatives_high_81bp.fasta" \
-    "$PY src/dataset/negatives_tss_tigr4.py --xlsx $tigr_xlsx --fasta $tigr_fa --tier high_conf_primary --limit 738 --dedup-rc -o $DATA_DIR/tigr4/negatives_high_81bp"
+    "$PY src/dataset/negatives_tss_tigr4.py --tsv $tigr_tsv --fasta $tigr_fa --tier high_conf_primary --limit 738 --dedup-rc -o $DATA_DIR/tigr4/negatives_high_81bp"
   if [ "$INCLUDE_GC" = "1" ]; then
     mkdir -p "$DATA_DIR/benchmark/d39v_gc" "$DATA_DIR/tigr4_gc"
     ensure_new "$DATA_DIR/benchmark/d39v_gc/negatives_81bp_gc30.fasta" \
@@ -52,17 +52,19 @@ stage_datasets() {
     ensure_new "$DATA_DIR/benchmark/d39v_gc/negatives_81bp_gc33.fasta" \
       "$PY src/dataset/negatives_tss_d39v.py --gff-cds $gff_cds --fasta $genome --gff-tss $gff_tss --dedup-rc --limit 1000 --target-gc 33 --gc-tolerance 5 -o $DATA_DIR/benchmark/d39v_gc/negatives_81bp_gc33"
     ensure_new "$DATA_DIR/tigr4_gc/negatives_high_81bp_gc31.fasta" \
-      "$PY src/dataset/negatives_tss_tigr4.py --xlsx $tigr_xlsx --fasta $tigr_fa --tier high_conf_primary --limit 738 --dedup-rc --target-gc 31 --gc-tolerance 5 -o $DATA_DIR/tigr4_gc/negatives_high_81bp_gc31"
+      "$PY src/dataset/negatives_tss_tigr4.py --tsv $tigr_tsv --fasta $tigr_fa --tier high_conf_primary --limit 738 --dedup-rc --target-gc 31 --gc-tolerance 5 -o $DATA_DIR/tigr4_gc/negatives_high_81bp_gc31"
   fi
   echo "[OK] stage datasets"
 }
 
 stage_splits() {
-  local n_sizes="988 1976 4940 9880 19760 29640 49400 98800 197600"
-  for n in $n_sizes; do
-    local f="$DATA_DIR/benchmark/mldspp_75_split_scale_db_$n.npz"
+  # "n_pos:filename" pairs for the kept datasets + scale ladder
+  local pairs="989:mldspp_75_split_1_d39v.npz 1727:mldspp_75_split_2_d39v_tigr4_high.npz 1998:mldspp_75_split_3_d39v_tigr4_all.npz 5000:mldspp_75_split_scale_10k.npz 15000:mldspp_75_split_scale_30k.npz 30000:mldspp_75_split_scale_60k.npz 50000:mldspp_75_split_scale_100k.npz 100000:mldspp_75_split_scale_200k.npz"
+  for pair in $pairs; do
+    local n="${pair%%:*}"
+    local f="$DATA_DIR/benchmark/${pair#*:}"
     [ -f "$f" ] && [ "$OVERWRITE" != "1" ] && continue
-    "$PY" src/dataset/make_mldspp_75_splits.py --n-pos "$n"
+    "$PY" src/dataset/make_mldspp_75_splits.py --n-pos "$n" --name "${pair#*:}"
   done
   echo "[OK] stage splits"
 }
@@ -70,19 +72,25 @@ stage_splits() {
 stage_benchmark() {
   local pos="${POS_FASTA:-$DATA_DIR/benchmark/d39v/positives_81bp.fasta}"
   local neg="${NEG_FASTA:-$DATA_DIR/benchmark/d39v/negatives_81bp.fasta}"
-  local tools="${TOOLS:-meme fimo_prok mldspp mldspp_75 lcnn promotech_hot ipromp_sp12}"
+  local tools="${TOOLS:-meme fimo_prok mldspp mldspp_75 lcnn promotech_hot ipromp_sp12 prompt prokbert}"
   "$PY" src/cli.py run $tools \
     --pos "$pos" --neg "$neg" --threads "$THREADS" --runs "$RUNS"
   echo "[OK] stage benchmark ($tools, n=$(grep -c '>' "$pos" 2>/dev/null || echo ?) pos)"
 }
 
 stage_analysis() {
-  "$PY" src/analysis/benchmark_statistics.py
-  "$PY" src/analysis/benchmark_confusion.py
-  "$PY" src/analysis/generate_master_roc.py
-  "$PY" src/analysis/resource_plots.py
-  "$PY" src/analysis/scaling_analysis.py --scale-db "$DATA_DIR/../scale_db_16cpu" || true
-  echo "[OK] stage analysis"
+  # New 5-script suite: per-run ROC/AUC, compute plots, metrics table.
+  # Uses newest run dir unless RUN_DIR is set explicitly.
+  local rdir="${RUN_DIR:-}"
+  if [ -z "$rdir" ]; then
+    rdir=$(ls -dt output/*_runs/*/ output/*_results/*/ 2>/dev/null | head -1)
+  fi
+  [ -n "$rdir" ] || { echo "ERROR: no run dir found (run stage benchmark first or set RUN_DIR)"; exit 1; }
+  [ -d "$rdir/predictions" ] || { echo "ERROR: $rdir has no predictions/"; exit 1; }
+  "$PY" src/analysis/generate_auc_plots.py "$rdir"
+  "$PY" src/analysis/generate_compute_plots.py "$rdir"
+  "$PY" src/analysis/compute_metrics.py "$rdir"
+  echo "[OK] stage analysis ($rdir)"
 }
 
 ensure_new() {

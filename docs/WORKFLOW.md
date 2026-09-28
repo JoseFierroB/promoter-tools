@@ -15,7 +15,7 @@ All commands run from the repository root. Detailed references:
                               │
                               ▼
 ┌────────────────────────────────────────────────────────────────────┐
-│ 1. DATASETS (regenerate canonical; skips existing files)           │
+│ 1. DATASETS (regenerate project sets; skips existing files)           │
 │    ./pipeline/run_pipeline.sh datasets                             │
 │    # individual commands: docs/RUNNING.md §Dataset Generation      │
 └────────────────────────────────────────────────────────────────────┘
@@ -34,13 +34,13 @@ All commands run from the repository root. Detailed references:
 │    flags: --threads N (CPUs) · --cpu-only (no GPU) · --runs N      │
 │           --pos/--neg · --output-dir · -o (metrics TSV)            │
 │                                                                     │
-│    # 7 tools · 1 CPU · 3 runs                                      │
+│    # 9 tools · 1 CPU · 3 runs                                      │
 │    pixi run python src/cli.py run meme fimo_prok mldspp \          │
-│      mldspp_75 lcnn promotech_hot ipromp_sp12 --threads 1 --runs 3 │
+│      mldspp_75 lcnn promotech_hot ipromp_sp12 prompt prokbert --threads 1 --runs 3 │
 │                                                                     │
-│    # 7 tools · 16 CPU (+GPU for lcnn / ipromp)                     │
+│    # 9 tools · 16 CPU (+GPU for lcnn / ipromp / prokbert)          │
 │    pixi run python src/cli.py run meme fimo_prok mldspp \          │
-│      mldspp_75 lcnn promotech_hot ipromp_sp12 --threads 16 --runs 3│
+│      mldspp_75 lcnn promotech_hot ipromp_sp12 prompt prokbert --threads 16 --runs 3│
 │                                                                     │
 │    # GPU tools only, CPU-only fallback                             │
 │    pixi run python src/cli.py run lcnn ipromp_sp12 --cpu-only \    │
@@ -52,16 +52,29 @@ All commands run from the repository root. Detailed references:
                               │
                               ▼
 ┌────────────────────────────────────────────────────────────────────┐
-│ 4. ANALYSIS                                                        │
-│    ROC:                                                            │
-│      pixi run python src/analysis/generate_master_roc.py           │
-│      pixi run python src/analysis/benchmark_statistics.py          │
-│      pixi run python src/analysis/benchmark_confusion.py           │
-│    Resources:                                                      │
-│      pixi run python src/analysis/resource_plots.py --iter 9880    │
-│      pixi run python src/analysis/resource_plots.py --by-iter      │
-│      pixi run python src/analysis/scaling_analysis.py --scale-db DIR│
-│      pixi run python src/analysis/generate_master_plots.py --mode all
+│ 4. ANALYSIS (all read run dirs; write into 1_inference/ + 3_tables/)│
+│    ROC + metrics per run:                                          │
+│      pixi run python src/cli.py run ... --plots  (or standalone:)  │
+│      pixi run python src/analysis/analyze_run.py \                 │
+│        --pred-dir <run>/1_inference/predictions --db <name> -o <run>│
+│    Compute plots per run:                                          │
+│      pixi run python src/analysis/generate_compute_plots.py <run>  │
+│    Sigma stratification (once per dataset):                        │
+│      pixi run python src/analysis/sigma_stratify.py \              │
+│        --run-dir <run> --name <ds> --metadata <meta.tsv>            │
+│    Operating points (Youden, global/sigma/strain):                 │
+│      pixi run python src/analysis/operating_points.py \            │
+│        --run-dir <run> --name <ds> [--metadata ...] [--neg ...]     │
+│    Compare runs (time/ram/speedup/vram + TSV):                     │
+│      pixi run python src/cli.py compare <run1> <run2> ... \         │
+│        [-o <out>] [--dataset "Title"]                              │
+│    Scaling ladder (single tool or --all):                          │
+│      pixi run python src/analysis/plot_scaling.py <runs...> \       │
+│        --tool "<Registry Name>" -o <out>   (NOT the display label)  │
+│    3090 vs 5090 (3 DL tools):                                      │
+│      pixi run python src/analysis/plot_gpu_compare.py \            │
+│        --a <run-3090> --b <run-5090> -o <out>                       │
+│    Contract + tests: docs/RUNNER_CONTRACT.md, tests/test_*.py      │
 └────────────────────────────────────────────────────────────────────┘
                               │
                               ▼
@@ -78,17 +91,16 @@ All commands run from the repository root. Detailed references:
 | Install envs | `pixi install && for d in tools/*/; do (cd "$d" && pixi install); done` |
 | Datasets | `./pipeline/run_pipeline.sh datasets` |
 | Splits | `./pipeline/run_pipeline.sh splits` |
-| Benchmark (7 tools, 1 CPU) | `pixi run python src/cli.py run meme fimo_prok mldspp mldspp_75 lcnn promotech_hot ipromp_sp12 --threads 1 --runs 3` |
-| Benchmark (16 CPU + GPU) | same with `--threads 16` |
+| Benchmark (9 tools, 1 CPU) | `pixi run python src/cli.py run meme fimo_prok mldspp mldspp_75 lcnn promotech_hot ipromp_sp12 prompt prokbert --threads 1 --runs 3` |
+| Benchmark (16 CPU + GPU) | same with `--threads 16 --gpu` |
 | Single tool | `pixi run python src/cli.py run lcnn [flags]` |
-| ROC plot | `pixi run python src/analysis/generate_master_roc.py` |
-| AUC + CI + DeLong | `pixi run python src/analysis/benchmark_statistics.py` |
-| Confusion matrices | `pixi run python src/analysis/benchmark_confusion.py` |
-| Resource plots | `pixi run python src/analysis/resource_plots.py [--by-iter]` |
-| Scaling analysis + plots | `pixi run python src/analysis/scaling_analysis.py --scale-db DIR` |
-| Canonical figure suite (119 fig. PNG/SVG/PDF) | `pixi run python src/analysis/generate_benchmark_plots.py` |
-| ROC/AUC curves (N=1,976 y N=59,280) | `pixi run python src/analysis/generate_auc_plots.py` |
-| Master plots suite (legacy) | `pixi run python src/analysis/generate_master_plots.py --mode all` |
+| ROC plot | `pixi run python src/analysis/generate_auc_plots.py <run_dir>` |
+| AUC + CI + DeLong | `pixi run python src/analysis/compute_metrics.py <run_dir>` |
+| Confusion matrices | `pixi run python src/analysis/compute_metrics.py <run_dir>` |
+| Resource plots | `pixi run python src/analysis/generate_compute_plots.py <run_dir>` |
+| Scaling analysis + plots | `pixi run python src/analysis/plot_scaling.py <run_dirs...> --tool ... -o <out>` |
+| Multi-dataset ROC atlas | `pixi run python src/analysis/generate_benchmark_suite.py ...` |
+| ROC/AUC curves | `pixi run python src/analysis/generate_auc_plots.py <run_dir>` |
 | Everything | `./pipeline/run_pipeline.sh all` |
 
 ## Notes for replication

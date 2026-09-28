@@ -7,7 +7,7 @@ Author: José Fierro Bustos & Víctor Rodríguez Bouza
 Repository: promoter-tools
 
 Properties Tested:
-  1. Sigma Subclass Sensitivity (Canonical SigA vs Ext-10 SigA vs SigX vs Negative)
+  1. Sigma Subclass Sensitivity (Bipartite SigA vs Ext-10 SigA vs SigX vs Negative)
   2. Strand Orientation Sensitivity (Sense 5'->3' vs Reverse Complement RC)
   3. Spatial Alignment & Positional Jitter (TSS shifted by -10, -5, +5, +10 bp)
   4. In Silico -10 Box Invalidation (TATAAT -> GCGGCC mutation impact)

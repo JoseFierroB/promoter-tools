@@ -1,5 +1,6 @@
 """Local runner: execute tools via subprocess in any machine."""
 import os
+import re
 import subprocess
 import time
 from pathlib import Path
@@ -76,6 +77,19 @@ def _promotech_timeout(n_seqs: int) -> int:
     dummy runs don't hit the default 600 s cap.
     """
     return max(600, int(n_seqs / 20.6 * 2.5))
+
+
+def _parse_train_infer(output: str):
+    """Split train vs inference seconds from the runner timing line.
+
+    Contract format: `<TOOL>: N seqs (train Xs / infer Ys)`.
+    Returns (train_s, infer_s); (0.0, None) when absent (pure-inference
+    runners print no split — the caller falls back to wall time).
+    """
+    m = re.search(r"\(train\s+([\d.]+)s?\s*/\s*infer\s+([\d.]+)s?\)", output)
+    if not m:
+        return 0.0, None
+    return float(m.group(1)), float(m.group(2))
 
 
 def _kill_process_tree(proc: subprocess.Popen) -> None:
@@ -164,6 +178,11 @@ class LocalRunner(Runner):
             cmd += ["--timeout", str(_promotech_timeout(n_seqs))]
         if tool.short_name == "lcnn" and os.environ.get("PROMOTER_TOOLS_LCNN_BATCH", ""):
             cmd += ["--batch-size", os.environ["PROMOTER_TOOLS_LCNN_BATCH"]]
+        if tool.short_name == "prokbert_mini":
+            if os.environ.get("PROMOTER_TOOLS_PROKBERT_BATCH", ""):
+                cmd += ["--batch-size", os.environ["PROMOTER_TOOLS_PROKBERT_BATCH"]]
+            if os.environ.get("PROMOTER_TOOLS_PROKBERT_PREFETCH", ""):
+                cmd += ["--prefetch-workers", os.environ["PROMOTER_TOOLS_PROKBERT_PREFETCH"]]
         if tool.short_name == "mldspp_75":
             split_file = _pick_mldspp_split(self.pos_fasta)
             if split_file is None:
@@ -219,45 +238,57 @@ class LocalRunner(Runner):
         stop_sampler = threading.Event()
 
         def _bg_sample():
+            _bg_sample.seen_pids = {proc.pid}
             try:
                 import psutil
                 from src.utils.metrics import _pss, _gpu_sample
                 ps_proc = psutil.Process(proc.pid)
-                proc_cache = {ps_proc.pid: ps_proc}  # reuse Process objects: cpu_percent needs a stable baseline
+                proc_cache = {ps_proc.pid: ps_proc}  # reuse Process objects: cpu_percent needs a stable previous reading
+                seen_pids = {ps_proc.pid}
                 while not stop_sampler.is_set():
                     try:
                         procs = [ps_proc]
                         for child in ps_proc.children(recursive=True):
                             p = proc_cache.setdefault(child.pid, child)
                             procs.append(p)
+                            seen_pids.add(child.pid)
                         pss_kb = sum(_pss(p.pid) for p in procs)
                         ram_mb = pss_kb / 1024.0
                         cpu = sum(p.cpu_percent() for p in procs)
                         samples.append((ram_mb, cpu))
                         if tool.gpu_id:
-                            gpu_samples.append(_gpu_sample(tool.gpu_id))
+                            gpu_samples.append(_gpu_sample(tool.gpu_id, seen_pids))
                     except psutil.NoSuchProcess:
-                        break
+                        # a short-lived child vanished mid-tick: skip the tick,
+                        # keep sampling (a break here would lose the rest of the run)
+                        time.sleep(0.2)
+                        continue
                     time.sleep(0.2)
             except Exception:
                 try:
                     import psutil as _psutil
                     from src.utils.metrics import _gpu_sample
                     ps_proc = _psutil.Process(proc.pid)
+                    seen_pids = {ps_proc.pid}
                     while not stop_sampler.is_set():
                         try:
                             procs = [ps_proc] + ps_proc.children(recursive=True)
+                            for p in procs[1:]:
+                                seen_pids.add(p.pid)
                             rss = sum(p.memory_info().rss for p in procs) / (1024 * 1024)
                             cpu = sum(p.cpu_percent() for p in procs)
                             samples.append((rss, cpu))
                             if tool.gpu_id:
-                                gpu_samples.append(_gpu_sample(tool.gpu_id))
+                                gpu_samples.append(_gpu_sample(tool.gpu_id, seen_pids))
                         except _psutil.NoSuchProcess:
-                            break
+                            time.sleep(0.2)
+                            continue
                         time.sleep(0.2)
                 except Exception:
                     pass
+            _bg_sample.seen_pids = set(seen_pids) if "seen_pids" in dir() else {proc.pid}
 
+        _bg_sample.seen_pids = set()
         t_sampler = threading.Thread(target=_bg_sample, daemon=True)
         t_sampler.start()
 
@@ -303,7 +334,11 @@ class LocalRunner(Runner):
 
         from src.utils.metrics import collect_local
         result = collect_local(proc, tool, output, t0, samples=samples,
-                               gpu_samples=gpu_samples)
+                               gpu_samples=gpu_samples,
+                               pids=getattr(_bg_sample, "seen_pids", None))
+        train_s, infer_s = _parse_train_infer(output)
+        result["train_s"] = train_s
+        result["infer_s"] = infer_s if infer_s is not None else result.get("wall_seconds")
         result["notes"] = output[-200:] if not result["success"] else ""
         extra = []
         if result['peak_ram_mb'] > 0:

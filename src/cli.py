@@ -3,11 +3,11 @@
 
 Agnostic pipeline: it only receives data (pos/neg FASTAs or a directory
 containing the pair). Dataset creation lives outside the pipeline
-(see experiments/canonical_15_datasets/).
+(see experiments/datasets/).
 
 Usage:
     pixi run python src/cli.py run mldspp --pos pos.fasta --neg neg.fasta
-    pixi run python src/cli.py run mldspp prompt --input-dir data/benchmark/canonical_15_datasets/4_d39v_tigr4_high --name myrun --plots
+    pixi run python src/cli.py run mldspp prompt --input-dir data/benchmark/datasets/2_d39v_tigr4_high --name myrun --plots
     pixi run python src/cli.py run prokbert --input-dir <dir> --threads 4 --cpu-only --plots
 """
 import argparse
@@ -34,8 +34,10 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "src" / "analysis"))
 
-# registry key -> (family for canonical layout, single-file output?)
-# Canonical layout inside a run: predictions/{name}_{fam}[.tsv]
+from run_layout import RunLayout, primary_run_dir
+
+# registry key -> (family for primary layout, single-file output?)
+# Primary layout inside a run: 1_inference/predictions/{name}_{fam}[.tsv]
 # New tools: add one line here (dir layout default; single-file if the runner
 # writes one combined TSV when -o points at a file).
 TOOL_LAYOUT = {
@@ -46,9 +48,7 @@ TOOL_LAYOUT = {
     "ipromp_sp12": ("ipromp", False),
     "lcnn": ("lcnn", False),
     "promotech_hot": ("promotech", False),
-    "promotech_tetra": ("promotech_tetra", False),
     "fimo_prok": ("fimo", False),
-    "fimo_db": ("fimo_db", False),
     "meme": ("meme", False),
 }
 
@@ -119,6 +119,32 @@ def derive_configuration(args) -> str:
     return f"{threads}cpu" + ("-gpu" if gpu else "")
 
 
+def _harness_record(args, configuration) -> dict:
+    """Harness knobs for STATUS.json traceability.
+
+    Records what the CLI controls; batch size and worker counts live with
+    each runner's defaults (see docs/RUNNING.md "Measurement methodology"
+    for the per-tool table). Effective device per tool mirrors the runners'
+    own rule (cuda iff the run is a -gpu config, the tool is gpu_capable
+    and carries a gpu_id, and --cpu-only was not passed); prompt is a known
+    exception (always CPU, documented in RUNNING.md).
+    """
+    from src.benchmark.tools import PROMOTER_TOOLS
+    is_gpu_cfg = configuration.endswith("-gpu")
+    tools = {}
+    for key in (args.tools or []):
+        t = PROMOTER_TOOLS.get(key)
+        if t is None:
+            continue
+        dev = ("cuda:" + t.gpu_id) if (not args.cpu_only and is_gpu_cfg
+                                       and t.gpu_capable and t.gpu_id) else "cpu"
+        tools[key] = {"gpu_id": t.gpu_id, "gpu_capable": t.gpu_capable,
+                      "device_effective": dev}
+    return {"threads": args.threads or 1, "cpu_only": bool(args.cpu_only),
+            "gpu": bool(args.gpu), "no_timeout": bool(args.no_timeout),
+            "tools": tools}
+
+
 def read_status(target: Path):
     try:
         return json.loads((target / "STATUS.json").read_text())
@@ -127,29 +153,20 @@ def read_status(target: Path):
 
 
 def prepare_run_dir(base: Path, configuration: str, tool_keys, n_pos, n_neg, sha,
-                      pos_src: str = "", neg_src: str = ""):
+                      pos_src: str = "", neg_src: str = "", dataset_name: str = None,
+                      harness: dict = None):
     """Bump / quarantine / resume logic. Returns (run_root, resumed).
 
-    Also creates canonical capsule layout via run_layout (with legacy symlink).
+    The dataset name stays independent of the unique run directory and alias.
+    `harness` (threads/flags/per-tool device hints) is recorded in STATUS.json
+    so two runs are never indistinguishable in metadata.
     """
-    try:
-        from run_layout import RunLayout, canonical_run_dir, legacy_run_dir  # type: ignore
-    except ImportError:
-        try:
-            from src.analysis.run_layout import RunLayout, canonical_run_dir, legacy_run_dir  # type: ignore
-        except ImportError:
-            RunLayout = None  # type: ignore
-    # derive date/name from base (legacy helper) for manifest
-    # base is like output/<YYMMDD>_runs/<name>  -> date from parent, name from base.name
-    try:
-        parent_name = Path(base).parent.name
-        if "_" in parent_name and parent_name[0].isdigit():
-            date = parent_name.split("_")[0]
-        else:
-            date = time.strftime("%y%m%d")
-        name_token = Path(base).name
-    except Exception:
-        date, name_token = time.strftime("%y%m%d"), ""
+    base = Path(base)
+    date_match = (re.fullmatch(r"(\d{6})_runs", base.parent.name)
+                  or re.fullmatch(r"(\d{6})_results", base.name))
+    date = date_match.group(1) if date_match else time.strftime("%y%m%d")
+    unnamed = bool(re.fullmatch(r"\d{6}_results", base.name))
+    name = dataset_name or ("results" if unnamed else base.name)
     i, candidate = 1, base
     while True:
         target = candidate / configuration
@@ -172,59 +189,39 @@ def prepare_run_dir(base: Path, configuration: str, tool_keys, n_pos, n_neg, sha
                 target.rename(q)
                 print(f"  [quarantine] incomplete/stale run moved to {q.parent.name}/{configuration}/")
         target.mkdir(parents=True, exist_ok=True)
-        # ensure capsule subdirs (new layout) — reversible, no data move
-        try:
-            layout = RunLayout(target)
-            layout.ensure_dirs()
-        except Exception:
-            pass
+        layout = RunLayout(target)
+        layout.ensure_dirs()
         (target / "STATUS.json").write_text(json.dumps({
             "status": "running",
             "started": time.strftime("%Y-%m-%dT%H:%M:%S"),
             "tools": sorted(tool_keys),
             "n_pos": n_pos, "n_neg": n_neg,
             "input_sha": sha, "configuration": configuration,
+            "name": name,
             "pos_src": pos_src, "neg_src": neg_src,
+            "harness": harness or {},
         }, indent=1))
-        # also write canonical MANIFEST (lightweight, reversible)
-        try:
-            # date/name for manifest: prefer base-derived
-            manifest_date = date or time.strftime("%y%m%d")
-            # name_token may be empty when base is .../_runs/<name> — extract correctly
-            # base = output/<YYMMDD>_runs/<name>  -> name = base.name
-            try:
-                manifest_name = Path(base).name
-                # if base is output/<YYMMDD>_runs, then manifest_name is the date_runs token, not dataset
-                # need to handle both: if base parent ends with _runs, then name is not in base
-                if manifest_name.endswith("_runs") or manifest_name == "output":
-                    manifest_name = "results"
-            except Exception:
-                manifest_name = "results"
-            # try to get better name from pos_src parent if available
-            layout = RunLayout(target)
-            layout.write_manifest(
-                date=manifest_date, name=manifest_name, config=configuration,
-                input_sha=sha, pos_src=pos_src, neg_src=neg_src,
-                n_pos=n_pos, n_neg=n_neg, tools=tool_keys,
-                legacy_path=str(target), canonical_path=str(target),
-            )
-            # create canonical view symlink output/runs/<YYMMDD>_<name>_<config> -> legacy (reversible)
-            try:
-                try:
-                    from run_layout import canonical_run_dir as _canon  # type: ignore
-                except ImportError:
-                    from src.analysis.run_layout import canonical_run_dir as _canon  # type: ignore
-                _canon_path = _canon(manifest_date, manifest_name, configuration)
-                if not _canon_path.exists() and not _canon_path.is_symlink():
-                    _canon_path.parent.mkdir(parents=True, exist_ok=True)
-                    try:
-                        _canon_path.symlink_to(target.resolve())
-                    except Exception:
-                        pass
-            except Exception:
-                pass
-        except Exception:
-            pass
+        instance_name = candidate.name[len(date) + 1:] if unnamed else candidate.name
+        alias_base = primary_run_dir(date, instance_name, configuration,
+                                       base=ROOT / "output" / "runs")
+        alias, alias_index = alias_base, 2
+        # Preserve existing aliases, including collisions from truncated names.
+        while alias.exists() or alias.is_symlink():
+            if alias.resolve() == target.resolve():
+                break
+            alias = alias_base.with_name(f"{alias_base.name}_{alias_index:02d}")
+            alias_index += 1
+        if not alias.exists() and not alias.is_symlink():
+            alias.parent.mkdir(parents=True, exist_ok=True)
+            alias.symlink_to(target.resolve(), target_is_directory=True)
+        manifest = layout.write_manifest(
+            date=date, name=name, config=configuration,
+            input_sha=sha, pos_src=pos_src, neg_src=neg_src,
+            n_pos=n_pos, n_neg=n_neg, tools=tool_keys,
+            legacy_path=str(target.resolve()), primary_path=str(alias),
+        )
+        manifest["run_id"] = alias.name
+        layout.manifest_path.write_text(json.dumps(manifest, indent=2))
         return target, resumed
 
 
@@ -235,6 +232,31 @@ def count_seqs(p: Path) -> int:
             if line.startswith(">"):
                 n += 1
     return n
+
+
+def _append_run_log(run_root: Path, args, token: str, configuration: str,
+                    sha: str, results: list):
+    """Append one human-readable block per tool to RUN.log (run root).
+
+    Provenance sidecar: the CLI invocation + relevant env + per-tool
+    timings, so a run is reproducible from RUN.log + inputs. TSVs untouched.
+    """
+    watched = ("CUDA_VISIBLE_DEVICES", "OMP_NUM_THREADS", "MKL_NUM_THREADS",
+               "OPENBLAS_NUM_THREADS", "PROMOTER_TOOLS_CPU_ONLY",
+               "PROMOTER_TOOLS_LCNN_BATCH", "PROMOTER_TOOLS_PROKBERT_BATCH",
+               "PROMOTER_TOOLS_PROKBERT_PREFETCH", "IPROMP_SPECIES")
+    lines = [f"# {time.strftime('%Y-%m-%dT%H:%M:%S')} {token} [{configuration}]",
+             f"# input_sha={sha}",
+             "# env: " + ", ".join(f"{k}={os.environ[k]}" for k in watched
+                                   if k in os.environ)]
+    for r in results:
+        lines.append(
+            f"{r.get('tool', '?')} wall={r.get('wall_seconds', '?')}s "
+            f"train={r.get('train_s', '?')}s infer={r.get('infer_s', '?')}s "
+            f"ram={r.get('peak_ram_mb', '?')}MB vram={r.get('peak_vram_mb', '?')}MB "
+            f"success={r.get('success', '?')} notes={(r.get('notes') or '')[:120]}")
+    with open(run_root / "RUN.log", "a") as fh:
+        fh.write("\n".join(lines) + "\n")
 
 
 def cmd_run(args):
@@ -280,30 +302,27 @@ def cmd_run(args):
     else:
         base = ROOT / "output" / f"{date}_results"
     run_root, resumed = prepare_run_dir(base, configuration, args.tools, n_pos, n_neg, sha,
-                                          str(pos_fasta.resolve()), str(neg_fasta.resolve()))
-    # canonical predictions lives inside 1_inference/predictions
+                                          str(pos_fasta.resolve()), str(neg_fasta.resolve()),
+                                          dataset_name=token,
+                                          harness=_harness_record(args, configuration))
+    layout = RunLayout(run_root)
+    # primary predictions lives inside 1_inference/predictions
     if args.output_dir:
-        pred_root = Path(args.output_dir)
+        pred_root = Path(args.output_dir).resolve()
     else:
-        # use new canonical if layout version >=1.0, else legacy fallback will be resolved by RunLayout
-        try:
-            from run_layout import RunLayout as _RLc  # type: ignore
-        except ImportError:
-            try:
-                from src.analysis.run_layout import RunLayout as _RLc  # type: ignore
-            except ImportError:
-                _RLc = None
-        if _RLc is not None:
-            pred_root = _RLc(run_root).inference / "predictions"
-        else:
-            pred_root = run_root / "1_inference" / "predictions"
+        pred_root = layout.inference / "predictions"
     pred_root.mkdir(parents=True, exist_ok=True)
+    if args.output_dir:
+        manifest = json.loads(layout.manifest_path.read_text())
+        manifest["predictions_path"] = str(pred_root)
+        layout.manifest_path.write_text(json.dumps(manifest, indent=2))
     print(f"Run dir: {run_root} (name={token}, configuration={configuration}"
           f"{', resumed' if resumed else ''})")
 
     if args.slurm:
         from src.backend.slurm import SlurmRunner
-        runner = SlurmRunner(pos_fasta=pos_fasta, neg_fasta=neg_fasta)
+        runner = SlurmRunner(pos_fasta=pos_fasta, neg_fasta=neg_fasta,
+                             output_dir=str(pred_root))
     else:
         from src.backend.local import LocalRunner
         runner = LocalRunner(n_runs=args.runs, output_dir=str(pred_root),
@@ -318,10 +337,8 @@ def cmd_run(args):
     for i, key in enumerate(args.tools):
         tool = PROMOTER_TOOLS[key]
         print(f"[{i+1}/{len(args.tools)}]", end=" ", flush=True)
-        if not args.slurm:
-            # per-tool namespaced output preserving the canonical
-            # {name}_{fam}[.tsv] layout (LocalRunner only)
-            runner.output_dir = str(tool_output_target(pred_root, token, key))
+        # Both backends use the primary per-tool {name}_{fam}[.tsv] layout.
+        runner.output_dir = str(tool_output_target(pred_root, token, key))
         m = runner.run(tool)
         results.append(m)
         if not m["success"]:
@@ -331,98 +348,47 @@ def cmd_run(args):
     df["name"] = token
     df["configuration"] = configuration
     df["run_date"] = run_date()
-    # canonical resource metrics lives in 2_resources/resource_metrics.tsv, with legacy copy at root for compat (will be phased out)
-    if args.output:
-        out_tsv = args.output
-    else:
-        try:
-            from run_layout import RunLayout as _RLm  # type: ignore
-        except ImportError:
-            try:
-                from src.analysis.run_layout import RunLayout as _RLm  # type: ignore
-            except ImportError:
-                _RLm = None
-        if _RLm is not None:
-            out_tsv = str(_RLm(run_root).resources / "resource_metrics.tsv")
-        else:
-            out_tsv = str(run_root / "2_resources" / "resource_metrics.tsv")
-    if Path(out_tsv).exists() and not args.output:
+    # Keep the capsule complete; -o is an additional export of the same table.
+    out_tsv = layout.resources / "resource_metrics.tsv"
+    if out_tsv.exists():
         prev = pd.read_csv(out_tsv, sep="\t")
         if "tool" in prev.columns and set(prev["tool"]) != set(df["tool"]):
             print(f"  WARNING: {out_tsv} contains {len(prev)} rows from a previous run "
-                  f"with different tools — it will be overwritten. Use -o to keep separate files.")
-    Path(out_tsv).parent.mkdir(parents=True, exist_ok=True)
+                  "with different tools — it will be overwritten.")
+    out_tsv.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(out_tsv, sep="\t", index=False)
+    layout.link_resource_table(out_tsv)
     print(f"\nMetrics saved: {out_tsv}")
+    _append_run_log(run_root, args, token, configuration, sha, results)
+    if args.output:
+        export = Path(args.output)
+        if export.resolve() != out_tsv.resolve():
+            export.parent.mkdir(parents=True, exist_ok=True)
+            df.to_csv(export, sep="\t", index=False)
+            print(f"Metrics exported: {export}")
 
     st = read_status(run_root)
     st = st or {}
     st.update({"status": "complete" if all(r.get("success") for r in results) else "failed",
                "finished": time.strftime("%Y-%m-%dT%H:%M:%S")})
     (run_root / "STATUS.json").write_text(json.dumps(st, indent=1))
-    # update MANIFEST with final status (reversible)
-    try:
-        try:
-            from run_layout import RunLayout as _RL  # type: ignore
-        except ImportError:
-            from src.analysis.run_layout import RunLayout as _RL  # type: ignore
-        layout = _RL(run_root)
-        if layout.manifest_path.exists():
-            import json as _json
-            m = _json.loads(layout.manifest_path.read_text())
-            m["status"] = st.get("status", "complete")
-            m["finished"] = st.get("finished", "")
-            layout.manifest_path.write_text(_json.dumps(m, indent=2))
-    except Exception:
-        pass
+    manifest = json.loads(layout.manifest_path.read_text())
+    manifest.update(status=st["status"], finished=st["finished"])
+    layout.manifest_path.write_text(json.dumps(manifest, indent=2))
 
     if args.plots:
         from analyze_run import analyze_run
         analyze_run(pred_root, token, run_root)
-        # generate per-run compute plots into 2_resources (reversible)
-        try:
-            from generate_compute_plots import main_run as _gen_compute  # type: ignore
-        except ImportError:
+        if getattr(args, "no_compute_plots", False):
+            print("  [plots] per-regime compute plots skipped (--no-compute-plots); "
+                  "resource_metrics.tsv kept for comparisons.")
+        else:
+            # A plotting failure must make --plots fail visibly, including import errors.
             try:
-                from src.analysis.generate_compute_plots import main_run as _gen_compute  # type: ignore
-            except ImportError:
-                _gen_compute = None
-        if _gen_compute is not None:
-            try:
+                from generate_compute_plots import main_run as _gen_compute
                 _gen_compute(run_root)
-            except SystemExit:
-                pass
-            except Exception as e:
-                print(f"  [warn] compute plots failed: {e}")
-        # also mirror plots -> 1_inference for capsule consistency
-        try:
-            try:
-                from run_layout import RunLayout as _RL2  # type: ignore
-            except ImportError:
-                from src.analysis.run_layout import RunLayout as _RL2  # type: ignore
-            layout = _RL2(run_root)
-            # analyze_run writes to run_root/plots; ensure 1_inference has same content via symlink/copy
-            import shutil as _shutil
-            src_plots = layout.plots
-            dst_inf = layout.inference
-            if src_plots.exists() and dst_inf.exists() and src_plots.resolve() != dst_inf.resolve():
-                for p in src_plots.glob("roc_auc_*.*"):
-                    if not (dst_inf / p.name).exists():
-                        try:
-                            (dst_inf / p.name).symlink_to(Path("../plots") / p.name)
-                        except Exception:
-                            _shutil.copy2(p, dst_inf / p.name)
-                # also ensure metrics_rows in 3_tables
-                for f in ["metrics_rows.tsv", "resource_metrics.tsv"]:
-                    src = run_root / f
-                    dst = layout.tables / f
-                    if src.exists() and not dst.exists():
-                        try:
-                            dst.symlink_to(Path("..") / f)
-                        except Exception:
-                            _shutil.copy2(src, dst)
-        except Exception:
-            pass
+            except (Exception, SystemExit) as exc:
+                raise SystemExit(f"ERROR: compute plots failed for {run_root}: {exc}") from exc
 
 
 def main():
@@ -434,7 +400,7 @@ def main():
     p_run.add_argument("tools", nargs="*", help="Tool keys to run (lcnn, promotech_hot, ...)")
     p_run.add_argument("--slurm", action="store_true", help="Use Slurm backend")
     p_run.add_argument("--runs", type=int, default=1, help="Number of independent runs (N≥3 recommended)")
-    p_run.add_argument("-o", "--output", help="Output TSV path")
+    p_run.add_argument("-o", "--output", help="Additional metrics TSV export (primary table is always kept)")
     p_run.add_argument("--output-dir", default=None,
                        help="Predictions output dir (default: namespaced run dir)")
     p_run.add_argument("--input-dir", default=None,
@@ -442,7 +408,7 @@ def main():
     p_run.add_argument("--name", default=None,
                        help="Run label (default: input dir basename, else dated results)")
     p_run.add_argument("--plots", action="store_true",
-                       help="ROC + AUC rows for this run after scoring")
+                       help="ROC + time/RAM plots (PNG/PDF) + AUC table after scoring")
     p_run.add_argument("--pos", default=None, help="Positive FASTA (with --neg)")
     p_run.add_argument("--neg", default=None, help="Negative FASTA (with --pos)")
     p_run.add_argument("--cpu-only", action="store_true",
@@ -453,6 +419,9 @@ def main():
                        help="Max threads per tool (sets OMP/MKL/OPENBLAS threads)")
     p_run.add_argument("--no-timeout", action="store_true",
                        help="Disable per-tool timeouts (run until completion)")
+    p_run.add_argument("--no-compute-plots", action="store_true",
+                       help="With --plots: skip per-regime compute_time/peak_ram plots "
+                            "(resource_metrics.tsv is always kept for comparisons)")
 
     # compare
     p_cmp = sub.add_parser("compare", help="Compare runs across datasets/days")

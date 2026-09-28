@@ -2,8 +2,8 @@
 """
 TIGR4 Positive TSS Sequence Extractor.
 
-Parses experimental TSS annotations from S1_TSS.xlsx (Aprianto et al., 2018)
-against the TIGR4 genome (NC_003028.fasta).
+Parses experimental TSS annotations from S1_TSS.tsv (exported once from
+S1_TSS.xlsx, Aprianto et al., 2018) against the TIGR4 genome (NC_003028.fasta).
 
 Features:
 - Multi-tier dataset generation ('high_conf_primary', 'extended_primary', 'all_tss').
@@ -14,7 +14,7 @@ Features:
 
 Usage:
     pixi run python src/dataset/positive_tss_tigr4.py \
-      --xlsx data/tigr4/S1_TSS.xlsx \
+      --tsv data/tigr4/S1_TSS.tsv \
       --fasta data/reference/NC_003028.fasta \
       --tier high_conf_primary \
       -u 60 -d 20 \
@@ -32,16 +32,73 @@ from typing import Dict, List, Tuple
 
 import numpy as np
 import pandas as pd
-import sys
-from pathlib import Path as _Path
-sys.path.insert(0, str(_Path(__file__).resolve().parents[2]))
 
 from Bio import SeqIO
 from Bio.Seq import Seq
 
-from src.dataset._tigr4_common import load_genome, write_dataset_files, compute_gc_statistics
 
-from src.dataset._tigr4_common import load_genome, write_dataset_files, compute_gc_statistics
+# ── TIGR4 helpers (inlined: each extraction script is self-contained) ──
+
+def load_genome(fasta_path: Path) -> Tuple[str, Seq, int]:
+    """Load the first record of a FASTA genome file."""
+    if not fasta_path.exists():
+        alt_fasta = fasta_path.parent / "TIGR4.fasta"
+        if alt_fasta.exists():
+            fasta_path = alt_fasta
+        else:
+            print(f"[ERROR] FASTA file not found at {fasta_path}", file=sys.stderr)
+            sys.exit(1)
+
+    genome_dict = SeqIO.to_dict(SeqIO.parse(fasta_path, "fasta"))
+    if not genome_dict:
+        print(f"[ERROR] Could not parse FASTA from {fasta_path}", file=sys.stderr)
+        sys.exit(1)
+
+    chrom_id = list(genome_dict.keys())[0]
+    seq = genome_dict[chrom_id].seq
+    print(f"[INFO] Loaded genome '{chrom_id}' (length: {len(seq):,} bp) from {fasta_path.name}")
+    return chrom_id, seq, len(seq)
+
+
+def write_dataset_files(records: List[Dict], out_prefix: Path) -> Tuple[Path, Path]:
+    """Write records as .fasta + .tsv (metadata without Sequence column)."""
+    out_prefix.parent.mkdir(parents=True, exist_ok=True)
+    fasta_out = out_prefix.with_suffix(".fasta")
+    tsv_out = out_prefix.with_suffix(".tsv")
+
+    with open(fasta_out, "w") as f:
+        for r in records:
+            f.write(f">{r['Sequence_ID']}\n{r['Sequence']}\n")
+
+    df_meta = pd.DataFrame(records)
+    if "Sequence" in df_meta.columns:
+        df_meta = df_meta.drop(columns=["Sequence"])
+    df_meta.to_csv(tsv_out, sep="\t", index=False)
+    return fasta_out, tsv_out
+
+
+def compute_gc_statistics(records: List[Dict], genome_seq: Seq) -> Dict:
+    """Compute GC content statistics for sampled records vs genome background."""
+    if not records:
+        return {}
+
+    sampled_gc = [r["GC_Content"] for r in records]
+    mean_gc = float(np.mean(sampled_gc))
+    stdev_gc = float(np.std(sampled_gc, ddof=1)) if len(sampled_gc) > 1 else 0.0
+
+    gen_seq_str = str(genome_seq).upper()
+    gc_gen_count = gen_seq_str.count("G") + gen_seq_str.count("C")
+    gen_gc_mean = (gc_gen_count / len(gen_seq_str)) * 100.0
+
+    n = len(sampled_gc)
+    std_error = stdev_gc / math.sqrt(n) if n > 0 and stdev_gc > 0 else 1.0
+    z_score = (mean_gc - gen_gc_mean) / std_error if std_error > 0 else 0.0
+    cohen_d = (mean_gc - gen_gc_mean) / stdev_gc if stdev_gc > 0 else 0.0
+
+    return {
+        "n_samples": n, "mean_gc": mean_gc, "stdev_gc": stdev_gc,
+        "genome_gc_mean": gen_gc_mean, "z_score": z_score, "cohen_d": cohen_d,
+    }
 
 
 # ════════════════════════════════════════════════════════════════
@@ -54,9 +111,9 @@ def parse_arguments() -> argparse.Namespace:
     )
 
     parser.add_argument(
-        "--xlsx",
-        default="data/tigr4/S1_TSS.xlsx",
-        help="Path to TIGR4 S1_TSS.xlsx file.",
+        "--tsv",
+        default="data/tigr4/S1_TSS.tsv",
+        help="Path to TIGR4 S1_TSS.tsv file (exported once from S1_TSS.xlsx).",
     )
     parser.add_argument(
         "--fasta",
@@ -104,12 +161,13 @@ def parse_arguments() -> argparse.Namespace:
 # ════════════════════════════════════════════════════════════════
 
 # ════════════════════════════════════════════════════════════════
-# 3. Excel Sheet Filtering & Loading
+# 3. TSV Sheet Filtering & Loading (from data/tigr4/S1_TSS.tsv,
+#    exported once from S1_TSS.xlsx with a _Source_Sheet column)
 # ════════════════════════════════════════════════════════════════
 
-def load_tigr4_tss_table(xlsx_path: Path, tier: str) -> Tuple[pd.DataFrame, List[str]]:
-    if not xlsx_path.exists():
-        print(f"[ERROR] Excel file not found at {xlsx_path}", file=sys.stderr)
+def load_tigr4_tss_table(tsv_path: Path, tier: str) -> Tuple[pd.DataFrame, List[str]]:
+    if not tsv_path.exists():
+        print(f"[ERROR] TSV file not found at {tsv_path}", file=sys.stderr)
         sys.exit(1)
 
     tier_sheet_map = {
@@ -125,17 +183,16 @@ def load_tigr4_tss_table(xlsx_path: Path, tier: str) -> Tuple[pd.DataFrame, List
     }
 
     target_sheets = tier_sheet_map.get(tier, tier_sheet_map["high_conf_primary"])
-    xl = pd.ExcelFile(xlsx_path)
+    df_all = pd.read_csv(tsv_path, sep="\t")
 
     dfs = []
     for sheet in target_sheets:
-        if sheet in xl.sheet_names:
-            df_sheet = pd.read_excel(xlsx_path, sheet_name=sheet)
-            df_sheet["_Source_Sheet"] = sheet
+        df_sheet = df_all[df_all["_Source_Sheet"] == sheet]
+        if not df_sheet.empty:
             dfs.append(df_sheet)
 
     if not dfs:
-        print(f"[ERROR] No matching sheets found for tier '{tier}' in {xlsx_path}", file=sys.stderr)
+        print(f"[ERROR] No matching sheets found for tier '{tier}' in {tsv_path}", file=sys.stderr)
         sys.exit(1)
 
     combined_df = pd.concat(dfs, ignore_index=True)
@@ -359,7 +416,7 @@ def report_summary(
     print("BIOLOGICAL VALIDATION METRICS:")
     print(f" • +1 Initiator Purines (A+G): {stats.get('plus1_purines_pct', 0):.1f}% (A: {stats.get('plus1_a_pct', 0):.1f}%, G: {stats.get('plus1_g_pct', 0):.1f}%)")
     print(f" • -10 Box Variant Match:       {stats.get('pribnow_pct', 0):.1f}% (Exact TATAAT: {stats.get('pribnow_exact_pct', 0):.1f}%)")
-    print(f" • Canonical 5'-UTR (15-45bp): {stats.get('canonical_utr_pct', 0):.1f}% of evaluated UTRs")
+    print(f" • Reference 5'-UTR (15-45bp): {stats.get('reference_utr_pct', 0):.1f}% of evaluated UTRs")
     print("═" * 65)
     print(f"[SUCCESS] FASTA dataset ➔ {fasta_out}")
     print(f"[SUCCESS] Metadata TSV ➔ {tsv_out}\n")
@@ -373,7 +430,7 @@ def main():
     args = parse_arguments()
 
     chrom_id, genome_seq, seq_len = load_genome(Path(args.fasta))
-    df_tss, target_sheets = load_tigr4_tss_table(Path(args.xlsx), args.tier)
+    df_tss, target_sheets = load_tigr4_tss_table(Path(args.tsv), args.tier)
 
     raw_records, exclusion_stats = extract_promoter_windows(
         df_tss, genome_seq, chrom_id, args.upstream, args.downstream
@@ -383,7 +440,7 @@ def main():
         raw_records, args.conflict_threshold
     )
 
-    gc_stats = compute_gc_statistics(resolved_records, genome_seq, args.upstream)
+    gc_stats = compute_gc_statistics(resolved_records, genome_seq)
 
     out_prefix = Path(args.output)
     fasta_out, tsv_out = write_dataset_files(resolved_records, out_prefix)

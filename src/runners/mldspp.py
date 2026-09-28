@@ -73,7 +73,7 @@ def main():
         pd.DataFrame({"PRED": probs[len(pos):]}).to_csv(
             out_dir / "mldspp_neg.csv", sep="\t", index=False)
 
-    print(f"MLDSPP: {len(pos) + len(neg)} seqs in {elapsed:.4f}s (train {train_s:.3f}s)")
+    print(f"MLDSPP: {len(pos) + len(neg)} seqs (train {train_s:.3f}s / infer {elapsed:.4f}s)")
 
 
 if __name__ == "__main__":
