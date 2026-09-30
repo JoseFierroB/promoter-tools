@@ -83,10 +83,10 @@ stage_analysis() {
   # Uses newest run dir unless RUN_DIR is set explicitly.
   local rdir="${RUN_DIR:-}"
   if [ -z "$rdir" ]; then
-    rdir=$(ls -dt output/*_runs/*/ output/*_results/*/ 2>/dev/null | head -1)
+    rdir=$(ls -dt output/*_runs/*/*/ 2>/dev/null | head -1)
   fi
   [ -n "$rdir" ] || { echo "ERROR: no run dir found (run stage benchmark first or set RUN_DIR)"; exit 1; }
-  [ -d "$rdir/predictions" ] || { echo "ERROR: $rdir has no predictions/"; exit 1; }
+  [ -d "$rdir/1_inference/predictions" ] || { echo "ERROR: $rdir has no 1_inference/predictions/"; exit 1; }
   "$PY" src/analysis/generate_auc_plots.py "$rdir"
   "$PY" src/analysis/generate_compute_plots.py "$rdir"
   "$PY" src/analysis/compute_metrics.py "$rdir"

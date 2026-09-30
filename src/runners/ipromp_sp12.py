@@ -36,6 +36,8 @@ def main():
                     help="DNABERT-6 directory")
     p.add_argument("-s", "--species", type=int, default=12,
                    help="iPro-MP species ID (default 12 = H. pylori; 23 = B. subtilis)")
+    p.add_argument("--batch-size", type=int, default=128,
+                   help="Inference batch size (default: 128).")
     args = p.parse_args()
     if args.pos is None and args.neg is None:
         p.error("at least one of --pos / --neg is required")
@@ -67,7 +69,7 @@ def main():
         models.append(model)
 
     t0 = time.perf_counter()
-    batch_size = 128
+    batch_size = args.batch_size
     n_workers = int(os.environ.get("OMP_NUM_THREADS", "1") or 1)
     if n_workers > 1:
         with ProcessPoolExecutor(max_workers=n_workers) as ex:

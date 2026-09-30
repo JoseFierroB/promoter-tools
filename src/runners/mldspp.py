@@ -48,17 +48,19 @@ def main():
     X_train, y_train = load_training()
     pos = list(SeqIO.parse(args.pos, "fasta")) if args.pos else []
     neg = list(SeqIO.parse(args.neg, "fasta")) if args.neg else []
+
+    model = XGBClassifier(**MLDSPP_XGB_PARAMS,
+                          n_jobs=int(os.environ.get("OMP_NUM_THREADS", "1") or 1))
+    model.fit(X_train, y_train)
+    train_s = time.perf_counter() - t0
+
+    # Test featurization belongs to inference (was inside the train window).
     X_parts = []
     if pos:
         X_parts.append(np.array([extract_aligned(str(r.seq)) for r in pos]))
     if neg:
         X_parts.append(np.array([extract_aligned(str(r.seq)) for r in neg]))
     X_test = np.vstack(X_parts)
-
-    model = XGBClassifier(**MLDSPP_XGB_PARAMS,
-                          n_jobs=int(os.environ.get("OMP_NUM_THREADS", "1") or 1))
-    model.fit(X_train, y_train)
-    train_s = time.perf_counter() - t0
 
     t0 = time.perf_counter()
     probs = model.predict_proba(X_test)[:, 1]

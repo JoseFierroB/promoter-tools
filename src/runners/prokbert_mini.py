@@ -66,7 +66,7 @@ def parse_args():
     parser.add_argument("--batch-size", type=int, default=64, help="Inference batch size (default: 64).")
     parser.add_argument("--prefetch-workers", type=int, default=0,
                         help="Tokenize batches ahead in N worker processes (0 = serial, default).")
-    parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu", help="Device (cuda/cpu).")
+    parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu", help="Device (cuda/cpu; default: cuda if available).")
     return parser.parse_args()
 
 def tokenize_texts(seq_texts, batch_size, prefetch_workers=0):
@@ -170,10 +170,12 @@ def main():
         neg_texts = [str(r.seq).upper() for r in neg_recs]
         # NOTE: tokenize pos/neg separately: batches must not straddle the
         # pos/neg boundary. Both pools still close before any forward pass.
+        t_tok = time.time()
         pos_encoded = tokenize_texts(pos_texts, args.batch_size,
                                      args.prefetch_workers)
         neg_encoded = tokenize_texts(neg_texts, args.batch_size,
                                      args.prefetch_workers)
+        tok_s = time.time() - t_tok
 
     tokenizer = ProkBERTTokenizer(tokenization_params={'kmer': 6, 'shift': 1}, operation_space='sequence',
                                     comp_params=dict(TOK_COMP_PARAMS))
@@ -182,13 +184,18 @@ def main():
     model.eval()
 
     if args.prefetch_workers and args.prefetch_workers > 0:
+        t_fwd = time.time()
         pos_preds = forward_batches(model, args.device, pos_encoded,
                                     pin_memory=True)
         neg_preds = forward_batches(model, args.device, neg_encoded,
                                     pin_memory=True)
+        # Pure compute (LCNN/iProMP convention): tokenize + forward,
+        # model loading excluded.
+        elapsed = tok_s + (time.time() - t_fwd)
     else:
         pos_ids, pos_preds = predict_fasta(model, tokenizer, args.pos, args.device, args.batch_size) if args.pos else ([], [])
         neg_ids, neg_preds = predict_fasta(model, tokenizer, args.neg, args.device, args.batch_size) if args.neg else ([], [])
+        elapsed = time.time() - t0
     
     if out_path.suffix in (".tsv", ".csv"):
         out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -210,8 +217,8 @@ def main():
             pd.DataFrame({"ID": neg_ids, "PRED": neg_preds}).to_csv(out_dir / "prokbert_neg.csv", sep="\t", index=False)
             frames.append(pd.DataFrame({"ID": neg_ids, "LABEL": 0, "PRED": neg_preds}))
         pd.concat(frames, ignore_index=True).to_csv(out_path / "prokbert.tsv", sep="\t", index=False)
-        
-    elapsed = time.time() - t0
+
+    # elapsed already set per branch (pure compute; serial includes parse).
     n_total = len(pos_ids) + len(neg_ids)
     print(f"ProkBERT: {n_total} seqs ({len(pos_ids)} Pos / {len(neg_ids)} Neg) in {elapsed:.2f}s [batch={args.batch_size} prefetch={args.prefetch_workers}]")
 

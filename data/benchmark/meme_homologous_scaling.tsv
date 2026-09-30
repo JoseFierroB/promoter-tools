@@ -1,0 +1,15 @@
+# MEME homologous-era scaling points (Aug 2026, CPU runs).
+# Source: output/scale_db_meme/<size>/predictions/resource_metrics.tsv on WS
+# (MEME Suite rows: n_sequences = pos+neg, wall_seconds).
+# Do NOT merge with the current ladder: different era and regime.
+# Kept as visual context (--context-tsv) because MEME scaling is not
+# log-linear globally (steep to ~100k, flatter after).
+tool,n,wall
+STREME+FIMO [motif],1976,13.212
+STREME+FIMO [motif],3952,22.35
+STREME+FIMO [motif],9880,63.472
+STREME+FIMO [motif],19760,200.566
+STREME+FIMO [motif],39520,608.808
+STREME+FIMO [motif],59280,1637.263
+STREME+FIMO [motif],98800,4956.68
+STREME+FIMO [motif],395200,14824.419

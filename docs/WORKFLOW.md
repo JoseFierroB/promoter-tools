@@ -94,12 +94,11 @@ All commands run from the repository root. Detailed references:
 | Benchmark (9 tools, 1 CPU) | `pixi run python src/cli.py run meme fimo_prok mldspp mldspp_75 lcnn promotech_hot ipromp_sp12 prompt prokbert --threads 1 --runs 3` |
 | Benchmark (16 CPU + GPU) | same with `--threads 16 --gpu` |
 | Single tool | `pixi run python src/cli.py run lcnn [flags]` |
-| ROC plot | `pixi run python src/analysis/generate_auc_plots.py <run_dir>` |
+| ROC plot | `pixi run python src/cli.py run ... --plots` (or standalone `src/analysis/analyze_run.py --pred-dir <pred> --db <name> -o <run>`) |
 | AUC + CI + DeLong | `pixi run python src/analysis/compute_metrics.py <run_dir>` |
 | Confusion matrices | `pixi run python src/analysis/compute_metrics.py <run_dir>` |
 | Resource plots | `pixi run python src/analysis/generate_compute_plots.py <run_dir>` |
 | Scaling analysis + plots | `pixi run python src/analysis/plot_scaling.py <run_dirs...> --tool ... -o <out>` |
-| Multi-dataset ROC atlas | `pixi run python src/analysis/generate_benchmark_suite.py ...` |
 | ROC/AUC curves | `pixi run python src/analysis/generate_auc_plots.py <run_dir>` |
 | Everything | `./pipeline/run_pipeline.sh all` |
 

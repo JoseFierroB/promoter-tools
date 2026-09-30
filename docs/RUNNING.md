@@ -148,8 +148,8 @@ the tool is skipped with a message listing the available splits.
 #    export_mldspp_75_fastas.py (npz → data/benchmark/splits/*.fasta)
 # 5. Benchmark: pixi run python src/cli.py run <tools> [--threads N] [--runs N]
 # 6. Analysis (per run dir): generate_auc_plots / generate_compute_plots /
-#              compute_metrics (legacy predecessors in archive/analysis_legacy/)
-# 7. Experiments (consensus / features): src/analysis/experiments/*.py
+#              compute_metrics (legacy predecessors retired; see git history)
+# 7. Experiments: experiments/{igr,rpod_replication}/ (self-contained; A/B prefetch retired to archive/legacy_dead/)
 ```
 
 An orchestrator for stages 2-6 lives in `pipeline/run_pipeline.sh` (separate
@@ -175,9 +175,10 @@ Conventions: single runs (`--runs 1`, no dispersion); `success=False` rows
 (timeouts write wall=timeout and zeros) are excluded from comparisons;
 per-run `harness` (threads, cpu-only/gpu/no-timeout flags, per-tool
 `gpu_id` + effective device) is recorded in `STATUS.json`. Runner batch
-sizes and worker counts live with each runner: ProkBERT 64 serial,
-iPro-MP batch 128 + `ProcessPool(threads)` tokenize-ahead, prompt batch 128
-serial (always CPU), LCNN batch 10000 (TF session), MLDSPP all-at-once
+sizes and worker counts live with each runner: ProkBERT 64/128 + prefetch
+workers, iPro-MP `--batch-size` (default 128) + `ProcessPool(threads)`
+tokenize-ahead, prompt batch 128 serial (always CPU), LCNN batch 10000
+(TF session), MLDSPP all-at-once
 (`n_jobs=threads`), PromoTech 4 sequential subprocesses (RF `n_jobs` patch),
 FIMO chunks=threads + thread pool over the binary, MEME 2 serial folds.
 
@@ -223,10 +224,10 @@ python experiments/igr/build_cds_ortho.py     # CDS internal + ortho 1:1 → dat
 > environment (`pixi run python ...`) or with any activated environment — no
 > pixi-specific tasks exist, so pixi and non-pixi users have full parity.
 
-### 2. Run the 7-tool benchmark on IGR (pure CLI configuration)
+### 2. Run the 9-tool benchmark on IGR (pure CLI configuration)
 
 ```bash
-pixi run python src/cli.py run meme fimo_prok mldspp mldspp_75 lcnn promotech_hot ipromp_sp12 \
+pixi run python src/cli.py run meme fimo_prok mldspp mldspp_75 lcnn promotech_hot ipromp_sp12 prompt prokbert \
     --pos data/benchmark_igr/d39v/positives_81bp_igr.fasta \
     --neg data/benchmark_igr/d39v/negatives_81bp_igr.fasta \
     --output-dir output/predictions_igr/d39v \
@@ -256,7 +257,7 @@ python experiments/igr/cluster_igrs.py                         # cross-strain IG
 python experiments/igr/sigma_roc.py                 # ROC stratified by SigA/None/SigX
 
 # Per-run metrics + plots (replaces legacy benchmark_confusion.py and
-# the archived 119-figure suite; originals in archive/analysis_legacy/)
+# the archived 119-figure suite; see git history)
 python src/analysis/compute_metrics.py <run_dir>            # confusion @Youden + bootstrap CI + DeLong
 python src/analysis/generate_auc_plots.py <run_dir>         # title-free ROC overlay
 python src/analysis/generate_compute_plots.py <run_dir>     # title-free time/RAM bars
@@ -303,10 +304,15 @@ PROMOTER_TOOLS_PROKBERT_BATCH=128 PROMOTER_TOOLS_PROKBERT_PREFETCH=16 pixi run p
 IPROMP_SPECIES=23             pixi run python src/cli.py run ipromp_sp12 ...   # iPro-MP species (default 12 = H. pylori; 23 = B. subtilis)
 ```
 
-> **`time_s` semantics**: runners report *pure compute time* — model loading,
-> session init and (for MLDSPP) training are excluded. MLDSPP prints the
-> training time separately (`... in Xs (train Ys)`). `wall_seconds` in the
-> metrics TSV is the full process wall time (load + compute).
+> **`time_s` semantics (convention)**: `elapsed` runs from the first compute
+> op (post-load, post-parse) to the last score. Model/session loading,
+> FASTA parsing and CSV writing are excluded; training is reported
+> separately (`... (train Ys / infer Zs)` in MEME/MLDSPP).
+> Per-runner start points: LCNN/iPro-MP exclude load (timers after load);
+> ProkBERT prefetch = tokenize + forward (load excluded), serial = from
+> predict call; prompt = from predict call; MLDSPP test featurization counts
+> as infer; FIMO chunk-prep excluded, per-chunk DB reloads included (natural
+> behavior). `wall_seconds` always covers the full process.
 
 ## GPU Usage
 

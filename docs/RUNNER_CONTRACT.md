@@ -43,9 +43,14 @@ Stems: `mldspp`, `mldspp_75spn`, `lcnn/lcnn_*`, PromoTech via
 `train` = model fitting / motif discovery (STREME, XGBoost fit);
 `infer` = scoring the test sequences only. Only runners with a train
 phase (meme, mldspp, mldspp_75) print the split; pure-inference runners
-print `<TOOL>: N seqs in Xs`, and the harness records `train_s=0.0`,
-`infer_s=wall_seconds` for them. The harness parses this line
-(`local._parse_train_infer`) into `train_s`/`infer_s`.
+print `<TOOL>: N seqs in Xs` (decorations like `(Pos/Neg)` or `[batch=..]`
+allowed — the harness matches by regex, see `local._parse_train_infer`).
+Runners without a split record `train_s=0.0`, `infer_s=wall_seconds`.
+
+Start-point convention: `elapsed` runs from the first compute op
+(post-load, post-parse) to the last score; loading, parsing and saving
+are excluded (see RUNNING.md methodology). MLDSPP test featurization
+counts as infer; FIMO per-chunk DB reloads count as infer (natural).
 
 ## 4. Seeds (all 42, all isolated)
 

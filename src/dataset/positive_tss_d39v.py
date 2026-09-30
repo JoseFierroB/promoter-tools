@@ -12,6 +12,7 @@ import os
 import csv
 import re
 import statistics
+from pathlib import Path
 from typing import Dict, List, Tuple
 from Bio import SeqIO
 from BCBio import GFF
@@ -41,6 +42,33 @@ REGULATOR_NAMES = {
     "ParB": "ParB",
     "DnaA": "DnaA"
 }
+
+
+# ── Inlined helpers (self-contained script; same implementations as
+#    negatives_tss_d39v.py) ──
+
+def get_all_tss(features):
+    for f in features:
+        is_tss = False
+        if f.type == 'transcription_start_site':
+            is_tss = True
+        elif f.type in ('sequence_feature', 'misc_feature', 'regulatory'):
+            for key, val_list in f.qualifiers.items():
+                val_str = " ".join(val_list).lower()
+                if "transcription start site" in val_str or "tss" in val_str:
+                    is_tss = True
+                    break
+        if is_tss:
+            yield f
+        sub_feats = getattr(f, 'sub_features', None) or getattr(f, 'features', [])
+        if sub_feats:
+            yield from get_all_tss(sub_feats)
+
+
+def calculate_gc(seq_str: str) -> float:
+    g = seq_str.count('G')
+    c = seq_str.count('C')
+    return ((g + c) / len(seq_str) * 100) if len(seq_str) > 0 else 0.0
 
 def parse_arguments() -> argparse.Namespace:
     """Sets up and parses the command-line arguments provided by the user."""
@@ -330,6 +358,7 @@ def extract_positives() -> None:
     window_size = args.upstream + args.downstream + 1
 
     # Use default hardcoded chromosome mapping
+    chrom_map = {}  # not needed: all data uses the same chromosome ID
 
     # Load structural annotations (CDS & Regulators)
     cds_data, regulator_data = load_cds_and_regulators(args.gff_cds)
@@ -464,6 +493,8 @@ def extract_positives() -> None:
     analyzed_list.sort(key=lambda x: (x["chrom"], x["pos"]))
 
     # Output file paths
+    out_parent = Path(args.output).parent
+    out_parent.mkdir(parents=True, exist_ok=True)
     fasta_out = f"{args.output}.fasta"
     tsv_out = f"{args.output}_metadata.tsv"
     sig_a_fasta = f"{args.output}_SigA.fasta"

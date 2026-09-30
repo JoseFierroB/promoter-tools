@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 ================================================================================
-CANONICAL RUNNER: Prompt (Du et al., 2024 / Interdisciplinary Sciences)
+BENCHMARK RUNNER: Prompt (Du et al., 2024 / Interdisciplinary Sciences)
 ================================================================================
 """
 
@@ -71,9 +71,10 @@ def main():
     args = parse_args()
     out_path = Path(args.output)
     
-    t0 = time.time()
     model = torch.load(args.model_path, map_location="cpu", weights_only=False)
     model.eval()
+    # Pure compute from here (load excluded, LCNN/iProMP convention).
+    t0 = time.time()
     
     pos_ids, pos_preds = predict_fasta(model, args.pos, args.batch_size)
     neg_ids, neg_preds = predict_fasta(model, args.neg, args.batch_size)
