@@ -2,33 +2,32 @@
 """Centralized run layout — single source of truth for all output paths.
 
 Reversible design: keeps legacy `output/<YYMMDD>_runs/<name>/<config>/`
-working while introducing canonical `output/runs/<YYMMDD>_<name>_<config>/`
+working while introducing primary `output/runs/<YYMMDD>_<name>_<config>/`
 capsule with `MANIFEST.json`. All path logic lives here so other modules
 do not hard-code `"output/..."` strings.
 
 Capsule (one run = one dir):
-  output/runs/<YYMMDD>_<name>_<config>/   # canonical
+  output/runs/<YYMMDD>_<name>_<config>/   # primary
   output/<YYMMDD>_runs/<name>/<config>/   # legacy (symlink or same content)
     STATUS.json          # running/complete, tools, input_sha, pos_src/neg_src, n_pos/n_neg
-    MANIFEST.json        # {run_id, date, dataset, config, input_sha, n, tools, layout_version, created_at, legacy_path, canonical_path}
-    1_inference/         # roc_auc_{name}.{png,pdf,svg}, metrics_rows.tsv, predictions/ subdir
-      predictions/       # {name}_{fam}[.tsv] (canonical) + legacy fallback at root/predictions
+    MANIFEST.json        # {run_id, date, dataset, config, input_sha, n, tools, layout_version, created_at, legacy_path, primary_path}
+    1_inference/         # title-free roc_auc_{name}.{png,pdf}, predictions/ subdir
+      predictions/       # {name}_{fam}[.tsv] (primary) + legacy fallback at root/predictions
     2_resources/         # resource_metrics.tsv, compute_time/peak_ram.{png,pdf}
-    3_tables/            # metrics_rows.tsv, resource_metrics.tsv (symlinks/copies), benchmark_metrics.tsv
+    3_tables/            # metrics_rows.tsv, metrics_table.tsv, resource_metrics.tsv (link)
     # no root/predictions, root/plots, root/resources, root/*.tsv — all inside 1/2/3
 
 Comparisons / benchmarks (lightweight views, no prediction copies):
-  output/comparisons/<YYMMDD>_<tokens>/   # canonical
+  output/comparisons/<YYMMDD>_<tokens>/   # primary
   output/<YYMMDD>_comparison_*            # legacy (symlink)
-    MANIFEST.json  # {sources: [canonical run paths], dataset, regimes, input_shas}
+    MANIFEST.json  # {sources: [primary run paths], dataset, regimes, input_shas}
     2_resources/compare_{time,ram,speedup,vram}.{png,pdf}
     3_tables/resources_compare.tsv
   output/benchmarks/<YYMMDD>_<Ndatasets>datasets/
     MANIFEST.json
     roc/  atlas/  benchmark_metrics.tsv
 
-Revert: `git checkout -- src/analysis/run_layout.py src/cli.py src/analysis/compare_runs.py src/analysis/generate_benchmark_suite.py src/analysis/generate_compute_plots.py src/analysis/generate_auc_plots.py src/analysis/analyze_run.py`
-and `rm -rf output/runs output/comparisons output/benchmarks` — legacy paths remain untouched.
+Legacy paths remain readable; new per-run exports stay inside 1/2/3.
 """
 from __future__ import annotations
 import json
@@ -39,10 +38,11 @@ from typing import List, Optional
 # bump when layout changes
 LAYOUT_VERSION = "1.0"
 
-# canonical roots (new)
-RUNS_ROOT = Path("output/runs")
-COMPARISONS_ROOT = Path("output/comparisons")
-BENCHMARKS_ROOT = Path("output/benchmarks")
+# primary roots (new)
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+RUNS_ROOT = PROJECT_ROOT / "output/runs"
+COMPARISONS_ROOT = PROJECT_ROOT / "output/comparisons"
+BENCHMARKS_ROOT = PROJECT_ROOT / "output/benchmarks"
 
 # legacy roots (kept for compat)
 LEGACY_RUNS_PREFIX = "output"  # + "/<YYMMDD>_runs/<name>/<config>/"
@@ -52,15 +52,18 @@ def _sanitize(s: str) -> str:
     s = re.sub(r"[^A-Za-z0-9_.-]+", "_", s.strip()).strip("_")
     return s or "run"
 
-def canonical_run_dir(date: str, name: str, config: str, base: Path = RUNS_ROOT) -> Path:
+def primary_run_dir(date: str, name: str, config: str, base: Path = RUNS_ROOT) -> Path:
     """output/runs/<YYMMDD>_<name>_<config>/"""
-    token = f"{date}_{_sanitize(name)}_{_sanitize(config)}"
-    # truncate to stay filesystem-friendly
-    if len(token) > 100:
-        token = token[:100].rstrip("_")
+    import hashlib
+    prefix, suffix = f"{date}_", f"_{_sanitize(config)}"
+    dataset = _sanitize(name)
+    if len(prefix + dataset + suffix) > 100:
+        digest = hashlib.sha256(name.encode()).hexdigest()[:10]
+        dataset = dataset[:100 - len(prefix + suffix) - 11].rstrip("_") + "_" + digest
+    token = prefix + dataset + suffix
     return base / token
 
-def legacy_run_dir(date: str, name: str, config: str, base: Path = Path("output")) -> Path:
+def legacy_run_dir(date: str, name: str, config: str, base: Path = PROJECT_ROOT / "output") -> Path:
     """output/<YYMMDD>_runs/<name>/<config>/"""
     return base / f"{date}_runs" / _sanitize(name) / _sanitize(config)
 
@@ -80,35 +83,101 @@ class RunLayout:
         self.root = Path(run_root)
 
     @classmethod
-    def from_canonical(cls, date: str, name: str, config: str, base: Path = RUNS_ROOT):
-        return cls(canonical_run_dir(date, name, config, base))
+    def from_primary(cls, date: str, name: str, config: str, base: Path = RUNS_ROOT):
+        return cls(primary_run_dir(date, name, config, base))
 
     @classmethod
-    def from_legacy(cls, date: str, name: str, config: str, base: Path = Path("output")):
+    def from_legacy(cls, date: str, name: str, config: str, base: Path = PROJECT_ROOT / "output"):
         return cls(legacy_run_dir(date, name, config, base))
 
     @classmethod
     def resolve(cls, path: Path) -> "RunLayout":
-        """Accept either canonical or legacy path (or predictions subdir) and return layout."""
+        """Accept either primary or legacy path (or predictions subdir) and return layout."""
         p = Path(path)
         # if pointing at predictions/, lift to parent
         if p.name == "predictions":
             p = p.parent
+            if p.name == "1_inference":
+                p = p.parent
+        p = p.resolve()
         # if legacy has date prefix in parent, keep as is
         return cls(p)
 
     @property
     def predictions(self) -> Path:
-        # canonical: 1_inference/predictions — legacy fallback: root/predictions
+        declared = self.metadata.get("predictions_path")
+        if declared:
+            path = Path(declared)
+            return path if path.is_absolute() else self.root / path
+        # primary: 1_inference/predictions — legacy fallback: root/predictions
         cand = self.root / "1_inference" / "predictions"
-        if cand.exists():
+        if cand.is_dir() and any(cand.iterdir()):
             return cand
         # also check legacy
-        return self.root / "predictions"
+        legacy = self.root / "predictions"
+        return legacy if legacy.exists() else cand
+
+    @property
+    def metadata(self) -> dict:
+        """Manifest overrides status; both may be absent in old runs."""
+        result = {}
+        for filename in ("STATUS.json", "MANIFEST.json"):
+            path = self.root / filename
+            if path.is_file():
+                result.update(json.loads(path.read_text()))
+        return result
+
+    @property
+    def dataset_name(self) -> str:
+        """Do not confuse a primary run ID or a repeat suffix with its dataset."""
+        import csv
+        import re
+        name = self.metadata.get("dataset") or self.metadata.get("name")
+        if name:
+            return str(name)
+        metrics = self.find_resource_metrics()
+        if metrics:
+            with metrics.open() as stream:
+                row = next(csv.DictReader(stream, delimiter="\t"), {})
+            if row.get("name") or row.get("db"):
+                return row.get("name") or row["db"]
+        if re.fullmatch(r"\d+cpu(?:-gpu)?", self.root.name):
+            return self.root.parent.name
+        match = re.fullmatch(r"\d{6}_(.+)_\d+cpu(?:-gpu)?", self.root.name)
+        return match.group(1) if match else self.root.name
+
+    def find_resource_metrics(self) -> Optional[Path]:
+        """Prefer primary metrics over stale legacy copies; reject ambiguity."""
+        directories = (self.resources, self.tables, self.root / "resources", self.root)
+        for directory in directories:
+            exact = directory / "resource_metrics.tsv"
+            if exact.is_file():
+                return exact
+        for directory in directories:
+            candidates = sorted(p for p in directory.glob("resource_metrics*.tsv") if p.is_file())
+            if len(candidates) > 1:
+                raise ValueError(f"Ambiguous resource metrics in {directory}: {candidates}")
+            if candidates:
+                return candidates[0]
+        return None
+
+    def link_resource_table(self, source: Optional[Path] = None):
+        """Expose the actual metrics in tables without duplicating or moving data."""
+        import os
+        source = source or self.find_resource_metrics()
+        if source is None:
+            return
+        self.tables.mkdir(parents=True, exist_ok=True)
+        target = self.tables / "resource_metrics.tsv"
+        if target.exists():
+            return
+        if target.is_symlink():  # repair a dangling legacy link only
+            target.unlink()
+        target.symlink_to(os.path.relpath(Path(source).resolve(), self.tables.resolve()))
 
     @property
     def inference(self) -> Path:
-        # new canonical
+        # new primary
         return self.root / "1_inference"
 
     @property
@@ -148,17 +217,17 @@ class RunLayout:
         return self.root / "MANIFEST.json"
 
     def ensure_dirs(self):
-        # canonical hierarchy only — no legacy symlinks/files at root
+        # primary hierarchy only — no legacy symlinks/files at root
         (self.root / "1_inference" / "predictions").mkdir(parents=True, exist_ok=True)
         self.resources.mkdir(parents=True, exist_ok=True)
         self.tables.mkdir(parents=True, exist_ok=True)
         # note: no creation of root/predictions, root/plots, root/resources — deprecated
-        # migration will move existing legacy dirs into canonical locations
+        # migration will move existing legacy dirs into primary locations
 
     def write_manifest(self, *, date: str, name: str, config: str,
                        input_sha: str = "", pos_src: str = "", neg_src: str = "",
                        n_pos: int = 0, n_neg: int = 0, tools: Optional[List[str]] = None,
-                       legacy_path: str = "", canonical_path: str = ""):
+                       legacy_path: str = "", primary_path: str = ""):
         manifest = {
             "layout_version": LAYOUT_VERSION,
             "run_id": f"{date}_{name}_{config}",
@@ -173,7 +242,7 @@ class RunLayout:
             "n_total": (n_pos + n_neg) if (n_pos or n_neg) else 0,
             "tools": sorted(tools or []),
             "created_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
-            "canonical_path": canonical_path or str(self.root),
+            "primary_path": primary_path or str(self.root),
             "legacy_path": legacy_path,
         }
         self.manifest_path.write_text(json.dumps(manifest, indent=2))
@@ -216,48 +285,49 @@ class RunLayout:
         return m
 
 
-def ensure_legacy_symlink(canonical: Path, legacy: Path):
-    """Create legacy symlink to canonical for backward compat (no data duplication)."""
+def ensure_legacy_symlink(primary: Path, legacy: Path):
+    """Create legacy symlink to primary for backward compat (no data duplication)."""
     try:
         if legacy.exists():
             return
         legacy.parent.mkdir(parents=True, exist_ok=True)
         # use relative symlink if possible
         try:
-            rel = canonical.resolve().relative_to(legacy.parent.resolve())
+            rel = primary.resolve().relative_to(legacy.parent.resolve())
             legacy.symlink_to(rel)
         except Exception:
-            legacy.symlink_to(canonical.resolve())
+            legacy.symlink_to(primary.resolve())
     except Exception:
         pass
 
-def migrate_legacy_to_canonical(date: str, name: str, config: str,
+def migrate_legacy_to_primary(date: str, name: str, config: str,
                                 dry_run: bool = True) -> dict:
-    """Plan (and optionally execute) migration of one legacy run to canonical."""
+    """Plan (and optionally execute) migration of one legacy run to primary."""
     legacy = legacy_run_dir(date, name, config)
-    canonical = canonical_run_dir(date, name, config)
+    primary = primary_run_dir(date, name, config)
     plan = {
         "legacy": str(legacy),
-        "canonical": str(canonical),
+        "primary": str(primary),
         "legacy_exists": legacy.exists(),
-        "canonical_exists": canonical.exists(),
+        "primary_exists": primary.exists(),
         "action": "none",
     }
     if not legacy.exists():
         plan["action"] = "no_legacy"
         return plan
-    if canonical.exists():
+    if primary.exists():
         plan["action"] = "exists"
         return plan
     plan["action"] = "symlink" if dry_run else "migrated"
     if not dry_run:
-        ensure_legacy_symlink(canonical, legacy)
-        # if canonical does not exist, copy structure via symlink
-        # actually we want canonical to be the real data, legacy symlink to it
-        # so we need to move legacy content to canonical then symlink back
-        if not canonical.exists():
-            legacy.rename(canonical)
-            ensure_legacy_symlink(canonical, legacy)
+        ensure_legacy_symlink(primary, legacy)
+        # if primary does not exist, copy structure via symlink
+        # actually we want primary to be the real data, legacy symlink to it
+        # so we need to move legacy content to primary then symlink back
+        if not primary.exists():
+            primary.parent.mkdir(parents=True, exist_ok=True)
+            legacy.rename(primary)
+            ensure_legacy_symlink(primary, legacy)
             plan["action"] = "migrated"
     else:
         # dry-run: just report what would happen
