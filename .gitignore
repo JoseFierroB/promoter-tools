@@ -55,6 +55,7 @@ output/
 mmseqs_db/
 benchmark_plots_organized/
 scratch/
+data/_quarantine/
 # Benchmark derivados CDS/ortho y raw TSS (generados, no fuente)
 # NOTA: data/benchmark_igr/ es benchmark CANÓNICO versionado (723 D39V + 4 subsets TIGR4)
 data/benchmark/d39v_1003_all_raw/

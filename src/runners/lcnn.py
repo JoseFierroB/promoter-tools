@@ -29,7 +29,7 @@ def main():
     p.add_argument("--neg", required=True, help="Negative test FASTA")
     p.add_argument("-o", "--output", default="output/predictions", help="Output dir")
     p.add_argument("-m", "--model", default=MODEL_DIR, help="Model directory")
-    p.add_argument("--batch-size", type=int, default=DEFAULT_BATCH, help="Inference batch size (0 = all sequences in one batch)")
+    p.add_argument("--batch-size", type=int, default=DEFAULT_BATCH, help="Inference batch size (default: 10000; 0 = all sequences in one batch)")
     args = p.parse_args()
 
     batch_size = args.batch_size

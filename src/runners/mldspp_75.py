@@ -40,7 +40,7 @@ def main():
     p.add_argument("--neg", required=True, help="Negative test FASTA")
     p.add_argument("-o", "--output", default="output/predictions", help="Output dir")
     p.add_argument("--split", default=None,
-                   help="Pre-built split .npz from data/benchmark/ (seed=42, ratio=0.75)")
+                   help="Pre-built split .npz from data/benchmark/ (seed=42, ratio=0.75); default: auto-pick by size+name")
     args = p.parse_args()
 
     t0 = time.perf_counter()

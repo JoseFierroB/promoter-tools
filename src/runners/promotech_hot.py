@@ -25,7 +25,7 @@ def main():
     p.add_argument("--neg", required=True, help="Negative test FASTA")
     p.add_argument("-o", "--output", default="output/predictions", help="Output dir")
     p.add_argument("--timeout", type=int, default=600,
-                   help="Per-step subprocess timeout in seconds (predict and scan)")
+                   help="Per-step subprocess timeout in seconds (predict and scan; default: 600)")
     args = p.parse_args()
 
     pos_count = sum(1 for l in open(args.pos) if l.startswith(">"))
