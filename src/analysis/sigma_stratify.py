@@ -4,7 +4,7 @@
 Classes come from the positives metadata sidecar
 (`positives_81bp_metadata.tsv`, column `Sigma_Factor`):
   SigA               -> SigA
-  ComX / SigX        -> ComX (SigX == ComX, merged)
+  ComX / SigX        -> SigX (same factor, merged; class label is SigX)
   empty / NaN / None -> None (monoboxes + TF-regulated/orphans)
 
 Scores come from the run's canonical predictions
@@ -14,7 +14,7 @@ IDs by positives order; ID tools (prompt/prokbert single_tsv) map by ID.
 
 Writes into the run dir (one file per sigma class):
   1_inference/sigma/roc_SigA_{name}.{png,pdf}
-  1_inference/sigma/roc_ComX_{name}.{png,pdf}
+  1_inference/sigma/roc_SigX_{name}.{png,pdf}
   1_inference/sigma/roc_None_{name}.{png,pdf}
   3_tables/sigma_factor_benchmark_metrics.tsv
 
@@ -46,7 +46,7 @@ try:
 except Exception:
     from src.analysis.bench_labels import PALETTE, TOOL_ORDER
 
-CLASS_ORDER = ["SigA", "ComX", "None"]
+CLASS_ORDER = ["SigA", "SigX", "None"]
 
 SIGMA_OUTPUTS = (
     tuple(f"roc_{s}_{{name}}.{e}" for s in CLASS_ORDER for e in ("png", "pdf"))
@@ -86,7 +86,7 @@ def load_classes(meta_path: Path):
         if v == "SigA":
             classes[str(r["Sequence_ID"])] = "SigA"
         elif v in ("ComX", "SigX"):
-            classes[str(r["Sequence_ID"])] = "ComX"
+            classes[str(r["Sequence_ID"])] = "SigX"
         else:
             classes[str(r["Sequence_ID"])] = "None"
     return pos_ids, classes
@@ -164,7 +164,7 @@ def main():
                 return
     pos_ids, classes = load_classes(Path(args.metadata))
     counts = pd.Series([classes[p] for p in pos_ids]).value_counts().to_dict()
-    print(f"classes: SigA={counts.get('SigA',0)} ComX={counts.get('ComX',0)} "
+    print(f"classes: SigA={counts.get('SigA',0)} SigX={counts.get('SigX',0)} "
           f"None={counts.get('None',0)} total={len(pos_ids)}")
 
     tool_maps = per_id_scores(pred_root, args.name, pos_ids)

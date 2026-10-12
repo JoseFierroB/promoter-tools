@@ -9,7 +9,7 @@ so cut AUCs match `sigma_factor_benchmark_metrics.tsv`.
 
 Writes into the run dir:
   3_tables/operating_point_metrics.tsv         (global, one row per tool)
-  3_tables/operating_point_metrics_sigma.tsv   (SigA/ComX/None, needs --metadata)
+  3_tables/operating_point_metrics_sigma.tsv   (SigA/SigX/None, needs --metadata)
 
 Usage:
     pixi run python src/analysis/operating_points.py \
@@ -58,7 +58,7 @@ def main():
     ap.add_argument("--run-dir", required=True)
     ap.add_argument("--name", required=True)
     ap.add_argument("--metadata", default=None,
-                    help="positives metadata TSV (enables SigA/ComX/None cuts)")
+                    help="positives metadata TSV (enables SigA/SigX/None cuts)")
     ap.add_argument("--neg", default=None,
                     help="negatives FASTA (with --metadata: enables d39v/tigr4 cuts; "
                          "neg IDs carry _D39V_/_TIGR4_ tags, scores align by FASTA order)")

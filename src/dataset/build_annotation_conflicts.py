@@ -8,7 +8,7 @@ values (None = missing label) are reported with:
   - conflict_type: SIGA_VS_SIGX (genuine sigma-vs-sigma) or
     LABELED_VS_NONE (evidence on one side, missing annotation on the other).
   - dedup_kept_id: survivor under the shared keep-first rule (D39V block
-    precedes TIGR4 in positives_81bp.fasta), i.e. what 16/17/18/5050 use.
+    precedes TIGR4 in positives_81bp.fasta), i.e. what 16/17/18 and the default balanced set use.
   - cross-strain note: downstream genes are ortholog pairs (conserved promoter).
 
 Frozen record: data/benchmark/annotation_conflicts.tsv holds the UNRESOLVED
