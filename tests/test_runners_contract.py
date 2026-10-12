@@ -27,7 +27,7 @@ RUNNERS = {
     "prompt": "src/runners/prompt.py",
     "prokbert": "src/runners/prokbert_mini.py",
     "ipromp_sp12": "src/runners/ipromp_sp12.py",
-    "fimo_prok": "src/runners/fimo.py",
+    "fimo_prok": "src/runners/fimo_prok.py",
     "meme": "src/runners/meme.py",
 }
 

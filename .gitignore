@@ -63,6 +63,13 @@ data/benchmark_cds/
 data/benchmark_ortho_1to1/
 # Backup GFF local
 *.bak_*
+# Other session's data (do not move, do not commit)
+data/bacterial_promoters/
+# Benchmark data products (regenerable; canonical versioned sets stay tracked
+# and new ones enter only via explicit `git add -f`)
+*.tsv
+*.fasta
+*.npz
 # New tools (2026-09): vendored code only; heavy data/models stay local
 tools/EvoSNR-Prom/data/
 tools/Prompt/one/

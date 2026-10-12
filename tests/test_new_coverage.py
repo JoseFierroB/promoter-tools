@@ -108,8 +108,8 @@ class SiblingGuardTests(unittest.TestCase):
             sig.mkdir(parents=True)
             (sig / "roc_SigA_demo.png").write_text("x")
             (sig / "roc_SigA_demo.pdf").write_text("x")
-            (sig / "roc_ComX_demo.png").write_text("x")
-            (sig / "roc_ComX_demo.pdf").write_text("x")
+            (sig / "roc_SigX_demo.png").write_text("x")
+            (sig / "roc_SigX_demo.pdf").write_text("x")
             (sig / "roc_None_demo.png").write_text("x")
             (sig / "roc_None_demo.pdf").write_text("x")
             tab = run / "3_tables"

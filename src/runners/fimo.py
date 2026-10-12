@@ -22,7 +22,7 @@ if str(_ROOT) not in os.environ.get("PYTHONPATH", ""):
     import sys as _sys
     _sys.path.insert(0, str(_ROOT))
 
-_ENV_BIN = str(_ROOT / "tools/meme/.pixi/envs/default/bin")
+_ENV_BIN = str(_ROOT / "tools/fimo/.pixi/envs/default/bin")
 if _ENV_BIN not in os.environ.get("PATH", ""):
     os.environ["PATH"] = f"{_ENV_BIN}:{os.environ.get('PATH', '')}"
 

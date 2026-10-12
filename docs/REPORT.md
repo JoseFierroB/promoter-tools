@@ -27,7 +27,7 @@
 
 ### By sigma (16cpu-gpu 260917)
 
-| Tool | SigA (675) | ComX (27) | None (1025) |
+| Tool | SigA (675) | SigX (27) | None (1025) |
 |------|-----------|-----------|-------------|
 | ProkBERT-mini [gLM] | 0.9911 | 0.9419 | 0.9220 |
 | PromoterLCNN [CNN] | 0.9906 | 0.8822 | 0.8890 |
@@ -35,7 +35,7 @@
 | MLDSPP 75% [BDT] | 0.9758 | 0.9002 | 0.9191 |
 | PromoTech RF-HOT [RF] | 0.9287 | 0.8725 | 0.9268 |
 
-ComX n=27: wide confidence intervals apply.
+SigX n=27: wide confidence intervals apply.
 
 ### By strain (Youden OP cuts, 16cpu-gpu 260917)
 

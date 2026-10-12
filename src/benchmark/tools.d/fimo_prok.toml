@@ -2,7 +2,7 @@
 name = "FIMO + Prokaryote DB"
 short = "fimo_prok"
 category = "Other"
-pixi_env = "tools/meme/pixi.toml"
+pixi_env = "tools/fimo/pixi.toml"
 gpu_capable = false
 n_sequences = 1988
 model_paths = []

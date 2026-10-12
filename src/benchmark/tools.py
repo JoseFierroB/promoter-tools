@@ -145,7 +145,7 @@ PROMOTER_TOOLS = {
         name="ProkBERT-mini (NeuralBioInfo)",
         short_name="prokbert_mini",
         category="DL",
-        pixi_env=config.ipromp_dir / "pixi.toml",
+        pixi_env=config.prokbert_dir / "pixi.toml",
         outputs=[ROOT / "output/predictions/prokbert.tsv"],
         model_paths=[],
         # Weights come from the HuggingFace Hub cache (no local file).
@@ -158,7 +158,7 @@ PROMOTER_TOOLS = {
         name="Prompt MLP (B. subtilis 168)",
         short_name="prompt",
         category="ML",
-        pixi_env=config.ipromp_dir / "pixi.toml",
+        pixi_env=config.prompt_dir / "pixi.toml",
         outputs=[ROOT / "output/predictions/prompt.tsv"],
         model_paths=[ROOT / "tools/Prompt/mlp/ckpt/168/model_500.pth"],
         gpu_capable=False,

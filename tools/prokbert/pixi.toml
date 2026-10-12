@@ -10,16 +10,18 @@ version = "0.0.50"
 [dependencies]
 python = "3.10.*"
 pip = "*"
-transformers = ">=4.30,<4.45"
 numpy = "*"
 biopython = "*"
 pandas = "*"
 scikit-learn = "*"
 h5py = "*"
+
+[pypi-dependencies]
+# transformers + torch via pip: conda-forge transformers pins a conda torch
+# that conflicts with the cu128 CUDA wheels (only on download.pytorch.org).
+torch = { version = ">=2.9,<2.12", index = "https://download.pytorch.org/whl/cu128" }
+transformers = ">=4.56,<=5.3.0"
 datasets = "*"
 accelerate = "*"
 huggingface_hub = "*"
-
-[pypi-dependencies]
-torch = { version = ">=2.0,<2.12", index = "https://download.pytorch.org/whl/cu128" }
 prokbert = { path = ".", editable = true }

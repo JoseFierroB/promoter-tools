@@ -31,7 +31,7 @@ promoter-tools/
     │   ├── MANIFEST.json / STATUS.json / RUN.log
     │   ├── 1_inference/predictions/{name}_{fam}*  # scores por tool
     │   ├── 1_inference/roc_auc_{name}.{png,pdf}   # (--plots)
-    │   ├── 1_inference/sigma/roc_{SigA,ComX,None}_*  # (sigma_stratify)
+    │   ├── 1_inference/sigma/roc_{SigA,SigX,None}_*  # (sigma_stratify)
     │   ├── 2_resources/resource_metrics.tsv        # siempre (con/sin --plots)
     │   ├── 2_resources/compute_time|peak_ram.{png,pdf}  # (--plots)
     │   └── 3_tables/metrics_rows.tsv               # dataset,tool,n,AUC

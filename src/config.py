@@ -61,6 +61,18 @@ class Config:
     def mldspp_dir(self) -> Path:
         return Path(os.environ.get("MLDSPP_DIR", str(ROOT / "tools/MLDSPP-Promoter-prediction")))
 
+    @property
+    def prokbert_dir(self) -> Path:
+        return Path(os.environ.get("PROKBERT_DIR", str(ROOT / "tools/prokbert")))
+
+    @property
+    def prompt_dir(self) -> Path:
+        return Path(os.environ.get("PROMPT_DIR", str(ROOT / "tools/prompt")))
+
+    @property
+    def fimo_dir(self) -> Path:
+        return Path(os.environ.get("FIMO_DIR", str(ROOT / "tools/fimo")))
+
     # ── Model paths (Codon NFS → local fallback) ──
     @property
     def ipromp_model_dir(self) -> Path:

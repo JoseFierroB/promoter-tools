@@ -6,7 +6,7 @@ Negatives: 1399 CDS (subsample seed 42 of canonical 1738) + 1399 IGR
 Dedup within negatives + cross leakage vs positives must be 0.
 
 Usage:
-    pixi run python src/dataset/build_mix_5050.py [-o data/benchmark/datasets/17_d39v_tigr4_high_mix5050]
+    pixi run python src/dataset/build_mix_5050.py [-o data/benchmark/datasets/17_d39v_tigr4_high_mix5050] [--prefer-sigx]
 """
 import argparse
 import random
@@ -29,19 +29,36 @@ def main():
     ap = argparse.ArgumentParser(description="Build 50/50 mixed-background dataset.")
     ap.add_argument("-o", "--output",
                     default="data/benchmark/datasets/17_d39v_tigr4_high_mix5050")
+    ap.add_argument("--prefer-sigx", action="store_true",
+                    help="On duplicate-sequence conflicts, keep the SigX-family "
+                         "(SigX/ComX) member over SigA/None (default: keep-first). "
+                         "Same sequences, only the retained ID/metadata row changes.")
     args = ap.parse_args()
     out = ROOT / args.output
     out.mkdir(parents=True, exist_ok=True)
     rng = random.Random(SEED)
 
-    # Positives: same 1399 keep-first dedup as build_igr_12.
-    seen, pos_ids, pos_seqs = set(), [], []
+    meta_all = pd.read_csv(CANON / "positives_81bp_metadata.tsv",
+                           sep="\t", dtype=str).set_index("Sequence_ID")
+
+    def family(i):
+        v = meta_all.loc[i, "Sigma_Factor"]
+        return "SigX" if v in ("SigX", "ComX") else str(v)
+
+    # Positives: same 1399 keep-first dedup as build_igr_12, optionally with
+    # minority-family tie-break (position-stable: replacement keeps the slot,
+    # so split indices stay valid).
+    seen, pos_ids, pos_seqs = {}, [], []
+    n_swapped = 0
     for i, s in load_fa(CANON / "positives_81bp.fasta"):
         if s not in seen:
-            seen.add(s)
+            seen[s] = len(pos_ids)
             pos_ids.append(i)
             pos_seqs.append(s)
-    print(f"positives: {len(pos_ids)} unique")
+        elif args.prefer_sigx and family(pos_ids[seen[s]]) != "SigX" and family(i) == "SigX":
+            pos_ids[seen[s]] = i
+            n_swapped += 1
+    print(f"positives: {len(pos_ids)} unique (sigx tie-break swaps: {n_swapped})")
 
     # CDS + IGR negatives: 1399 unique each via shuffled keep-first
     # (dedup within + across pools with top-up; deterministic seed).
