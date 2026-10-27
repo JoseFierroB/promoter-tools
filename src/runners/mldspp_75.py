@@ -48,6 +48,9 @@ def main():
 
     pos = list(SeqIO.parse(args.pos, "fasta"))
     neg = list(SeqIO.parse(args.neg, "fasta"))
+    # NOTE: unlike mldspp.py, test featurization happens BEFORE fit here:
+    # X_spn_pos = X_pos_all[train_idx] needs the full feature matrix first.
+    # So train_s includes test featurization (unavoidable, structural).
     X_pos_all = np.array([extract_aligned(str(r.seq)) for r in pos])
     X_neg_all = np.array([extract_aligned(str(r.seq)) for r in neg])
 

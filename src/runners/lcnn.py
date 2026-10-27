@@ -9,7 +9,8 @@ import numpy as np
 import pandas as pd
 from Bio import SeqIO
 
-MODEL_DIR = "tools/Promoters/weights/PromoterLCNN/IsPromoter_fold_5"
+MODEL_DIR = str(Path(__file__).resolve().parent.parent.parent
+                / "tools/Promoters/weights/PromoterLCNN/IsPromoter_fold_5")
 DEFAULT_BATCH = 10000
 _TBL = np.zeros(256, dtype=np.uint8)
 _TBL[[ord(c) for c in "ATCG"]] = [0, 1, 2, 3]  # A,T,C,G -> rows of eye(4)

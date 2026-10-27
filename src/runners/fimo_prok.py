@@ -14,8 +14,10 @@ PROK_DB = Path(__file__).resolve().parent.parent.parent / "tools/meme/motif_data
 
 
 def main():
-    sys.argv += ["--db", str(PROK_DB), "--label", "fimo_prok", "--tag", "FIMO_PROK"]
-    _fimo_main()
+    # Forward user flags first, then wrapper defaults (same precedence as
+    # the old sys.argv += [...]: wrapper values win; --help still works).
+    _fimo_main(sys.argv[1:] + ["--db", str(PROK_DB), "--label", "fimo_prok",
+                               "--tag", "FIMO_PROK"])
 
 
 if __name__ == "__main__":
