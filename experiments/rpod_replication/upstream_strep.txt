@@ -1,0 +1,7 @@
+# 0-order Markov frequencies from file S_pneumoniae/temp_files/upstream.fna
+# seqs: 2200    min: 550    max: 550    avg: 550.0    sum: 1210000    alph: DNA
+# order 0
+A 3.101e-01
+C 1.899e-01
+G 1.899e-01
+T 3.101e-01
