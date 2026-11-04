@@ -108,7 +108,12 @@ class RunLayout:
         declared = self.metadata.get("predictions_path")
         if declared:
             path = Path(declared)
-            return path if path.is_absolute() else self.root / path
+            if not path.is_absolute():
+                path = self.root / path
+            # manifests written on another machine/layout may declare a stale
+            # path: trust it only when it exists and is non-empty.
+            if path.is_dir() and any(path.iterdir()):
+                return path
         # primary: 1_inference/predictions — legacy fallback: root/predictions
         cand = self.root / "1_inference" / "predictions"
         if cand.is_dir() and any(cand.iterdir()):
