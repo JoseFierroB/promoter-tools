@@ -6,7 +6,7 @@ Negatives: 1399 CDS (subsample seed 42 of canonical 1738) + 1399 IGR
 Dedup within negatives + cross leakage vs positives must be 0.
 
 Usage:
-    pixi run python src/dataset/build_mix_5050.py [-o data/benchmark/datasets/17_d39v_tigr4_high_mix5050] [--prefer-sigx]
+    pixi run python src/dataset/build_mix_5050.py [-o data/benchmark/datasets/17_d39v_tigr4_high_mix5050] [--prefer-sigx] [--strain-match]
 """
 import argparse
 import random
@@ -33,6 +33,12 @@ def main():
                     help="On duplicate-sequence conflicts, keep the SigX-family "
                          "(SigX/ComX) member over SigA/None (default: keep-first). "
                          "Same sequences, only the retained ID/metadata row changes.")
+    ap.add_argument("--strain-match", action="store_true",
+                    help="Match the positive strain ratio (D39V/TIGR4) inside EACH "
+                         "negative background (CDS, IGR) via stratified quotas. "
+                         "Short strata are topped up from the other strain of the "
+                         "same background (logged). Off by default (legacy: "
+                         "slot/pool-proportional sampling).")
     args = ap.parse_args()
     out = ROOT / args.output
     out.mkdir(parents=True, exist_ok=True)
@@ -77,10 +83,72 @@ def main():
                 break
         return out
 
+    def strain_of_cds(i):
+        if "TIGR4" in i:
+            return "TIGR4"
+        if "D39V" in i:
+            return "D39V"
+        raise SystemExit(f"ERROR: cannot infer strain from CDS id {i!r}")
+
+    def take_stratified(labeled_pool, quotas, taken, background):
+        """Sample per-strain quotas (dict strain -> n) from [(id, seq, strain)].
+
+        Strata are shuffled in fixed D39V-then-TIGR4 order (seed 42). A short
+        stratum is topped up from the other strain of the same background;
+        the fallback is printed (loud, not silent). Returns
+        ([(id, seq, strain)], {strain: n_taken}) with strains aligned.
+        """
+        got_ids = set()
+        got = []
+        for strain in ("D39V", "TIGR4"):
+            stratum = [(i, s) for i, s, st in labeled_pool if st == strain]
+            rng.shuffle(stratum)
+            for i, s in stratum:
+                if i not in got_ids and s not in taken:
+                    taken.add(s)
+                    got_ids.add(i)
+                    got.append((i, s, strain))
+                if sum(1 for _, _, st in got if st == strain) >= quotas[strain]:
+                    break
+        counts = {st: sum(1 for _, _, s in got if s == st) for st in ("D39V", "TIGR4")}
+        if any(counts[st] < quotas[st] for st in ("D39V", "TIGR4")):
+            rest = [(i, s, st) for i, s, st in labeled_pool if i not in got_ids]
+            rng.shuffle(rest)
+            for i, s, st in rest:
+                if s not in taken:
+                    taken.add(s)
+                    got_ids.add(i)
+                    got.append((i, s, st))
+                if len(got) >= sum(quotas.values()):
+                    break
+            counts = {st: sum(1 for _, _, s in got if s == st) for st in ("D39V", "TIGR4")}
+            print(f"  WARNING [{background}]: strain quota short "
+                  f"(want {quotas}, got {counts}) — topped up within background")
+        return got, counts
+
     taken = set()
-    cds_sub = take_unique(cds, 1399, taken)
-    igr_sub = take_unique(igr, 1399, taken)
-    assert len(cds_sub) == 1399 and len(igr_sub) == 1399, "pool exhausted"
+    neg_strain = []
+    if args.strain_match:
+        n_d39v = sum(1 for i in pos_ids
+                     if meta_all.loc[i, "Chromosome"] == "D39V")
+        n_tig = len(pos_ids) - n_d39v
+        quotas = {"D39V": n_d39v, "TIGR4": n_tig}
+        print(f"strain quotas per background: {quotas} (from positives)")
+        m16 = pd.read_csv(IGR16 / "negatives_81bp_metadata.tsv",
+                          sep="\t", dtype=str).set_index("Sequence_ID")
+        cds_labeled = [(i, s, strain_of_cds(i)) for i, s in cds]
+        igr_labeled = [(i, s, str(m16.loc[i, "Strain"])) for i, s in igr]
+        cds_got, cds_counts = take_stratified(cds_labeled, quotas, taken, "CDS")
+        igr_got, igr_counts = take_stratified(igr_labeled, quotas, taken, "IGR")
+        assert len(cds_got) == 1399 and len(igr_got) == 1399, "pool exhausted"
+        cds_sub = [(i, s) for i, s, _ in cds_got]
+        igr_sub = [(i, s) for i, s, _ in igr_got]
+        neg_strain = [st for _, _, st in cds_got + igr_got]
+        print(f"strain-matched negatives: CDS {cds_counts} + IGR {igr_counts}")
+    else:
+        cds_sub = take_unique(cds, 1399, taken)
+        igr_sub = take_unique(igr, 1399, taken)
+        assert len(cds_sub) == 1399 and len(igr_sub) == 1399, "pool exhausted"
 
     neg_ids = [i for i, _ in cds_sub + igr_sub]
     neg_seqs = [s for _, s in cds_sub + igr_sub]
@@ -99,8 +167,10 @@ def main():
                        sep="\t", dtype=str).set_index("Sequence_ID")
     meta.loc[pos_ids].reset_index().to_csv(
         out / "positives_81bp_metadata.tsv", sep="\t", index=False)
-    pd.DataFrame({"Sequence_ID": neg_ids, "Source": src}).to_csv(
-        out / "negatives_81bp_metadata.tsv", sep="\t", index=False)
+    neg_frame = pd.DataFrame({"Sequence_ID": neg_ids, "Source": src})
+    if args.strain_match:
+        neg_frame["Strain"] = neg_strain
+    neg_frame.to_csv(out / "negatives_81bp_metadata.tsv", sep="\t", index=False)
     print(f"WROTE {out}: {len(pos_ids)} pos + {len(neg_ids)} neg")
 
 

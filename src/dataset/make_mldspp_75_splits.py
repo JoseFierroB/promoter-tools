@@ -24,11 +24,11 @@ SEED = 42
 RATIO = 0.75
 
 
-def make_split(n_pos: int, out_dir: Path) -> Path:
+def make_split(n_pos: int, out_dir: Path, name: str = None) -> Path:
     idx = np.random.RandomState(SEED).permutation(n_pos)
     n_train = int(n_pos * RATIO)
     train_idx, test_idx = idx[:n_train], idx[n_train:]
-    out = out_dir / f"mldspp_75_split_scale_db_{n_pos}.npz"
+    out = out_dir / (name or f"mldspp_75_split_{n_pos}.npz")
     np.savez(out, train_idx=train_idx, test_idx=test_idx, seed=np.array(SEED))
     return out
 
@@ -37,12 +37,17 @@ def main():
     p = argparse.ArgumentParser(description="Generate mldspp_75 splits for scale_db sizes")
     p.add_argument("--n-pos", type=int, nargs="+", required=True,
                    help="Positive counts to build splits for")
+    p.add_argument("--name", type=str, default=None,
+                   help="Exact output filename (single --n-pos only); "
+                        "default: mldspp_75_split_<n>.npz")
     args = p.parse_args()
+    if args.name and len(set(args.n_pos)) != 1:
+        p.error("--name requires exactly one --n-pos value")
 
     for n_pos in sorted(set(args.n_pos)):
         if n_pos <= 0 or int(n_pos * RATIO) * 4 != n_pos * 3:
             print(f"WARNING: {n_pos} not divisible by 4 — protocol assumes n*0.75 exact")
-        out = make_split(n_pos, OUT_DIR)
+        out = make_split(n_pos, OUT_DIR, args.name)
         print(f"  {out.name}: train={int(n_pos*RATIO)} test={n_pos-int(n_pos*RATIO)}")
 
 
