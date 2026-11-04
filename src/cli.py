@@ -266,6 +266,10 @@ def cmd_run(args):
     run_date = _bl.run_date
 
     valid = sorted(PROMOTER_TOOLS)
+    if not args.tools and not args.all_tools:
+        args.tools = list(_bl.DEFAULT_TOOLS_7)
+        print("No tools specified: defaulting to canonical 7 "
+              "(use --all-tools for all 9, or list tool keys explicitly).")
     if not args.tools:
         print("ERROR: specify at least one tool key.\nAvailable tools:\n  " + "\n  ".join(valid))
         sys.exit(2)
@@ -397,7 +401,9 @@ def main():
 
     # run
     p_run = sub.add_parser("run", help="Execute benchmark tools")
-    p_run.add_argument("tools", nargs="*", help="Tool keys to run (lcnn, promotech_hot, ...)")
+    p_run.add_argument("tools", nargs="*", help="Tool keys to run (lcnn, promotech_hot, ...); default: canonical 7")
+    p_run.add_argument("--all-tools", action="store_true",
+                       help="Run all 9 registry tools instead of the default 7")
     p_run.add_argument("--slurm", action="store_true", help="Use Slurm backend")
     p_run.add_argument("--runs", type=int, default=1, help="Number of independent runs (N≥3 recommended)")
     p_run.add_argument("-o", "--output", help="Additional metrics TSV export (primary table is always kept)")

@@ -19,7 +19,7 @@ try:
     from bench_labels import PALETTE, TOOL_ORDER  # primary (single source)
 except Exception:  # fallback when run as script without package context
     PALETTE = {
-        "MLDSPP 0% [BDT]":       {"color": "#F81D54", "ls": "-",  "lw": 1.8, "method": "BDT"},
+        "MLDSPP [BDT]":       {"color": "#F81D54", "ls": "-",  "lw": 1.8, "method": "BDT"},
         "MLDSPP 75% [BDT]":      {"color": "#55001C", "ls": "-",  "lw": 1.8, "method": "BDT"},
         "PromoTech RF-HOT [RF]": {"color": "#F1A52B", "ls": "-",  "lw": 1.9, "method": "RF"},
         "PromoterLCNN [CNN]":    {"color": "#973C04", "ls": "-",  "lw": 1.9, "method": "CNN"},
@@ -30,14 +30,14 @@ except Exception:  # fallback when run as script without package context
         "STREME+FIMO [motif]":   {"color": "#18974C", "ls": ":",  "lw": 1.7, "method": "motif"},
     }
     TOOL_ORDER = [
-        "MLDSPP 0% [BDT]", "MLDSPP 75% [BDT]", "PromoTech RF-HOT [RF]",
+        "MLDSPP [BDT]", "MLDSPP 75% [BDT]", "PromoTech RF-HOT [RF]",
         "PromoterLCNN [CNN]", "prompt [NN]", "ProkBERT-mini [gLM]",
         "iPro-MP [gLM]", "FIMO ProkDB [PWMs]", "STREME+FIMO [motif]",
     ]
 
 # registry key -> (display label, loader kind) — insertion order = TOOL_ORDER above
 TOOLS = {
-    "mldspp": ("MLDSPP 0% [BDT]", "posneg_dir"),
+    "mldspp": ("MLDSPP [BDT]", "posneg_dir"),
     "mldspp_75": ("MLDSPP 75% [BDT]", "posneg_dir"),
     "promotech_hot": ("PromoTech RF-HOT [RF]", "posneg_dir"),
     "lcnn": ("PromoterLCNN [CNN]", "posneg_dir"),
@@ -140,6 +140,12 @@ def load_all(pred_root: Path, name: str, only=None):
     iPro-MP with that hint (its file lacks a LABEL column).
     """
     keys = [k for k in TOOLS if only is None or k in only]
+    if only is not None:
+        unknown = [k for k in only if k not in TOOLS]
+        if unknown:
+            raise SystemExit(
+                f"ERROR: unknown tool key(s) {unknown}. "
+                f"Valid keys: {sorted(TOOLS)}")
     scored = {}
     for key in keys:
         if key == "ipromp_sp12":

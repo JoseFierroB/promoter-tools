@@ -31,7 +31,7 @@ DS_DISPLAY = {
 # so bars/lines/legends are always in the same, non-metric order.
 # ---------------------------------------------------------------------------
 TOOL_ORDER = [
-    "MLDSPP 0% [BDT]",
+    "MLDSPP [BDT]",
     "MLDSPP 75% [BDT]",
     "PromoTech RF-HOT [RF]",
     "PromoterLCNN [CNN]",
@@ -42,9 +42,22 @@ TOOL_ORDER = [
     "STREME+FIMO [motif]",
 ]
 
+# Canonical 7-tool cut (default everywhere since 2026-11-02):
+# excludes MLDSPP 75% (superseded variant) and STREME+FIMO (motif baseline).
+# Registry keys (see analyze_run.TOOLS); display labels above.
+DEFAULT_TOOLS_7 = [
+    "mldspp",
+    "promotech_hot",
+    "lcnn",
+    "prompt",
+    "prokbert",
+    "ipromp_sp12",
+    "fimo_prok",
+]
+
 # exhaustive style map (color + line style for ROC, color for bars)
 PALETTE = {
-    "MLDSPP 0% [BDT]":       {"color": "#F81D54", "ls": "-",  "lw": 1.8, "method": "BDT"},
+    "MLDSPP [BDT]":       {"color": "#F81D54", "ls": "-",  "lw": 1.8, "method": "BDT"},
     "MLDSPP 75% [BDT]":      {"color": "#55001C", "ls": "-",  "lw": 1.8, "method": "BDT"},
     "PromoTech RF-HOT [RF]": {"color": "#F1A52B", "ls": "-",  "lw": 1.9, "method": "RF"},
     "PromoterLCNN [CNN]":    {"color": "#973C04", "ls": "-",  "lw": 1.9, "method": "CNN"},
