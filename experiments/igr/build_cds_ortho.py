@@ -17,7 +17,7 @@ Description:
          - tigr4_ortho_1to1_promoters: TIGR4 promoters in conserved 1:1 IGRs vs Ortho IGR negatives
 
 Note on D39V TSS Census:
-    Formal filtered baseline count is standardized to N=989 TSSs (988 + 1 corrected TSS).
+    Formal filtered reference count is standardized to N=989 TSSs (988 + 1 corrected TSS).
 ================================================================================
 """
 
@@ -211,11 +211,11 @@ def build_cds_datasets():
     tigr4_seq = str(tigr4_rec.seq).upper()
     tigr4_len = len(tigr4_seq)
     
-    xl = pd.ExcelFile(ROOT_DIR / "data/tigr4/S1_TSS.xlsx")
-    df_hp = xl.parse("High Confidence (TSS_100.4)")
-    df_hs = xl.parse("Secondary TSS, High confidence")
-    df_lp = xl.parse("Low Confidence (TSS_2.1)")
-    df_ls = xl.parse("Secondary TSS, Low confidence")
+    df_all = pd.read_csv(ROOT_DIR / "data/tigr4/S1_TSS.tsv", sep="\t")
+    df_hp = df_all[df_all["_Source_Sheet"] == "High Confidence (TSS_100.4)"]
+    df_hs = df_all[df_all["_Source_Sheet"] == "Secondary TSS, High confidence"]
+    df_lp = df_all[df_all["_Source_Sheet"] == "Low Confidence (TSS_2.1)"]
+    df_ls = df_all[df_all["_Source_Sheet"] == "Secondary TSS, Low confidence"]
     
     cds_tigr4 = []
     tigr4_gff = ROOT_DIR / "data/reference/NC_003028.gff3"
@@ -361,8 +361,8 @@ def build_ortho_datasets():
     df_t_igr_lin = df_t_igr[~df_t_igr["is_circular_origin_wrap"]].copy()
     df_t_igr_lin["s"] = df_t_igr_lin["start"].astype(int)
     df_t_igr_lin["e"] = df_t_igr_lin["end"].astype(int)
-    xl = pd.ExcelFile(ROOT_DIR / "data/tigr4/S1_TSS.xlsx")
-    df_hp = xl.parse("High Confidence (TSS_100.4)")
+    df_all = pd.read_csv(ROOT_DIR / "data/tigr4/S1_TSS.tsv", sep="\t")
+    df_hp = df_all[df_all["_Source_Sheet"] == "High Confidence (TSS_100.4)"]
     
     t_ortho_pos = []
     for _, r in df_hp.iterrows():

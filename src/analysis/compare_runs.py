@@ -12,11 +12,12 @@ Usage:
         [-o output/<YYMMDD>_comparison]
 
 Output (inside the comparison dir):
-  2_resources/compare_{time,ram,speedup}.{png,svg,pdf}
+  2_resources/compare_{time,ram,speedup,vram}.{png,pdf}
   3_tables/resources_compare.tsv (incl. speedup_vs_slowest per tool)
   CONTENTS.md
 """
 import sys
+from collections import Counter
 from datetime import date
 from pathlib import Path
 
@@ -26,9 +27,16 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-# registry `tool` names (resource_metrics.tsv) -> canonical display labels
+try:
+    from run_layout import COMPARISONS_ROOT, RunLayout
+except ImportError:
+    from src.analysis.run_layout import COMPARISONS_ROOT, RunLayout
+
+ROOT = Path(__file__).resolve().parents[2]
+
+# registry `tool` names (resource_metrics.tsv) -> primary display labels (single source of truth)
 REGISTRY_TO_DISPLAY = {
-    "MLDSPP XGBoost": "MLDSPP 0% [BDT]",
+    "MLDSPP XGBoost": "MLDSPP [BDT]",
     "MLDSPP XGBoost (75% spn)": "MLDSPP 75% [BDT]",
     "Prompt MLP (B. subtilis 168)": "prompt [NN]",
     "ProkBERT-mini (NeuralBioInfo)": "ProkBERT-mini [gLM]",
@@ -40,21 +48,21 @@ REGISTRY_TO_DISPLAY = {
 }
 
 try:
-    from bench_labels import TOOL_ORDER as CANONICAL_ORDER, TOOL_COLORS  # type: ignore
+    from bench_labels import TOOL_ORDER as PRIMARY_ORDER, TOOL_COLORS  # type: ignore
 except Exception:
     TOOL_COLORS = {
-        "MLDSPP 0% [BDT]": "#880E4F",
-        "MLDSPP 75% [BDT]": "#C2185B",
-        "PromoTech RF-HOT [RF]": "#EF6C00",
-        "PromoterLCNN [CNN]": "#2E7D32",
-        "prompt [NN]": "#0288D1",
-        "ProkBERT-mini [gLM]": "#D81B60",
-        "iPro-MP [gLM]": "#7E57C2",
-        "FIMO ProkDB [PWMs]": "#00897B",
-        "STREME+FIMO [motif]": "#795548",
+        "MLDSPP [BDT]": "#F81D54",
+        "MLDSPP 75% [BDT]": "#55001C",
+        "PromoTech RF-HOT [RF]": "#F1A52B",
+        "PromoterLCNN [CNN]": "#973C04",
+        "prompt [NN]": "#0060E6",
+        "ProkBERT-mini [gLM]": "#734595",
+        "iPro-MP [gLM]": "#BA9CEE",
+        "FIMO ProkDB [PWMs]": "#2E9E5B",
+        "STREME+FIMO [motif]": "#18974C",
     }
-    CANONICAL_ORDER = [
-        "MLDSPP 0% [BDT]", "MLDSPP 75% [BDT]", "PromoTech RF-HOT [RF]",
+    PRIMARY_ORDER = [
+        "MLDSPP [BDT]", "MLDSPP 75% [BDT]", "PromoTech RF-HOT [RF]",
         "PromoterLCNN [CNN]", "prompt [NN]", "ProkBERT-mini [gLM]",
         "iPro-MP [gLM]", "FIMO ProkDB [PWMs]", "STREME+FIMO [motif]",
     ]
@@ -79,24 +87,46 @@ def run_label(rundir: Path, df: pd.DataFrame) -> str:
 
 def load_run(rundir: Path):
     """Return (label, res_df) with normalized columns, or None."""
-    res_files = sorted(rundir.glob("resource_metrics*.tsv"))
-    if not res_files:
-        res_files = sorted((rundir / "resources").glob("resource_metrics*.tsv"))
-    if not res_files:
-        res_files = sorted((rundir / "2_resources").glob("resource_metrics*.tsv"))
-    if not res_files:
-        res_files = sorted((rundir / "3_tables").glob("resource_metrics*.tsv"))
-    if not res_files:
+    layout = RunLayout.resolve(rundir)
+    rundir = layout.root
+    metrics = layout.find_resource_metrics()
+    if metrics is None:
         print(f"  [skip] {rundir}: no resource_metrics*.tsv")
         return None
-    res = pd.read_csv(res_files[0], sep="\t")
-    label = run_label(rundir, res)
+    try:
+        res = pd.read_csv(metrics, sep="\t")
+    except pd.errors.EmptyDataError:
+        print(f"  [skip] {rundir}: empty resource metrics")
+        return None
+    if "success" in res.columns:
+        res = res[res["success"].astype(str).str.strip().str.lower().isin(
+            ("true", "1", "1.0"))]
+    if res.empty:
+        print(f"  [skip] {rundir}: no successful tool rows")
+        return None
     res = res.copy()
-    res["run"] = label
     name_col = "tool" if "tool" in res.columns else None
     if name_col:
         res["Tool"] = res[name_col].map(
-            lambda x: REGISTRY_TO_DISPLAY.get(str(x), str(x)))
+            lambda x: REGISTRY_TO_DISPLAY.get(str(x), str(x)) if pd.notna(x) else x)
+    if "Tool" not in res.columns:
+        print(f"  [skip] {rundir}: no tool column")
+        return None
+    res = res[res["Tool"].notna() & res["Tool"].astype(str).str.strip().ne("")].copy()
+    if res.empty:
+        print(f"  [skip] {rundir}: no named tool rows")
+        return None
+    metadata = layout.metadata
+    res["name"] = layout.dataset_name
+    cfg = metadata.get("config") or metadata.get("configuration") or rundir.name
+    if "configuration" not in res.columns:
+        res["configuration"] = res["regime"] if "regime" in res.columns else cfg
+    res["configuration"] = res["configuration"].replace("", np.nan).fillna(cfg)
+    label = run_label(rundir, res)
+    # Source identity must not collapse separate dates/repeats with the same label.
+    res["run"] = str(rundir)
+    res["run_label"] = label
+    res["source_path"] = str(rundir)
     return label, res
 
 
@@ -113,125 +143,88 @@ REGIME_DISPLAY = {
 REGIME_HATCHES = ["//", "\\\\", "..", ""]
 
 
-def fmt_time_short(v: float) -> str:
-    if v >= 100:
-        return f"{v:.0f}s\n({v / 60:.1f}m)"
-    return f"{v:.2f}s"
+def _tool_order(tool):
+    """Use the shared method order, with a deterministic fallback for new tools."""
+    ranks = {t: i for i, t in enumerate(PRIMARY_ORDER)}
+    return ranks.get(tool, len(ranks)), tool.casefold()
 
 
-def fmt_ram(v: float) -> str:
-    return f"{v:.1f} MB"
+def _comparison_figure(n_tools, n_series):
+    # Allow more space for each group as regimes are added. The legend lives
+    # outside the axes; constrained layout reserves its own space for it.
+    width = max(12, n_tools * (2.2 if n_series >= 3 else 1.9))
+    return plt.subplots(figsize=(width, 8.5 if n_series >= 3 else 7.5),
+                        dpi=300, constrained_layout=True)
 
 
-def single_bars(ax, tools, vals, ylabel, title, fmt):
-    """One bar per tool, canonical TOOL_ORDER (BDT→RF→CNN→NN→gLM→motif), not alphabetical/value."""
-    order_idx = {t: i for i, t in enumerate(CANONICAL_ORDER)}
-    paired = sorted(zip(tools, vals), key=lambda item: order_idx.get(item[0], 999))
+def _style_bar_axes(ax, tools, ylabel):
+    ax.set_xticks(np.arange(len(tools)))
+    # Keep the full names, but put the method on its own line.
+    ax.set_xticklabels([t.replace(" [", "\n[") for t in tools],
+                       fontsize=10, fontweight="bold")
+    ax.tick_params(axis="x", pad=9)
+    ax.set_xlabel("Tool and Model Architecture", fontsize=12,
+                  fontweight="bold", labelpad=14)
+    ax.set_ylabel(ylabel, fontsize=12, fontweight="bold")
+    ax.set_axisbelow(True)
+    ax.grid(True, axis="y", linestyle="--", alpha=0.5)
+    ax.spines[["top", "right"]].set_visible(False)
+    ax.margins(x=0.025)
+
+
+def _inside_legend(ax, ncol=1, **kwargs):
+    """Legend in the upper-right corner, inside the axes (never outside)."""
+    return ax.legend(loc="upper right", borderaxespad=0.5, frameon=True,
+                     framealpha=0.9, fontsize=10, ncol=ncol, **kwargs)
+
+
+def single_bars(ax, tools, vals, ylabel):
+    """One bar per tool, primary TOOL_ORDER (BDT→RF→CNN→NN→gLM→motif), not alphabetical/value."""
+    paired = sorted(zip(tools, vals), key=lambda item: _tool_order(item[0]))
     tools = [t for t, _ in paired]
     vals = [v for _, v in paired]
     x = np.arange(len(tools))
     bars = ax.bar(x, vals, 0.52,
                   color=[TOOL_COLORS.get(t, "#333333") for t in tools],
                   edgecolor="black", linewidth=0.8, zorder=3)
-    for b, v in zip(bars, vals):
-        ax.annotate(fmt(v), (b.get_x() + b.get_width() / 2, v),
-                    xytext=(0, 5), textcoords="offset points",
-                    ha="center", va="bottom", fontsize=9.5, fontweight="bold",
-                    color="black")
-    ax.set_xticks(x)
-    ax.set_xticklabels(tools, fontsize=10, fontweight="bold", rotation=20,
-                       ha="right")
-    ax.set_xlabel("Tool", fontsize=12, fontweight="bold", labelpad=10)
-    ax.set_ylabel(ylabel, fontsize=12, fontweight="bold")
-    ax.set_title(title, fontsize=13, fontweight="bold", pad=15)
-    ax.grid(True, axis="y", linestyle="--", alpha=0.5, zorder=0)
-    ax.spines[["top", "right"]].set_visible(False)
+    _style_bar_axes(ax, tools, ylabel)
 
 
-def regime_bars(ax, tools, runs, values, ylabel, title, fmt,
-                regime_of: dict, ylim_top=None):
+def regime_bars(ax, tools, runs, values, ylabel, regime_of: dict,
+                run_display=None):
     """Grouped bars per tool, one bar per run (regime). Tool colors + hatch per regime.
 
-    Tools in canonical TOOL_ORDER (BDT→RF→CNN→NN→gLM→motif); x labels rotated;
-    value annotations staggered per run so adjacent numbers don't overlap.
+    Tools in primary TOOL_ORDER (BDT→RF→CNN→NN→gLM→motif).
+    Exact values live in 3_tables/resources_compare.tsv, not on the bars.
     """
     import matplotlib.patches as mpatches
-    order_idx = {t: i for i, t in enumerate(CANONICAL_ORDER)}
-    tools = sorted(tools, key=lambda t: order_idx.get(t, 999))
+    tools = sorted(tools, key=_tool_order)
     x = np.arange(len(tools))
     n = len(runs)
-    width = min(0.8 / max(n, 1), 0.22)
-    max_val = 0.0
-    all_vals = [values.get((t, r), np.nan) for t in tools for r in runs]
-    all_vals = [v for v in all_vals if not np.isnan(v)]
-    span = (max(all_vals) - min(all_vals)) if all_vals else 0.0
-    bar_artists = []
+    width = 0.82 / max(n, 1)
     for i, run in enumerate(runs):
         vals = [values.get((t, run), np.nan) for t in tools]
         off = (i - (n - 1) / 2) * width
         hatch = REGIME_HATCHES[i % len(REGIME_HATCHES)]
-        bars = ax.bar(x + off, [0 if np.isnan(v) else v for v in vals], width,
-                      edgecolor="black", linewidth=0.8,
-                      color=[TOOL_COLORS.get(t, "#9E9E9E") for t in tools],
-                      hatch=hatch, zorder=3)
-        bar_artists.append(list(zip(bars, vals, tools)))
-        for v in vals:
-            if not np.isnan(v):
-                max_val = max(max_val, v)
-    # annotate with per-group vertical spreading so close numbers don't collide
-    for j in range(len(tools)):
-        group = [(bar_artists[i][j][0], bar_artists[i][j][1], bar_artists[i][j][2])
-                 for i in range(n) if not np.isnan(bar_artists[i][j][1])]
-        group.sort(key=lambda g: g[1])
-        placed = []
-        for b, v, t in group:
-            yoff = 4
-            while any(abs((v + yoff * max_val / 300) - p) < max_val * 0.045
-                      for p in placed):
-                yoff += 11
-            placed.append(v + yoff * max_val / 300)
-            ax.annotate(fmt(v), (b.get_x() + b.get_width() / 2, v),
-                        xytext=(0, yoff), textcoords="offset points",
-                        ha="center", va="bottom", fontsize=7.5,
-                        fontweight="bold",
-                        color=TOOL_COLORS.get(t, "black"))
+        ax.bar(x + off, vals, width,
+               edgecolor="black", linewidth=0.8,
+               color=[TOOL_COLORS.get(t, "#9E9E9E") for t in tools],
+               hatch=hatch, zorder=3)
     handles = [mpatches.Rectangle((0, 0), 1, 1, facecolor="#9E9E9E",
                                   hatch=REGIME_HATCHES[i % len(REGIME_HATCHES)],
                                   edgecolor="black",
-                                  label=REGIME_DISPLAY.get(regime_of.get(r, r), r))
+                                  label=(run_display or {}).get(
+                                      r, REGIME_DISPLAY.get(regime_of.get(r, r), r)))
                for i, r in enumerate(runs)]
-    ax.set_xticks(x)
-    ax.set_xticklabels(tools, fontsize=10, fontweight="bold", rotation=20,
-                       ha="right")
-    ax.set_xlabel("Tool and Model Architecture", fontsize=12, fontweight="bold", labelpad=10)
-    ax.set_ylabel(ylabel, fontsize=12, fontweight="bold")
-    ax.set_title(title, fontsize=13, fontweight="bold", pad=15)
-    if ylim_top:
-        ax.set_ylim(0, ylim_top)
-    else:
-        ax.set_ylim(0, max_val * 1.25 if max_val > 0 else 1)
-    ax.grid(True, axis="y", linestyle="--", alpha=0.5, zorder=0)
-    ax.spines[["top", "right"]].set_visible(False)
-    ax.legend(handles=handles, title="Execution Regime", frameon=True,
-              fontsize=9.5, loc="upper left",
-              handlelength=2.5, handleheight=2.5)
+    _style_bar_axes(ax, tools, ylabel)
+    _inside_legend(ax, ncol=len(runs), handles=handles, title="Execution Regime",
+                   handlelength=2.5, handleheight=2.0)
 
 
 def save_fig(fig, path: Path):
     for ext in ("png", "pdf"):
         fig.savefig(path.with_suffix(f".{ext}"), dpi=300, bbox_inches="tight")
     plt.close(fig)
-
-
-def _dataset_title(res_all: pd.DataFrame, dataset_label: str = None) -> str:
-    if dataset_label:
-        return dataset_label
-    if "name" in res_all.columns:
-        from bench_labels import DS_DISPLAY
-        names = [str(v) for v in res_all["name"].unique()]
-        if len(names) == 1:
-            return DS_DISPLAY.get(names[0], names[0])
-    return "comparison"
 
 
 def _total_n(res_all: pd.DataFrame) -> int:
@@ -242,70 +235,65 @@ def _total_n(res_all: pd.DataFrame) -> int:
     return 0
 
 
-def compare_runs(run_dirs, out_dir: Path, dataset_label: str = None):
+def _vram_reference(res_all, regime_of):
+    """Select one GPU configuration, preferring the 1cpu-gpu reference.
+
+    A positive GPU-memory sample in a CPU-only run is not proof that inference
+    used the GPU. Never choose the first row across CPU and GPU runs together.
+    """
+    gpu_runs = [run for run, regime in regime_of.items()
+                if str(regime).endswith("-gpu")]
+    if not gpu_runs:
+        return res_all.iloc[:0], None
+    reference = next((r for r in gpu_runs if regime_of[r] == "1cpu-gpu"),
+                     gpu_runs[0])
+    return res_all[res_all["run"] == reference], reference
+
+
+def compare_runs(run_dirs, out_dir: Path, exclude=None):
+    layouts = [RunLayout.resolve(Path(rd)) for rd in run_dirs]
+    out_dir = Path(out_dir).resolve()
+    # Refuse to write inside an input run (or its ancestors): comparisons
+    # must live in their own directory.
+    for layout in layouts:
+        if (out_dir == layout.root or out_dir in layout.root.parents
+                or layout.root in out_dir.parents):
+            raise ValueError(f"Comparison output {out_dir} is an input run, its "
+                             f"ancestor, or its descendant ({layout.root}); "
+                             "choose a separate directory.")
     loaded = []
-    # track canonical source paths for MANIFEST (no data duplication)
-    source_paths: List[str] = []
-    input_shas: List[str] = []
-    for rd in run_dirs:
-        r = load_run(Path(rd))
+    source_paths = []
+    seen = set()
+    for layout in layouts:
+        source = str(layout.root)
+        if source in seen:
+            continue
+        seen.add(source)
+        r = load_run(layout.root)
         if r is not None:
             loaded.append(r)
-            try:
-                source_paths.append(str(Path(rd).resolve()))
-                # try to read STATUS/MANIFEST for input_sha
-                st = None
-                for cand in [Path(rd) / "STATUS.json", Path(rd) / "MANIFEST.json"]:
-                    if cand.exists():
-                        import json as _json
-                        st = _json.loads(cand.read_text())
-                        if st.get("input_sha"):
-                            input_shas.append(st["input_sha"])
-                            break
-            except Exception:
-                pass
+            source_paths.append(source)
     if not loaded:
         print("ERROR: no usable runs found.")
         sys.exit(2)
 
-    labels = [lbl for lbl, _ in loaded]
+    labels = source_paths
+    display_labels = {source: label for source, (label, _) in zip(labels, loaded)}
     res_all = pd.concat([r for _, r in loaded], ignore_index=True)
+    if exclude:
+        drop = set(exclude)
+        n0 = len(res_all)
+        res_all = res_all[~res_all.get("Tool", pd.Series(dtype=str)).isin(drop)].reset_index(drop=True)
+        print(f"  [compare] excluded {sorted(drop)}: {n0} -> {len(res_all)} rows")
 
-    tools_res = [t for t in CANONICAL_ORDER if t in set(res_all.get("Tool", []))]
+    tools_res = [t for t in PRIMARY_ORDER if t in set(res_all.get("Tool", []))]
     tools_res += [t for t in sorted(set(res_all.get("Tool", [])) - set(tools_res))]
 
     resd = out_dir / "2_resources"
     tab = out_dir / "3_tables"
     for d in (resd, tab):
         d.mkdir(parents=True, exist_ok=True)
-    # legacy symlink for old callers expecting output/<YYMMDD>_comparison_* (reversible)
-    try:
-        legacy_comp = Path("output") / out_dir.name
-        if legacy_comp != out_dir and not legacy_comp.exists() and not legacy_comp.is_symlink():
-            legacy_comp.symlink_to(out_dir.resolve())
-    except Exception:
-        pass
-    # write comparison MANIFEST (lightweight view, no prediction copies) — reversible
-    try:
-        try:
-            from run_layout import RunLayout  # type: ignore
-        except ImportError:
-            from src.analysis.run_layout import RunLayout  # type: ignore
-        # prefer canonical comparisons root, but keep out_dir as requested (legacy compat)
-        RunLayout(out_dir).write_comparison_manifest(
-            out_dir, sources=source_paths, dataset=_dataset_title(res_all, dataset_label),
-            regimes=[REGIME_DISPLAY.get(str(r.get("configuration", r.get("regime", ""))), str(r.get("configuration", ""))) for _, r in res_all.drop_duplicates("run").iterrows()],
-            input_shas=list(dict.fromkeys(input_shas)),
-        )
-        # also ensure legacy symlink if out_dir is under old output/<YYMMDD>_comparison_* and canonical is output/comparisons/*
-        # (handled by migration script; here we just ensure MANIFEST exists)
-    except Exception:
-        pass
 
-    ds_title = _dataset_title(res_all, dataset_label)
-    # fallback: if dataset_label generic ("results"/"comparison"), try to infer from run_dirs
-    if ds_title in ("comparison", "results", "") and dataset_label:
-        ds_title = dataset_label
     total_n = _total_n(res_all)
     n_tag = f", N={total_n:,}" if total_n else ""
     regime_of = {}
@@ -314,7 +302,19 @@ def compare_runs(run_dirs, out_dir: Path, dataset_label: str = None):
         regime_of.setdefault(r["run"], cfg)
     # human regimes for titles: always declare CPU/GPU being compared
     regimes_disp = [REGIME_DISPLAY.get(regime_of.get(r, r), regime_of.get(r, r)) for r in labels]
-    regimes_str = " vs ".join(regimes_disp) if len(regimes_disp) <= 3 else ", ".join(regimes_disp)
+    regime_counts = Counter(regime_of.values())
+    run_display = dict(zip(labels, regimes_disp))
+    for source in labels:
+        if regime_counts[regime_of[source]] <= 1:
+            continue
+        # Shortest unique source suffix keeps repeated regimes identifiable
+        # without changing bar styling, hatch order, or legend placement.
+        parts = Path(source).parts
+        for depth in range(1, len(parts) + 1):
+            suffix = Path(*parts[-depth:])
+            if sum(Path(*Path(other).parts[-depth:]) == suffix for other in labels) == 1:
+                break
+        run_display[source] += f" ({suffix})"
 
     # --- 2_resources: time / RAM / speedup (+ VRAM below) ---
     if "wall_seconds" in res_all.columns:
@@ -325,14 +325,11 @@ def compare_runs(run_dirs, out_dir: Path, dataset_label: str = None):
             lambda s: s.max() / s.replace(0, np.nan))
     res_all.to_csv(tab / "resources_compare.tsv", sep="\t", index=False)
     if len(labels) == 1:
-        cfg_single = regimes_disp[0] if regimes_disp else ""
         specs = [("wall_seconds", f"Execution Time (seconds{n_tag})",
-                  f"Execution time — {ds_title} (N={total_n:,}, {cfg_single})" if total_n and cfg_single else f"Execution time — {ds_title}",
-                  "compare_time", fmt_time_short),
+                  "compare_time"),
                  ("peak_ram_mb", "Peak Memory Usage (MB)",
-                  f"Peak RAM — {ds_title} (N={total_n:,}, {cfg_single})" if total_n and cfg_single else f"Peak RAM — {ds_title}",
-                  "compare_ram", fmt_ram)]
-        for col, ylabel, title, stem, fmt in specs:
+                  "compare_ram")]
+        for col, ylabel, stem in specs:
             if col not in res_all.columns:
                 continue
             sub = res_all[pd.to_numeric(res_all[col], errors="coerce").notna()]
@@ -340,116 +337,86 @@ def compare_runs(run_dirs, out_dir: Path, dataset_label: str = None):
                 continue
             tools = [t for t in tools_res if t in set(sub["Tool"])]
             vals = [float(sub[sub["Tool"] == t][col].iloc[0]) for t in tools]
-            fig, ax = plt.subplots(figsize=(max(12, len(tools) * 1.6), 6.5),
-                                   dpi=300)
-            single_bars(ax, tools, vals, ylabel, title, fmt)
+            fig, ax = _comparison_figure(len(tools), 1)
+            single_bars(ax, tools, vals, ylabel)
             save_fig(fig, resd / stem)
             print(f"  [SAVED] 2_resources/{stem}")
     else:
-        specs = [("wall_seconds", f"Execution Time (seconds{n_tag})",
-                  f"Execution time — {ds_title} (N={total_n:,}; {regimes_str})" if total_n
-                  else f"Execution time — {ds_title} ({regimes_str})",
-                  "compare_time", fmt_time_short),
+        specs = [("wall_seconds", "Execution Time (s)",
+                  "compare_time"),
                  ("peak_ram_mb", "Peak Memory Usage (MB)",
-                  f"Peak RAM — {ds_title} (N={total_n:,}; {regimes_str})" if total_n
-                  else f"Peak RAM — {ds_title} ({regimes_str})",
-                  "compare_ram", fmt_ram),
+                  "compare_ram"),
                  ("speedup_vs_slowest", "Speedup vs slowest config (x)",
-                  f"Speedup — {ds_title} (N={total_n:,}; {regimes_str})" if total_n
-                  else f"Speedup — {ds_title} ({regimes_str})",
-                  "compare_speedup", lambda v: f"{v:.2f}x")]
-        for col, ylabel, title, stem, fmt in specs:
+                  "compare_speedup")]
+        for col, ylabel, stem in specs:
             if col not in res_all.columns:
                 continue
             sub = res_all[pd.to_numeric(res_all[col], errors="coerce").notna()]
             if sub.empty:
                 continue
             vals = {(r["Tool"], r["run"]): float(r[col]) for _, r in sub.iterrows()}
-            fig, ax = plt.subplots(figsize=(16, 7.5), dpi=300)
-            regime_bars(ax, tools_res, labels, vals, ylabel, title, fmt,
-                        regime_of)
+            fig, ax = _comparison_figure(len(tools_res), len(labels))
+            regime_bars(ax, tools_res, labels, vals, ylabel,
+                        regime_of, run_display=run_display)
             save_fig(fig, resd / stem)
             print(f"  [SAVED] 2_resources/{stem}")
 
     # --- GPU VRAM: weights vs peak (GPU tools only) ---
     GPU_TOOLS = {"PromoterLCNN [CNN]", "ProkBERT-mini [gLM]", "iPro-MP [gLM]"}
+    vram_reference_label = None
     if {"model_size_mb", "peak_vram_mb"} <= set(res_all.columns):
-        vsub = res_all[(pd.to_numeric(res_all["peak_vram_mb"],
-                                      errors="coerce").fillna(0) > 0) & (res_all["Tool"].isin(GPU_TOOLS))]
+        gpu_reference, vram_reference_label = _vram_reference(res_all, regime_of)
+        vsub = gpu_reference[(pd.to_numeric(gpu_reference["peak_vram_mb"],
+                                      errors="coerce").fillna(0) > 0) & (gpu_reference["Tool"].isin(GPU_TOOLS))]
         if not vsub.empty:
-            order_idx = {t: i for i, t in enumerate(CANONICAL_ORDER)}
+            order_idx = {t: i for i, t in enumerate(PRIMARY_ORDER)}
             vtools = sorted([t for t in tools_res if t in set(vsub["Tool"])],
                             key=lambda t: order_idx.get(t, 999))
             weights = [float(vsub[vsub["Tool"] == t]["model_size_mb"].iloc[0])
                        for t in vtools]
             peaks = [float(vsub[vsub["Tool"] == t]["peak_vram_mb"].iloc[0])
                      for t in vtools]
-            fig, ax = plt.subplots(figsize=(10, 6), dpi=300)
+            fig, ax = _comparison_figure(len(vtools), 2)
             x = np.arange(len(vtools))
             w = 0.35
-            b1 = ax.bar(x - w / 2, weights, w, label="Model Weights (Disk/RAM)",
-                        color="#455A64", edgecolor="black", linewidth=0.8,
-                        zorder=3)
-            b2 = ax.bar(x + w / 2, peaks, w, label="Peak Inference VRAM",
-                        color="#7E57C2", edgecolor="black", linewidth=0.8,
-                        zorder=3)
-            for bar in b1:
-                h = bar.get_height()
-                ax.annotate(f"{h:.1f} MB",
-                            (bar.get_x() + bar.get_width() / 2, h),
-                            xytext=(0, 5), textcoords="offset points",
-                            ha="center", va="bottom", fontsize=9.5,
-                            fontweight="bold")
-            for bar in b2:
-                h = bar.get_height()
-                ax.annotate(f"{h:.1f} MB\n({h / 1024:.3f} GB)",
-                            (bar.get_x() + bar.get_width() / 2, h),
-                            xytext=(0, 5), textcoords="offset points",
-                            ha="center", va="bottom", fontsize=9.5,
-                            fontweight="bold")
-            ax.set_ylabel("Memory (MB)", fontsize=12, fontweight="bold")
-            ax.set_title(f"GPU Memory — {ds_title} (N = {total_n:,}; {regimes_str})" if total_n
-                         else f"GPU Memory — {ds_title} ({regimes_str})",
-                         fontsize=13, fontweight="bold", pad=15)
-            ax.set_xticks(x)
-            ax.set_xticks(np.arange(len(vtools)))
-            ax.set_xticklabels(vtools, fontsize=10.5, fontweight="bold",
-                               rotation=20, ha="right")
-            ax.set_ylim(0, max(peaks) * 1.25 if peaks else 1)
-            ax.grid(True, axis="y", linestyle="--", alpha=0.5, zorder=0)
-            ax.spines[["top", "right"]].set_visible(False)
-            ax.legend(frameon=True, fontsize=10, loc="upper left")
-            plt.tight_layout()
+            # Grouped (not stacked: peak already contains resident weights).
+            # Peak bars share one pastel: the value (height) compares,
+            # not the color. Both bars are VRAM info by construction.
+            ax.bar(x - w / 2, weights, w, label="Model weights",
+                   color="#455A64", edgecolor="black", linewidth=0.8,
+                   zorder=3)
+            ax.bar(x + w / 2, peaks, w, label="Max Inference VRAM",
+                   color="#C5CAE9", edgecolor="black", linewidth=0.8,
+                   zorder=3)
+            reference_display = run_display[vram_reference_label]
+            _style_bar_axes(ax, vtools, "Memory (MB)")
+            _inside_legend(ax, ncol=2, title=f"Reference: {reference_display}")
             save_fig(fig, resd / "compare_vram")
             print("  [SAVED] 2_resources/compare_vram")
 
     with open(out_dir / "CONTENTS.md", "w") as fh:
         fh.write("# Cross-run compute comparison\n\nRuns:\n")
         for lbl in labels:
-            fh.write(f"- {lbl}\n")
+            fh.write(f"- {display_labels[lbl]}: {lbl}\n")
         fh.write("\n- 2_resources/compare_{time,ram,speedup}: "
                  "single bars (1 run) or grouped by regime (>1 run).\n"
                  "- 2_resources/compare_vram: weights vs peak VRAM (GPU tools).\n"
                  "- 3_tables/resources_compare.tsv: source table "
                  "(incl. speedup_vs_slowest per tool).\n")
+        if vram_reference_label:
+            fh.write(f"\nVRAM reference: {vram_reference_label}. "
+                     "Model weights and peak VRAM come from this run only.\n")
     print(f"Done -> {out_dir}")
 
 
 def default_comparison_dir(run_dirs) -> Path:
     """Derive output dir from input runs: date + run tokens.
 
-    e.g. [output/260910_runs/4_d39v_tigr4_high/16cpu-gpu, ...] ->
-    output/comparisons/260910_comparison_4_d39v_tigr4_high-16cpu-gpu[_...].
-    Falls back to output/ next to legacy output/<YYMMDD>_comparison_* for compat.
+    e.g. [output/260917_runs/2_d39v_tigr4_high/16cpu-gpu, ...] ->
+    output/comparisons/260917_comparison_2_d39v_tigr4_high-16cpu-gpu[_...].
+    Default output stays under the project's primary comparisons directory.
     """
     import re
-    try:
-        from run_layout import COMPARISONS_ROOT  # type: ignore
-    except ImportError:
-        try:
-            from src.analysis.run_layout import COMPARISONS_ROOT  # type: ignore
-        except ImportError:
-            COMPARISONS_ROOT = Path("output/comparisons")
     dates, tokens = [], []
     for rd in run_dirs:
         parts = [p for p in Path(rd).parts if p not in ("output",)]
@@ -459,7 +426,7 @@ def default_comparison_dir(run_dirs) -> Path:
                 dates.append(m.group(1))
                 break
         # token: last two meaningful components, date prefix stripped
-        # (e.g. 4_d39v_tigr4_high + 16cpu-gpu, or 1cpu-gpu alone)
+        # (e.g. 2_d39v_tigr4_high + 16cpu-gpu, or 1cpu-gpu alone)
         tail = parts[-2:] if len(parts) >= 2 else parts
         tail = [re.sub(r"^\d{6}_", "", t) for t in tail]
         tail = [t for t in tail
@@ -471,19 +438,12 @@ def default_comparison_dir(run_dirs) -> Path:
     stem = f"{stamp}_comparison_" + "__".join(tokens)
     if len(stem) > 100:
         stem = stem[:100].rstrip("_")
-    base = COMPARISONS_ROOT / stem
+    base = ROOT / COMPARISONS_ROOT / stem
     # bump _02, _03... if it already exists and is non-empty
     out, i = base, 2
-    while out.exists() and any(out.iterdir()):
+    while out.is_symlink() or (out.exists() and (not out.is_dir() or any(out.iterdir()))):
         out = Path(f"{base}_{i:02d}")
         i += 1
-    # ensure legacy symlink for old callers expecting output/<YYMMDD>_comparison_*
-    try:
-        legacy = Path("output") / stem
-        if not legacy.exists() and not out.exists():
-            pass  # will create out, symlink later
-    except Exception:
-        pass
     return out
 
 
@@ -494,14 +454,15 @@ def main():
     p.add_argument("runs", nargs="+", help="Run dirs (output/<date>_runs/<name>/<config>/)")
     p.add_argument("-o", "--output", default=None,
                    help="Comparison dir (default: inherited date+names from input runs)")
-    p.add_argument("--dataset", default=None,
-                   help="Dataset display name for plot titles")
+    p.add_argument("--exclude", nargs="*", default=None,
+                   help="Display labels to drop (e.g. 'MLDSPP 75pct [BDT]'); "
+                        "useful for 7-tool cuts without touching run dirs")
     a = p.parse_args()
     if a.output:
         out = Path(a.output)
     else:
         out = default_comparison_dir(a.runs)
-    compare_runs(a.runs, out, dataset_label=a.dataset)
+    compare_runs(a.runs, out, exclude=a.exclude)
 
 
 if __name__ == "__main__":

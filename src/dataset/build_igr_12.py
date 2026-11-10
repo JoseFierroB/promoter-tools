@@ -76,8 +76,13 @@ def main():
             if bool(r.get("is_circular_origin_wrap", False)):
                 skipped_wrap += 1
                 continue
-            s, e = int(r["start"]), int(r["end"])
-            for w in range(s, e - WIN + 2):
+            # Refined TSVs are 1-based inclusive [start, end]; convert to
+            # 0-based half-open [start-1, end) to match genome slicing and
+            # 0-based TSS positions. (The previous revision treated them as
+            # 0-based directly: every window shifted +1 and last-slot windows
+            # overshot the IGR by 1 bp.)
+            s, e = int(r["start"]) - 1, int(r["end"])
+            for w in range(s, e - WIN + 1):
                 lo = bisect.bisect_left(tss[strain], w - MARGIN)
                 hi = bisect.bisect_right(tss[strain], w + WIN - 1 + MARGIN)
                 if lo == hi:

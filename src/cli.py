@@ -12,7 +12,6 @@ Usage:
 """
 import argparse
 import hashlib
-import json
 import os
 import re
 import sys
@@ -34,7 +33,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "src" / "analysis"))
 
-from run_layout import RunLayout, primary_run_dir
+from run_layout import RunLayout
 
 # registry key -> (family for primary layout, single-file output?)
 # Primary layout inside a run: 1_inference/predictions/{name}_{fam}[.tsv]
@@ -118,120 +117,12 @@ def derive_configuration(args) -> str:
             gpu = False
     return f"{threads}cpu" + ("-gpu" if gpu else "")
 
-
-def _harness_record(args, configuration) -> dict:
-    """Harness knobs for STATUS.json traceability.
-
-    Records what the CLI controls; batch size and worker counts live with
-    each runner's defaults (see docs/RUNNING.md "Measurement methodology"
-    for the per-tool table). Effective device per tool mirrors the runners'
-    own rule (cuda iff the run is a -gpu config, the tool is gpu_capable
-    and carries a gpu_id, and --cpu-only was not passed); prompt is a known
-    exception (always CPU, documented in RUNNING.md).
-    """
-    from src.benchmark.tools import PROMOTER_TOOLS
-    is_gpu_cfg = configuration.endswith("-gpu")
-    tools = {}
-    for key in (args.tools or []):
-        t = PROMOTER_TOOLS.get(key)
-        if t is None:
-            continue
-        dev = ("cuda:" + t.gpu_id) if (not args.cpu_only and is_gpu_cfg
-                                       and t.gpu_capable and t.gpu_id) else "cpu"
-        tools[key] = {"gpu_id": t.gpu_id, "gpu_capable": t.gpu_capable,
-                      "device_effective": dev}
-    return {"threads": args.threads or 1, "cpu_only": bool(args.cpu_only),
-            "gpu": bool(args.gpu), "no_timeout": bool(args.no_timeout),
-            "tools": tools}
-
-
-def read_status(target: Path):
-    try:
-        return json.loads((target / "STATUS.json").read_text())
-    except Exception:
-        return None
-
-
-def prepare_run_dir(base: Path, configuration: str, tool_keys, n_pos, n_neg, sha,
-                      pos_src: str = "", neg_src: str = "", dataset_name: str = None,
-                      harness: dict = None):
-    """Bump / quarantine / resume logic. Returns (run_root, resumed).
-
-    The dataset name stays independent of the unique run directory and alias.
-    `harness` (threads/flags/per-tool device hints) is recorded in STATUS.json
-    so two runs are never indistinguishable in metadata.
-    """
-    base = Path(base)
-    date_match = (re.fullmatch(r"(\d{6})_runs", base.parent.name)
-                  or re.fullmatch(r"(\d{6})_results", base.name))
-    date = date_match.group(1) if date_match else time.strftime("%y%m%d")
-    unnamed = bool(re.fullmatch(r"\d{6}_results", base.name))
-    name = dataset_name or ("results" if unnamed else base.name)
-    i, candidate = 1, base
-    while True:
-        target = candidate / configuration
-        st = read_status(target)
-        if st and st.get("status") == "complete":
-            i += 1
-            candidate = Path(str(base) + f"_{i:02d}")
-            continue
-        resumed = False
-        if target.exists() and any(target.iterdir()):
-            same = (st and st.get("input_sha") == sha
-                    and sorted(st.get("tools", [])) == sorted(tool_keys)
-                    and st.get("n_pos") == n_pos and st.get("n_neg") == n_neg)
-            if same:
-                resumed = True
-            else:
-                stamp = time.strftime("%H%M%S")
-                q = Path(str(candidate) + f"_partial_{stamp}") / configuration
-                q.parent.mkdir(parents=True, exist_ok=True)
-                target.rename(q)
-                print(f"  [quarantine] incomplete/stale run moved to {q.parent.name}/{configuration}/")
-        target.mkdir(parents=True, exist_ok=True)
-        layout = RunLayout(target)
-        layout.ensure_dirs()
-        (target / "STATUS.json").write_text(json.dumps({
-            "status": "running",
-            "started": time.strftime("%Y-%m-%dT%H:%M:%S"),
-            "tools": sorted(tool_keys),
-            "n_pos": n_pos, "n_neg": n_neg,
-            "input_sha": sha, "configuration": configuration,
-            "name": name,
-            "pos_src": pos_src, "neg_src": neg_src,
-            "harness": harness or {},
-        }, indent=1))
-        instance_name = candidate.name[len(date) + 1:] if unnamed else candidate.name
-        alias_base = primary_run_dir(date, instance_name, configuration,
-                                       base=ROOT / "output" / "runs")
-        alias, alias_index = alias_base, 2
-        # Preserve existing aliases, including collisions from truncated names.
-        while alias.exists() or alias.is_symlink():
-            if alias.resolve() == target.resolve():
-                break
-            alias = alias_base.with_name(f"{alias_base.name}_{alias_index:02d}")
-            alias_index += 1
-        if not alias.exists() and not alias.is_symlink():
-            alias.parent.mkdir(parents=True, exist_ok=True)
-            alias.symlink_to(target.resolve(), target_is_directory=True)
-        manifest = layout.write_manifest(
-            date=date, name=name, config=configuration,
-            input_sha=sha, pos_src=pos_src, neg_src=neg_src,
-            n_pos=n_pos, n_neg=n_neg, tools=tool_keys,
-            legacy_path=str(target.resolve()), primary_path=str(alias),
-        )
-        manifest["run_id"] = alias.name
-        layout.manifest_path.write_text(json.dumps(manifest, indent=2))
-        return target, resumed
-
-
-def count_seqs(p: Path) -> int:
-    n = 0
-    with open(p) as fh:
-        for line in fh:
-            if line.startswith(">"):
-                n += 1
-    return n
+def prepare_run_dir(base: Path, configuration: str) -> Path:
+    """Run dir = <base>/<configuration>/, created fresh. Reruns overwrite."""
+    target = Path(base) / configuration
+    target.mkdir(parents=True, exist_ok=True)
+    RunLayout(target).ensure_dirs()
+    return target
 
 
 def _append_run_log(run_root: Path, args, token: str, configuration: str,
@@ -266,6 +157,10 @@ def cmd_run(args):
     run_date = _bl.run_date
 
     valid = sorted(PROMOTER_TOOLS)
+    if not args.tools and not args.all_tools:
+        args.tools = list(_bl.DEFAULT_TOOLS_7)
+        print("No tools specified: defaulting to canonical 7 "
+              "(use --all-tools for all 9, or list tool keys explicitly).")
     if not args.tools:
         print("ERROR: specify at least one tool key.\nAvailable tools:\n  " + "\n  ".join(valid))
         sys.exit(2)
@@ -290,7 +185,6 @@ def cmd_run(args):
 
     # --- strict agnostic inputs: input dir pair or explicit pos+neg ---
     pos_fasta, neg_fasta, suggested = resolve_inputs(args)
-    n_pos, n_neg = count_seqs(pos_fasta), count_seqs(neg_fasta)
     name = sanitize_name(args.name) if args.name else (suggested or "results")
     token = name
     sha = sha_inputs(pos_fasta, neg_fasta)
@@ -301,10 +195,7 @@ def cmd_run(args):
         base = ROOT / "output" / f"{date}_runs" / name
     else:
         base = ROOT / "output" / f"{date}_results"
-    run_root, resumed = prepare_run_dir(base, configuration, args.tools, n_pos, n_neg, sha,
-                                          str(pos_fasta.resolve()), str(neg_fasta.resolve()),
-                                          dataset_name=token,
-                                          harness=_harness_record(args, configuration))
+    run_root = prepare_run_dir(base, configuration)
     layout = RunLayout(run_root)
     # primary predictions lives inside 1_inference/predictions
     if args.output_dir:
@@ -312,12 +203,7 @@ def cmd_run(args):
     else:
         pred_root = layout.inference / "predictions"
     pred_root.mkdir(parents=True, exist_ok=True)
-    if args.output_dir:
-        manifest = json.loads(layout.manifest_path.read_text())
-        manifest["predictions_path"] = str(pred_root)
-        layout.manifest_path.write_text(json.dumps(manifest, indent=2))
-    print(f"Run dir: {run_root} (name={token}, configuration={configuration}"
-          f"{', resumed' if resumed else ''})")
+    print(f"Run dir: {run_root} (name={token}, configuration={configuration})")
 
     if args.slurm:
         from src.backend.slurm import SlurmRunner
@@ -367,15 +253,6 @@ def cmd_run(args):
             df.to_csv(export, sep="\t", index=False)
             print(f"Metrics exported: {export}")
 
-    st = read_status(run_root)
-    st = st or {}
-    st.update({"status": "complete" if all(r.get("success") for r in results) else "failed",
-               "finished": time.strftime("%Y-%m-%dT%H:%M:%S")})
-    (run_root / "STATUS.json").write_text(json.dumps(st, indent=1))
-    manifest = json.loads(layout.manifest_path.read_text())
-    manifest.update(status=st["status"], finished=st["finished"])
-    layout.manifest_path.write_text(json.dumps(manifest, indent=2))
-
     if args.plots:
         from analyze_run import analyze_run
         analyze_run(pred_root, token, run_root)
@@ -397,7 +274,9 @@ def main():
 
     # run
     p_run = sub.add_parser("run", help="Execute benchmark tools")
-    p_run.add_argument("tools", nargs="*", help="Tool keys to run (lcnn, promotech_hot, ...)")
+    p_run.add_argument("tools", nargs="*", help="Tool keys to run (lcnn, promotech_hot, ...); default: canonical 7")
+    p_run.add_argument("--all-tools", action="store_true",
+                       help="Run all 9 registry tools instead of the default 7")
     p_run.add_argument("--slurm", action="store_true", help="Use Slurm backend")
     p_run.add_argument("--runs", type=int, default=1, help="Number of independent runs (N≥3 recommended)")
     p_run.add_argument("-o", "--output", help="Additional metrics TSV export (primary table is always kept)")

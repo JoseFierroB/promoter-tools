@@ -6,7 +6,13 @@
 Self-contained modules for analyzing promoters in refined intergenic regions
 (IGRs) of *Streptococcus pneumoniae* (D39V and TIGR4) and specialized niches
 (CDS-internal promoters and 1:1 ortholog pairs). These modules reuse the same
-runners and CLI as the canonical benchmark; only the dataset changes.
+runners and CLI as the project benchmark; only the dataset changes.
+
+> **Shared IGR data plane:** the code is self-contained, but it reads shared
+> data under `output/intergenic*/`, `output/mmseqs2/`, `output/tigr4_data/`
+> and `output/tables/igr_*` — do not move/rename those dirs (see
+> `docs/REPO_LAYOUT.md`). Regenerable via the extract scripts; versioned
+> sets live in `data/`.
 
 ---
 
@@ -43,10 +49,10 @@ python experiments/igr/build_tigr4_igr.py   # → data/benchmark_igr/tigr4 (4 su
 python experiments/igr/build_cds_ortho.py   # → data/benchmark_cds, data/benchmark_ortho_1to1
 ```
 
-### Step 2 — Benchmark (canonical CLI, configuration only)
+### Step 2 — Benchmark (project CLI, configuration only)
 
 ```bash
-python src/cli.py run meme fimo_prok mldspp mldspp_75 lcnn promotech_hot ipromp_sp12 \
+python src/cli.py run meme fimo_prok mldspp mldspp_75 lcnn promotech_hot ipromp_sp12 prompt prokbert \
     --pos data/benchmark_igr/d39v/positives_81bp_igr.fasta \
     --neg data/benchmark_igr/d39v/negatives_81bp_igr.fasta \
     --output-dir output/predictions_igr/d39v \
@@ -66,7 +72,7 @@ python experiments/igr/sigma_roc.py         # ROC by sigma factor
 
 ---
 
-## 3. Datasets (canonical IGR benchmark)
+## 3. Datasets (IGR benchmark)
 
 | Dataset | Pos/Neg | Content |
 |---|---|---|
@@ -90,5 +96,5 @@ MLDSPP 75/25 split (seed 42): `data/benchmark/mldspp_75_split_benchmark_igr.npz`
   the environment == `python ...` with the environment activated).
 - Generated outputs (not versioned): `output/predictions_igr/`,
   `output/intergenic_refined/`, `output/tables/igr_*.tsv`.
-- The canonical benchmark (D39V 989 / TIGR4 tiers) lives in `data/benchmark/`
+- The project benchmark (D39V 989 / TIGR4 tiers) lives in `data/benchmark/`
   and `data/tigr4/` — this module is a parallel experimental extension.

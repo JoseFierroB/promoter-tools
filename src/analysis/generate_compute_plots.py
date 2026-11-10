@@ -29,15 +29,15 @@ def _c(display: str, fallback: str) -> str:
     return _CANON_COLORS.get(display, fallback)
 
 PALETTE = {
-    "MLDSPP XGBoost":                {"short": "MLDSPP",      "method": "BDT",   "color": _c("MLDSPP 0% [BDT]", "#F81D54"), "marker": "v"},
+    "MLDSPP XGBoost":                {"short": "MLDSPP",      "method": "BDT",   "color": _c("MLDSPP [BDT]", "#F81D54"), "marker": "v"},
     "MLDSPP XGBoost (75% spn)":      {"short": "MLDSPP 75%",  "method": "BDT",   "color": _c("MLDSPP 75% [BDT]", "#55001C"), "marker": "^"},
     "PromoterLCNN":                  {"short": "PromoterLCNN","method": "CNN",   "color": _c("PromoterLCNN [CNN]", "#973C04"), "marker": "s"},
-    "FIMO + Prokaryote DB":          {"short": "FIMO",        "method": "PWMs",  "color": _c("FIMO ProkDB [PWMs]", "#002616"), "marker": "D"},
+    "FIMO + Prokaryote DB":          {"short": "FIMO",        "method": "PWMs",  "color": _c("FIMO ProkDB [PWMs]", "#2E9E5B"), "marker": "D"},
     "PromoTech RF-HOT (PG Max)":     {"short": "PromoTech",   "method": "RF",    "color": _c("PromoTech RF-HOT [RF]", "#F1A52B"), "marker": "P"},
     "iPro-MP (H. pylori)":           {"short": "iPro-MP",     "method": "gLM",   "color": _c("iPro-MP [gLM]", "#BA9CEE"), "marker": "o"},
     "MEME Suite (STREME+FIMO)":      {"short": "MEME",        "method": "motif", "color": _c("STREME+FIMO [motif]", "#18974C"), "marker": "o"},
     "Prompt MLP (B. subtilis 168)":  {"short": "Prompt",      "method": "NN",    "color": _c("prompt [NN]", "#0060E6"), "marker": "p"},
-    "ProkBERT-mini (NeuralBioInfo)": {"short": "ProkBERT-mini", "method": "gLM", "color": _c("ProkBERT-mini [gLM]", "#2D004D"), "marker": "h"},
+    "ProkBERT-mini (NeuralBioInfo)": {"short": "ProkBERT-mini", "method": "gLM", "color": _c("ProkBERT-mini [gLM]", "#734595"), "marker": "h"},
 }
 
 
@@ -100,7 +100,7 @@ def main_run(run_dir: Path):
         try:
             from bench_labels import TOOL_ORDER as _TO
             _legacy_to_primary = {
-                "MLDSPP XGBoost": "MLDSPP 0% [BDT]",
+                "MLDSPP XGBoost": "MLDSPP [BDT]",
                 "MLDSPP XGBoost (75% spn)": "MLDSPP 75% [BDT]",
                 "PromoTech RF-HOT (PG Max)": "PromoTech RF-HOT [RF]",
                 "PromoterLCNN": "PromoterLCNN [CNN]",
@@ -128,12 +128,6 @@ def main_run(run_dir: Path):
         # tools are present in a run (especially MEME and ProkBERT-mini).
         fig, ax = plt.subplots(figsize=(max(13.5, len(sub) * 1.65), 7), dpi=300)
         bars = ax.bar(range(len(sub)), vals, color=colors, edgecolor="black", linewidth=0.8)
-        for b, v in zip(bars, vals):
-            ax.annotate(_format_run_value(col, v),
-                        (b.get_x() + b.get_width() / 2, v),
-                        xytext=(0, 5), textcoords="offset points",
-                        ha="center", va="bottom", fontsize=9.5,
-                        fontweight="bold", clip_on=False)
         ax.set_xticks(range(len(sub)))
         ax.set_xticklabels(labels, fontsize=10.5, fontweight="bold",
                            rotation=22, ha="right", rotation_mode="anchor")

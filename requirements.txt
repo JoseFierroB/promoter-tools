@@ -1,5 +1,5 @@
 # promoter-tools — Python dependencies
-# Reference for non-pixi users; the canonical environment is pixi (pixi.toml).
+# Reference for non-pixi users; the primary environment is pixi (pixi.toml).
 # Core environment:
 numpy>=1.21
 pandas>=1.0

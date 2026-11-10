@@ -13,6 +13,10 @@ DS_DISPLAY = {
     "2_d39v_tigr4_high_sigma": "D39V+TIGR4 high",
     "4_d39v_tigr4_high": "D39V+TIGR4 high",
     "4_d39v_tigr4_high_sigma": "D39V+TIGR4 high",
+    "16_d39v_tigr4_high_igr_1to2": "D39V+TIGR4 IGR",
+    "17_d39v_tigr4_high_mix5050": "D39V+TIGR4 mix",
+    "18_d39v_tigr4_high_cds_1to2": "D39V+TIGR4 CDS",
+    "d39v_tigr4_hc_dedup_balanced": "D39V+TIGR4 balanced",
     "3_d39v_tigr4_all": "D39V+TIGR4 all",
     "scale_10k": "Scale 10k",
     "scale_30k": "Scale 30k",
@@ -31,7 +35,7 @@ DS_DISPLAY = {
 # so bars/lines/legends are always in the same, non-metric order.
 # ---------------------------------------------------------------------------
 TOOL_ORDER = [
-    "MLDSPP 0% [BDT]",
+    "MLDSPP [BDT]",
     "MLDSPP 75% [BDT]",
     "PromoTech RF-HOT [RF]",
     "PromoterLCNN [CNN]",
@@ -42,16 +46,29 @@ TOOL_ORDER = [
     "STREME+FIMO [motif]",
 ]
 
+# Canonical 7-tool cut (default everywhere since 2026-11-02):
+# excludes MLDSPP 75% (superseded variant) and STREME+FIMO (motif baseline).
+# Registry keys (see analyze_run.TOOLS); display labels above.
+DEFAULT_TOOLS_7 = [
+    "mldspp",
+    "promotech_hot",
+    "lcnn",
+    "prompt",
+    "prokbert",
+    "ipromp_sp12",
+    "fimo_prok",
+]
+
 # exhaustive style map (color + line style for ROC, color for bars)
 PALETTE = {
-    "MLDSPP 0% [BDT]":       {"color": "#F81D54", "ls": "-",  "lw": 1.8, "method": "BDT"},
+    "MLDSPP [BDT]":       {"color": "#F81D54", "ls": "-",  "lw": 1.8, "method": "BDT"},
     "MLDSPP 75% [BDT]":      {"color": "#55001C", "ls": "-",  "lw": 1.8, "method": "BDT"},
     "PromoTech RF-HOT [RF]": {"color": "#F1A52B", "ls": "-",  "lw": 1.9, "method": "RF"},
     "PromoterLCNN [CNN]":    {"color": "#973C04", "ls": "-",  "lw": 1.9, "method": "CNN"},
     "prompt [NN]":           {"color": "#0060E6", "ls": "-",  "lw": 1.8, "method": "NN"},
-    "ProkBERT-mini [gLM]":   {"color": "#2D004D", "ls": "-",  "lw": 2.3, "method": "gLM"},
+    "ProkBERT-mini [gLM]":   {"color": "#734595", "ls": "-",  "lw": 2.3, "method": "gLM"},
     "iPro-MP [gLM]":         {"color": "#BA9CEE", "ls": "-",  "lw": 2.1, "method": "gLM"},
-    "FIMO ProkDB [PWMs]":    {"color": "#002616", "ls": "--", "lw": 1.7, "method": "PWMs"},
+    "FIMO ProkDB [PWMs]":    {"color": "#2E9E5B", "ls": "--", "lw": 1.7, "method": "PWMs"},
     "STREME+FIMO [motif]":   {"color": "#18974C", "ls": ":",  "lw": 1.7, "method": "motif"},
 }
 

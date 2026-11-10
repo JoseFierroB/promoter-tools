@@ -32,26 +32,31 @@ zero pos/neg leakage. Builder: `src/dataset/build_mix_5050.py`; split:
 (train 1049 / test 350). Cross-strain annotation conflicts (7 exact-duplicate
 groups) documented in `data/benchmark/annotation_conflicts.tsv`.
 
-Latest 8-tool results on the default set (16cpu-gpu, `output/comparisons/261012_5050_8tools/`):
+Latest 7-tool results on the default set (1cpu-gpu, `output/261027_runs/d39v_tigr4_hc_1_to2_5050_dedup/`, AUC with 95% bootstrap CI + DeLong p vs best):
 
-| Tool | AUC |
-|---|---|
-| MLDSPP 75% [BDT] | 0.9301 |
-| ProkBERT-mini [gLM] | 0.9253 |
-| iPro-MP [gLM] | 0.9152 |
-| PromoterLCNN [CNN] | 0.8955 |
-| MLDSPP 0% [BDT] | 0.8351 |
-| prompt [NN] | 0.8194 |
-| STREME+FIMO [motif] | 0.8057 |
-| FIMO ProkDB [PWMs] | 0.6802 |
+| Tool | AUC | 95% CI | DeLong p |
+|---|---|---|---|
+| ProkBERT-mini [gLM] | 0.9280 | 0.918–0.938 | — |
+| iPro-MP [gLM] | 0.9166 | 0.904–0.928 | 0.006 |
+| PromoTech RF-HOT [RF] | 0.8979 | 0.887–0.910 | 0.0002 |
+| PromoterLCNN [CNN] | 0.8927 | 0.880–0.907 | <0.0001 |
+| MLDSPP [BDT] | 0.8373 | 0.823–0.852 | <0.0001 |
+| prompt [NN] | 0.8219 | 0.808–0.835 | <0.0001 |
+| FIMO ProkDB [PWMs] | 0.6871 | 0.671–0.704 | <0.0001 |
 
 Commands and full metrics in `docs/WORKFLOW.md` and `docs/REPORT.md`.
 
 ```bash
-# Run the full 9-tool benchmark locally (default dataset auto-selected)
-pixi run python src/cli.py run meme fimo_prok mldspp mldspp_75 lcnn promotech_hot ipromp_sp12 prompt prokbert \
+# Run the benchmark locally (default dataset auto-selected).
+# No tool list = canonical 7 (excludes MLDSPP-75% superseded variant and
+# STREME motif baseline); --all-tools runs all 9; --only/-subset per script.
+pixi run python src/cli.py run \
   --pos data/benchmark/datasets/d39v_tigr4_hc_dedup_balanced/positives_81bp.fasta \
   --neg data/benchmark/datasets/d39v_tigr4_hc_dedup_balanced/negatives_81bp.fasta
+
+# Explicit 9-tool run, or drop tools from a comparison without touching run dirs:
+pixi run python src/cli.py run --all-tools [...]
+pixi run python src/analysis/compare_runs.py <run1> <run2> --exclude "MLDSPP 75pct [BDT]" -o <out>
 ```
 
 ## Experimental Extensions (parallel, same resources)
@@ -98,7 +103,7 @@ pipeline/               # Shell entrypoints + legacy scripts (run_pipeline.sh)
 
 data/
 ├── benchmark/          # Default hc_dedup_balanced set + splits + annotation_conflicts.tsv
-├── benchmark/datasets/ # All versioned datasets (16/17/18 IGR/mix/CDS + canonical 2_)
+├── benchmark/datasets/ # Versioned datasets (default: d39v_tigr4_hc_dedup_balanced)
 ├── benchmark_igr/      # Experimental: IGR benchmark (D39V 723 + TIGR4 subsets)
 ├── tigr4/              # TIGR4 TSS datasets (multiple tiers, S1_TSS.tsv)
 └── reference/          # Reference genomes + annotations (GFF3 + FASTA)

@@ -4,9 +4,16 @@ Used by LocalRunner (psutil subprocess monitoring) and SlurmRunner (sacct),
 ensuring all execution paths produce the same output schema.
 
 Produces dict keys:
-    tool, category, wall_seconds, time_s, peak_ram_mb, peak_vram_mb,
+    tool, category, wall_seconds, time_s, cpu_seconds, peak_ram_mb, peak_vram_mb,
     mean_cpu_pct, gpu_name, gpu_available, model_size_mb, intermediate_mb,
     n_sequences, throughput_seq_s, success, notes
+
+Conventions (see docs/RUNNING.md "Measurement methodology"):
+  - wall_seconds: full process wall (load + compute). time_s: runner
+    self-reported compute. cpu_seconds: mean_cpu_pct/100 * wall.
+  - peak_ram_mb: max PSS over 0.2 s samples (RSS-sum fallback).
+  - peak_vram_mb: max device VRAM attributed to our PIDs when known,
+    else device-global (contaminated by neighbours).
 """
 import re
 import subprocess
@@ -30,16 +37,32 @@ def _nvml():
     return _pynvml
 
 
-def _gpu_sample(gpu_id: str):
-    """Sample VRAM (MB) and GPU util% of device index `gpu_id`."""
+def _gpu_sample(gpu_id: str, pids=None):
+    """Sample VRAM (MB) and GPU util% of device index `gpu_id`.
+
+    If `pids` (a set of our process-tree PIDs) is given, VRAM sums only
+    those PIDs via NVML per-process accounting instead of the device-global
+    counter, so other processes on the card don't contaminate the number.
+    util% stays device-level (NVML exposes no per-PID time average).
+    """
     try:
         nv = _nvml()
         if nv is None:
             return 0.0, 0.0
         handle = nv.nvmlDeviceGetHandleByIndex(int(gpu_id))
-        mem = nv.nvmlDeviceGetMemoryInfo(handle)
+        if pids:
+            try:
+                vram = sum(p.usedGpuMemory / (1024 * 1024)
+                           for p in nv.nvmlDeviceGetComputeRunningProcesses(handle)
+                           if p.pid in pids)
+            except Exception:
+                mem = nv.nvmlDeviceGetMemoryInfo(handle)
+                vram = mem.used / (1024 * 1024)
+        else:
+            mem = nv.nvmlDeviceGetMemoryInfo(handle)
+            vram = mem.used / (1024 * 1024)
         util = nv.nvmlDeviceGetUtilizationRates(handle)
-        return mem.used / (1024 * 1024), float(util.gpu)
+        return vram, float(util.gpu)
     except Exception:
         return 0.0, 0.0
 
@@ -57,12 +80,14 @@ def _gpu_name(gpu_id: str) -> str:
 
 
 def collect_local(proc, tool, output: str, wall_start: float,
-                  samples: list = None, gpu_samples: list = None) -> dict:
+                   samples: list = None, gpu_samples: list = None,
+                   pids: set = None) -> dict:
     """Measure resources while a subprocess.Popen runs.
 
     If `samples` is provided (list of (rss_mb, cpu_pct) from background thread),
     those are used directly. Otherwise falls back to psutil in-process sampling.
     `gpu_samples` is a list of (vram_mb, gpu_util_pct) sampled by the same thread.
+    `pids` scopes VRAM accounting to our process tree (see _gpu_sample).
     """
     wall = round(time.perf_counter() - wall_start, 3)
     time_s, throughput = _parse_runner_output(output, tool)
@@ -75,7 +100,7 @@ def collect_local(proc, tool, output: str, wall_start: float,
         vram_mb = round(max(s[0] for s in gpu_samples), 1)
         gpu_util = round(sum(s[1] for s in gpu_samples) / len(gpu_samples), 1)
     else:
-        vram_mb = _query_vram()
+        vram_mb = _query_vram(pids)
         gpu_util = 0.0
     gpu_name = _gpu_name(tool.gpu_id) if tool.gpu_id else ""
     return _build_metrics(tool, wall, time_s, ram_mb, cpu_pct, vram_mb,
@@ -201,9 +226,32 @@ def _sample_psutil(proc, interval=0.5):
     return ram_mb, cpu_pct
 
 
-def _query_vram():
-    """nvidia-smi VRAM query — returns 0.0 if no GPU or command fails."""
+def _query_vram(pids=None):
+    """nvidia-smi VRAM query — returns 0.0 if no GPU or command fails.
+
+    With `pids` (set of our process-tree PIDs), sums only matching PIDs via
+    --query-compute-apps=pid,used_memory; otherwise legacy global sum over
+    all compute apps (contaminated by other processes on the card).
+    """
     try:
+        if pids is not None:
+            if not pids:
+                return 0.0
+            res = subprocess.run(
+                ["nvidia-smi", "--query-compute-apps=pid,used_memory",
+                 "--format=csv,noheader,nounits"],
+                capture_output=True, text=True, timeout=5)
+            total = 0.0
+            for line in res.stdout.strip().split("\n"):
+                if not line.strip():
+                    continue
+                parts = [x.strip() for x in line.split(",")]
+                if len(parts) >= 2 and parts[0].isdigit() and int(parts[0]) in pids:
+                    try:
+                        total += float(parts[1].split()[0])
+                    except (ValueError, IndexError):
+                        pass
+            return round(total, 1)
         res = subprocess.run(
             ["nvidia-smi", "--query-compute-apps=used_memory",
              "--format=csv,noheader,nounits"],
@@ -215,13 +263,17 @@ def _query_vram():
 
 
 def _build_metrics(tool, wall: float, time_s, ram_mb: float, cpu_pct: float,
-                   vram_mb: float, throughput, success: bool = True,
-                   notes: str = "", gpu_name: str = "", gpu_util: float = 0.0):
+                    vram_mb: float, throughput, success: bool = True,
+                    notes: str = "", gpu_name: str = "", gpu_util: float = 0.0):
+    # cpu_seconds: CPU time consumed (mean % x wall), same semantics as
+    # sacct CPUTimeRAW. Derived, not sampled.
+    cpu_seconds = round(cpu_pct / 100.0 * wall, 3)
     return {
         "tool": tool.name,
         "category": tool.category,
         "wall_seconds": round(wall, 3),
         "time_s": round(time_s or wall, 3),
+        "cpu_seconds": cpu_seconds,
         "peak_ram_mb": round(ram_mb, 1),
         "peak_vram_mb": round(vram_mb, 1),
         "mean_cpu_pct": round(cpu_pct, 1),

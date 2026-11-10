@@ -9,7 +9,7 @@ Repository: promoter-tools
 Description:
     Constructs isolated, reproducible IGR-specific promoter datasets for
     Streptococcus pneumoniae TIGR4 (NC_003028.3) by mapping experimental
-    TSSs (from S1_TSS.xlsx) into refined IGR intervals (TIGR4_igrs_refined.tsv).
+    TSSs (from S1_TSS.tsv) into refined IGR intervals (TIGR4_igrs_refined.tsv).
 
 Outputs generated in: data/benchmark_igr/tigr4/
     1. subset_1_high_conf_primary/   (Primary High-Confidence in IGRs)
@@ -37,7 +37,7 @@ if not GENOME_FASTA.exists():
     GENOME_FASTA = ROOT_DIR / "data/reference/TIGR4.fasta"
 
 IGR_TSV = ROOT_DIR / "output/intergenic_refined/tigr4/TIGR4_igrs_refined.tsv"
-S1_XLSX = ROOT_DIR / "data/tigr4/S1_TSS.xlsx"
+S1_TSV = ROOT_DIR / "data/tigr4/S1_TSS.tsv"
 OUT_BASE = ROOT_DIR / "data/benchmark_igr/tigr4"
 
 def calculate_gc(seq_str: str) -> float:
@@ -146,11 +146,11 @@ def main():
     linear_igrs["end_int"] = linear_igrs["end"].astype(int)
     print(f"Loaded Refined IGRs: {len(linear_igrs)} linear intergenic intervals")
     
-    # 3. Parse all 4 sheets from S1_TSS.xlsx
-    xl = pd.ExcelFile(S1_XLSX)
-    
+    # 3. Parse all 4 sheets from S1_TSS.tsv (one row set per _Source_Sheet)
+    df_all = pd.read_csv(S1_TSV, sep="\t")
+
     def parse_sheet_tss(sheet_name, pos_col, source_tag):
-        df = xl.parse(sheet_name)
+        df = df_all[df_all["_Source_Sheet"] == sheet_name]
         parsed = []
         for idx, r in df.iterrows():
             pos = int(r[pos_col])
@@ -212,7 +212,7 @@ def main():
         "subset_4_all_comprehensive": {
             "name": "TIGR4 IGR All Comprehensive (4 Sheets)",
             "df_pos": df_all_tss[df_all_tss["In_Refined_IGR"]].copy(),
-            "desc": "Comprehensive set of all experimental TSSs from S1_TSS.xlsx located strictly inside refined IGRs."
+            "desc": "Comprehensive set of all experimental TSSs from S1_TSS.tsv located strictly inside refined IGRs."
         }
     }
     
