@@ -1,9 +1,41 @@
 #!/usr/bin/env python3
-"""Build 17_d39v_tigr4_high_mix5050: dedup positives (1399) + 50/50 negatives.
+"""Build the deduped 1399 + 1399 CDS + 1399 IGR collection (sole assembler).
 
-Negatives: 1399 CDS (subsample seed 42 of canonical 1738) + 1399 IGR
-(subsample seed 42 of the 2798 from 16_d39v_tigr4_high_igr_1to2).
-Dedup within negatives + cross leakage vs positives must be 0.
+Recipe (all deterministic, seed 42):
+  positives: keep-first dedup of the CANON positives pool (same 1399
+      sequences from any complete pool: raw D39V 989 + TIGR4 738, or the
+      1727 combined set). D39V headers carry the sigma-assigned family label
+      (C1/C5 transferred to SigA); TIGR4 headers carry conf + family suffix.
+  negatives: 1399 CDS (shuffled keep-first subsample of the canonical 1738:
+      raw D39V 1000 + TIGR4 738) + 1399 IGR (same of the 2798 IGR pool).
+      Dedup within + across pools, zero pos/neg leakage.
+  --strain-match: per-strain quotas (D39V/TIGR4 ratio of the positives)
+      inside EACH background via stratified quotas (loud top-up on short
+      strata). This flag produces the vigente hc set (negatives metadata
+      gains the Strain column).
+
+Provenance of the committed collection
+(data/benchmark/datasets/d39v_tigr4_hc_dedup_balanced, 1399+2798):
+  built 2026-10-12 with this script, --strain-match, -o <hc path>.
+  Verified facts:
+  - positives: keep-first dedup gives the same 1399 sequences from the raw
+    D39V 989 + TIGR4 738 pools; D39V headers carry the sigma-assigned family
+    label (C1/C5 transferred to SigA), TIGR4 headers carry conf + family
+    suffix (see split FASTAs + sigma metadata under data/tigr4/).
+  - CDS negatives (1399): byte-exact reproduction of the 17_mix5050 sibling
+    from raw D39V + TIGR4 negatives in file order (d39v then tigr4),
+    random.Random(42).shuffle, keep-first. The hc set reuses that pool.
+  - quotas: positives are 972 D39V + 427 TIGR4 (Chromosome column), and each
+    negative background holds exactly 972 D39V + 427 TIGR4 rows — the
+    --strain-match signature (negatives metadata gains the Strain column).
+  - IGR pool (2798): sampled with the same seed-42 rule from the refined-IGR
+    windows; the committed 16_d39v_tigr4_high_igr_1to2 snapshot in git
+    history is a later resampling (same IDs, different windows), so reruns
+    from current sources resample equivalently but not byte-identically.
+  Pools at build time: CANON = 2_d39v_tigr4_high_sigma (positives with
+  meta-key headers + 1727-row sigma metadata w/ Chromosome/Sigma_Factor;
+  negatives = raw concat) + IGR16 (pool + strain metadata). Both restorable
+  from git history (pre-purge commits).
 
 Usage:
     pixi run python src/dataset/build_mix_5050.py [-o data/benchmark/datasets/17_d39v_tigr4_high_mix5050] [--prefer-sigx] [--strain-match]
