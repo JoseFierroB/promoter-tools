@@ -54,14 +54,15 @@ SIGMA_OUTPUTS = (
 
 
 def _outputs_current(out_dir: Path, tables_path: Path, name: str,
-                     newest_input_mtime: float) -> bool:
+                      newest_input_mtime: float, tag: str = "") -> bool:
     """True when all 7 sigma outputs exist and predate no input.
 
     Used to run sigma once per dataset: sibling regime dirs
     (output/<date>_runs/<name>/<config>/) share inputs, so the first
     regime generates and the rest skip unless --force is given.
+    `tag` scopes the check to tagged outputs (e.g. _7tools).
     """
-    wanted = [out_dir / f.format(name=name) for f in SIGMA_OUTPUTS]
+    wanted = [out_dir / f.format(name=name + tag) for f in SIGMA_OUTPUTS]
     wanted.append(tables_path)
     if not all(p.is_file() for p in wanted):
         return False
@@ -92,10 +93,10 @@ def load_classes(meta_path: Path):
     return pos_ids, classes
 
 
-def per_id_scores(pred_root: Path, name: str, pos_ids):
+def per_id_scores(pred_root: Path, name: str, pos_ids, only=None):
     """Return {display_label: ({pid: score}, [neg scores])} using analyze_run loaders."""
     out = {}
-    scored = load_all(pred_root, name)
+    scored = load_all(pred_root, name, only)
     # need n_pos hint = len(pos_ids) for ipromp (already handled inside load_all)
     for key, (label, y_true, y_score) in scored.items():
         n_pos = int(y_true.sum())
@@ -138,7 +139,18 @@ def main():
     ap.add_argument("--force", action="store_true",
                     help="Regenerate even when current sigma outputs exist "
                          "(own dir or a sibling regime dir).")
+    ap.add_argument("--only", nargs="*", default=None,
+                    help="Tool keys to include (e.g. mldspp lcnn prokbert); "
+                         "default: canonical 7 tools.")
+    ap.add_argument("--all-tools", action="store_true",
+                    help="Include all 9 registry tools instead of the default 7")
+    ap.add_argument("--tag", default="",
+                    help="Suffix for output files (e.g. _7tools), so filtered "
+                         "runs don't overwrite the full outputs.")
     args = ap.parse_args()
+    if args.only is None and not args.all_tools:
+        from bench_labels import DEFAULT_TOOLS_7
+        args.only = list(DEFAULT_TOOLS_7)
 
     run_dir = Path(args.run_dir)
     pred_root = run_dir / "1_inference" / "predictions"
@@ -148,17 +160,18 @@ def main():
     # are newer than every input (predictions + metadata).
     if not args.force:
         newest_in = _newest_input_mtime(pred_root, Path(args.metadata))
+        met_name = f"sigma_factor_benchmark_metrics{args.tag}.tsv"
         own = (run_dir / "1_inference" / "sigma",
-               run_dir / "3_tables" / "sigma_factor_benchmark_metrics.tsv")
-        if _outputs_current(*own, args.name, newest_in):
+               run_dir / "3_tables" / met_name)
+        if _outputs_current(*own, args.name, newest_in, args.tag):
             print(f"  [sigma] skip: current outputs in {run_dir} (use --force).")
             return
         for sib in sorted(run_dir.parent.iterdir()):
             if sib == run_dir or not sib.is_dir():
                 continue
             sib_out = (sib / "1_inference" / "sigma",
-                       sib / "3_tables" / "sigma_factor_benchmark_metrics.tsv")
-            if _outputs_current(*sib_out, args.name, newest_in):
+                       sib / "3_tables" / met_name)
+            if _outputs_current(*sib_out, args.name, newest_in, args.tag):
                 print(f"  [sigma] skip: current outputs in sibling {sib.name} "
                       f"(use --force).")
                 return
@@ -167,7 +180,7 @@ def main():
     print(f"classes: SigA={counts.get('SigA',0)} SigX={counts.get('SigX',0)} "
           f"None={counts.get('None',0)} total={len(pos_ids)}")
 
-    tool_maps = per_id_scores(pred_root, args.name, pos_ids)
+    tool_maps = per_id_scores(pred_root, args.name, pos_ids, args.only)
     if not tool_maps:
         raise SystemExit(f"ERROR: no predictions in {pred_root}")
 
@@ -191,8 +204,9 @@ def main():
     tables = run_dir / "3_tables"
     tables.mkdir(parents=True, exist_ok=True)
     met = pd.DataFrame(rows)
-    met.to_csv(tables / "sigma_factor_benchmark_metrics.tsv", sep="\t", index=False)
-    print(f"  [sigma] metrics: {len(met)} rows -> 3_tables/sigma_factor_benchmark_metrics.tsv")
+    met_name = f"sigma_factor_benchmark_metrics{args.tag}.tsv"
+    met.to_csv(tables / met_name, sep="\t", index=False)
+    print(f"  [sigma] metrics: {len(met)} rows -> 3_tables/{met_name}")
     print(met.pivot(index="tool", columns="sigma", values="auc").to_string())
 
     sig_dir = run_dir / "1_inference" / "sigma"
@@ -206,8 +220,8 @@ def main():
                                            key=lambda x: order_idx.get(x[0], 999)):
             s = PALETTE.get(label, {"color": "#333", "ls": "-", "lw": 1.8})
             ax.plot(fpr, tpr, color=s["color"], linestyle=s["ls"],
-                    linewidth=s["lw"], label=f"{label} (AUC = {a:.3f})")
-        ax.plot([0, 1], [0, 1], color="grey", lw=1.2, ls="--", label="Chance (0.500)")
+                    linewidth=s["lw"], label=f"{label} (AUC = {a:.2f})")
+        ax.plot([0, 1], [0, 1], color="grey", lw=1.2, ls="--", label="Random Guess (AUC = 0.50)")
         ax.set_xlim([-0.01, 1.01]); ax.set_ylim([-0.01, 1.02])
         ax.set_xlabel("False Positive Rate (1 - Specificity)", fontsize=12, fontweight="bold")
         ax.set_ylabel("True Positive Rate (Sensitivity)", fontsize=12, fontweight="bold")
@@ -215,9 +229,9 @@ def main():
         ax.grid(True, linestyle=":", alpha=0.6)
         plt.tight_layout()
         for ext in ("png", "pdf"):
-            fig.savefig(sig_dir / f"roc_{sig}_{args.name}.{ext}", bbox_inches="tight")
+            fig.savefig(sig_dir / f"roc_{sig}_{args.name}{args.tag}.{ext}", bbox_inches="tight")
         plt.close(fig)
-        print(f"  [sigma] ROC saved: 1_inference/sigma/roc_{sig}_{args.name}.png/.pdf")
+        print(f"  [sigma] ROC saved: 1_inference/sigma/roc_{sig}_{args.name}{args.tag}.png/.pdf")
 
 
 if __name__ == "__main__":

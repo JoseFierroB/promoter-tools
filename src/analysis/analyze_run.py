@@ -24,9 +24,9 @@ except Exception:  # fallback when run as script without package context
         "PromoTech RF-HOT [RF]": {"color": "#F1A52B", "ls": "-",  "lw": 1.9, "method": "RF"},
         "PromoterLCNN [CNN]":    {"color": "#973C04", "ls": "-",  "lw": 1.9, "method": "CNN"},
         "prompt [NN]":           {"color": "#0060E6", "ls": "-",  "lw": 1.8, "method": "NN"},
-        "ProkBERT-mini [gLM]":   {"color": "#2D004D", "ls": "-",  "lw": 2.3, "method": "gLM"},
+        "ProkBERT-mini [gLM]":   {"color": "#734595", "ls": "-",  "lw": 2.3, "method": "gLM"},
         "iPro-MP [gLM]":         {"color": "#BA9CEE", "ls": "-",  "lw": 2.1, "method": "gLM"},
-        "FIMO ProkDB [PWMs]":    {"color": "#002616", "ls": "--", "lw": 1.7, "method": "PWMs"},
+        "FIMO ProkDB [PWMs]":    {"color": "#2E9E5B", "ls": "--", "lw": 1.7, "method": "PWMs"},
         "STREME+FIMO [motif]":   {"color": "#18974C", "ls": ":",  "lw": 1.7, "method": "motif"},
     }
     TOOL_ORDER = [
@@ -223,8 +223,8 @@ def analyze_run(pred_root: Path, name: str, out_dir: Path, only=None) -> pd.Data
     for cname, fpr, tpr, a in sorted(curves, key=lambda x: order_idx.get(x[0], 999)):
         style = PALETTE.get(cname, {"color": "#333333", "ls": "-", "lw": 1.8})
         ax.plot(fpr, tpr, color=style["color"], linestyle=style["ls"],
-                linewidth=style["lw"], label=f"{cname} (AUC = {a:.3f})")
-    ax.plot([0, 1], [0, 1], "k--", lw=1.2, alpha=0.6, label="Random Guess (AUC = 0.500)")
+                linewidth=style["lw"], label=f"{cname} (AUC = {a:.2f})")
+    ax.plot([0, 1], [0, 1], "k--", lw=1.2, alpha=0.6, label="Random Guess (AUC = 0.50)")
     ax.set_xlim([-0.02, 1.02])
     ax.set_ylim([-0.02, 1.02])
     ax.set_xlabel("False Positive Rate (1 - Specificity)", fontsize=12, fontweight="bold")

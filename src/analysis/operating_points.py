@@ -62,14 +62,25 @@ def main():
     ap.add_argument("--neg", default=None,
                     help="negatives FASTA (with --metadata: enables d39v/tigr4 cuts; "
                          "neg IDs carry _D39V_/_TIGR4_ tags, scores align by FASTA order)")
+    ap.add_argument("--only", nargs="*", default=None,
+                    help="Tool keys to include (e.g. mldspp lcnn prokbert); "
+                         "default: canonical 7 tools.")
+    ap.add_argument("--all-tools", action="store_true",
+                    help="Include all 9 registry tools instead of the default 7")
+    ap.add_argument("--tag", default="",
+                    help="Suffix for output files (e.g. _7tools), so filtered "
+                         "cuts don't overwrite the full outputs.")
     args = ap.parse_args()
+    if args.only is None and not args.all_tools:
+        from bench_labels import DEFAULT_TOOLS_7
+        args.only = list(DEFAULT_TOOLS_7)
 
     run_dir = Path(args.run_dir)
     pred_root = run_dir / "1_inference" / "predictions"
     if not pred_root.exists():  # legacy fallback
         pred_root = run_dir / "predictions"
 
-    scored = load_all(pred_root, args.name)
+    scored = load_all(pred_root, args.name, args.only)
     if not scored:
         raise SystemExit(f"ERROR: no predictions in {pred_root}")
 
@@ -88,15 +99,15 @@ def main():
         rows.append({"dataset": args.name, "tool": label, "cut": "global",
                      "n_pos": int(np.asarray(y_true).sum()),
                      "n_neg": int(len(y_true) - np.asarray(y_true).sum()), **op})
-    pd.DataFrame(rows).to_csv(tables / "operating_point_metrics.tsv",
+    pd.DataFrame(rows).to_csv(tables / f"operating_point_metrics{args.tag}.tsv",
                               sep="\t", index=False)
-    print(f"  [op] global: {len(rows)} rows -> 3_tables/operating_point_metrics.tsv")
+    print(f"  [op] global: {len(rows)} rows -> 3_tables/operating_point_metrics{args.tag}.tsv")
 
     # Sigma cuts (ID-grounded, same mapping as sigma_stratify).
     if args.metadata:
         from sigma_stratify import load_classes, per_id_scores, CLASS_ORDER
         pos_ids, classes = load_classes(Path(args.metadata))
-        tool_maps = per_id_scores(pred_root, args.name, pos_ids)
+        tool_maps = per_id_scores(pred_root, args.name, pos_ids, args.only)
         srows = []
         for label, (pmap, nscores) in tool_maps.items():
             for sig in CLASS_ORDER:
@@ -111,9 +122,9 @@ def main():
                     continue
                 srows.append({"dataset": args.name, "tool": label, "cut": sig,
                               "n_pos": len(sub), "n_neg": len(nscores), **op})
-        pd.DataFrame(srows).to_csv(tables / "operating_point_metrics_sigma.tsv",
+        pd.DataFrame(srows).to_csv(tables / f"operating_point_metrics_sigma{args.tag}.tsv",
                                    sep="\t", index=False)
-        print(f"  [op] sigma: {len(srows)} rows -> 3_tables/operating_point_metrics_sigma.tsv")
+        print(f"  [op] sigma: {len(srows)} rows -> 3_tables/operating_point_metrics_sigma{args.tag}.tsv")
 
     # Strain cuts (pos: metadata Chromosome; neg: FASTA ID tags).
     if args.metadata and args.neg:
@@ -133,7 +144,7 @@ def main():
             raise SystemExit(f"ERROR: neg ID without strain tag: {nid}")
 
         pos_ids = meta["Sequence_ID"].astype(str).tolist()
-        tool_maps = per_id_scores(pred_root, args.name, pos_ids)
+        tool_maps = per_id_scores(pred_root, args.name, pos_ids, args.only)
         trows = []
         for label, (pmap, nscores) in tool_maps.items():
             if len(nscores) != len(neg_ids):
@@ -156,9 +167,9 @@ def main():
                     continue
                 trows.append({"dataset": args.name, "tool": label, "cut": st,
                               "n_pos": len(sub), "n_neg": len(n_by_strain[st]), **op})
-        pd.DataFrame(trows).to_csv(tables / "operating_point_metrics_strain.tsv",
-                                   sep="\t", index=False)
-        print(f"  [op] strain: {len(trows)} rows -> 3_tables/operating_point_metrics_strain.tsv")
+        pd.DataFrame(trows).to_csv(tables / f"operating_point_metrics_strain{args.tag}.tsv",
+                                     sep="\t", index=False)
+        print(f"  [op] strain: {len(trows)} rows -> 3_tables/operating_point_metrics_strain{args.tag}.tsv")
 
     if broken:
         print(f"  [op] BROKEN (constant scores, no threshold): {broken}")

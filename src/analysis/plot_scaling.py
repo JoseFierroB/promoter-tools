@@ -6,7 +6,6 @@ Reads execution time / peak RAM / AUC from each scale run's
   2_resources/scaling_time.{png,pdf}   — execution time vs N (log-log)
   2_resources/scaling_throughput.{png,pdf} — seq/s vs N
   3_tables/scaling.tsv                 — numbers per size
-  MANIFEST.json                        — sources
 
 Usage (single tool):
     pixi run python src/analysis/plot_scaling.py \
@@ -25,7 +24,6 @@ Usage (multi-tool, all 9 in primary order):
       -o output/comparisons/2609XX_scale9_10k-100k
 """
 import argparse
-import json
 import sys
 from pathlib import Path
 
@@ -45,7 +43,7 @@ except Exception:
     _TOOL_COLORS = {}
 
 REGISTRY_TO_DISPLAY = {
-    "MLDSPP XGBoost": "MLDSPP 0% [BDT]",
+    "MLDSPP XGBoost": "MLDSPP [BDT]",
     "MLDSPP XGBoost (75% spn)": "MLDSPP 75% [BDT]",
     "PromoTech RF-HOT (PG Max)": "PromoTech RF-HOT [RF]",
     "PromoterLCNN": "PromoterLCNN [CNN]",
@@ -72,7 +70,15 @@ def load_point(run_dir: Path, tool: str):
     label = REGISTRY_TO_DISPLAY.get(tool, tool)
     mrow = met[met["tool"] == label]
     auc = float(mrow["auc"].iloc[0]) if not mrow.empty else float("nan")
-    npos, nneg = int(mrow["n_pos"].iloc[0]), int(mrow["n_neg"].iloc[0]) if not mrow.empty else (0, 0)
+    if not mrow.empty:
+        npos, nneg = int(mrow["n_pos"].iloc[0]), int(mrow["n_neg"].iloc[0])
+    elif (run_dir / "STATUS.json").is_file():
+        # legacy runs: metrics labels predate the canonical rename
+        import json as _json
+        _st = _json.loads((run_dir / "STATUS.json").read_text())
+        npos, nneg = int(_st.get("n_pos", 0)), int(_st.get("n_neg", 0))
+    else:
+        npos, nneg = 0, 0
     return {"run": str(run_dir), "n": npos + nneg,
             "wall": float(row["wall_seconds"]), "ram": float(row["peak_ram_mb"]),
             "vram": float(row["peak_vram_mb"]), "auc": auc}
@@ -124,21 +130,15 @@ def main():
     df.to_csv(tab / "scaling.tsv", sep="\t", index=False)
 
     label = REGISTRY_TO_DISPLAY.get(args.tool, args.tool)
-    ds = args.dataset or label
     n = df["n"].values.astype(float)
     w = df["wall"].values.astype(float)
-    slope = float(np.polyfit(np.log10(n), np.log10(w), 1)[0])
 
     # 1. execution time vs N log-log
     fig, ax = plt.subplots(figsize=(9, 6), dpi=300)
-    ax.loglog(n, w, "o-", color="#2D004D", lw=2.2, ms=8, label=label)
-    for x, y in zip(n, w):
-        ax.annotate(f"{int(x/1000)}k: {y:.0f}s", (x, y), xytext=(0, 8),
-                    textcoords="offset points", ha="center", fontsize=9, fontweight="bold")
+    ax.loglog(n, w, "o-", color="#734595", lw=2.2, ms=8, label=label)
     ax.set_xlabel("Dataset size N (pos+neg)", fontsize=12, fontweight="bold")
     ax.set_ylabel("Execution time (s, log scale)", fontsize=12, fontweight="bold")
-    ax.set_title(f"{ds} — scaling", fontsize=13, fontweight="bold", pad=12)
-    ax.legend(fontsize=10)
+    ax.legend(fontsize=10, loc="upper left")
     ax.grid(True, which="both", linestyle=":", alpha=0.5)
     plt.tight_layout()
     save(fig, resd / "scaling_time")
@@ -148,22 +148,14 @@ def main():
     fig, ax = plt.subplots(figsize=(9, 6), dpi=300)
     thr = n / w
     ax.semilogx(n, thr, "s-", color="#0060E6", lw=2.2, ms=8, label=label)
-    for x, y in zip(n, thr):
-        ax.annotate(f"{y:.1f}/s", (x, y), xytext=(0, 8),
-                    textcoords="offset points", ha="center", fontsize=9, fontweight="bold")
     ax.set_xlabel("Dataset size N (pos+neg)", fontsize=12, fontweight="bold")
     ax.set_ylabel("Throughput (seq/s)", fontsize=12, fontweight="bold")
-    ax.set_title(f"{ds} — throughput vs size", fontsize=13, fontweight="bold", pad=12)
-    ax.legend(fontsize=10)
+    ax.legend(fontsize=10, loc="upper left")
     ax.grid(True, which="both", linestyle=":", alpha=0.5)
     plt.tight_layout()
     save(fig, resd / "scaling_throughput")
     print("  [SAVED] 2_resources/scaling_throughput.png/.pdf")
 
-    (out / "MANIFEST.json").write_text(json.dumps(
-        {"type": "scaling", "dataset": ds, "tool": label,
-         "sources": [p["run"] for p in pts],
-         "loglog_slope": round(slope, 3)}, indent=2))
     print(f"Done -> {out}\n{df.to_string(index=False)}")
 
 
@@ -233,19 +225,14 @@ def main_multi(args):
     tab.mkdir(parents=True, exist_ok=True)
     pd.DataFrame(rows).to_csv(tab / "scaling_all.tsv", sep="\t", index=False)
 
-    ds = args.dataset or ""
-    title_ds = f" ({ds})" if ds else ""
     context = _load_context(args.context_tsv) if args.context_tsv else {}
     specs = [("wall", True, "Execution time (s, log scale)",
-              f"Execution time scaling — {len(series)} tools{title_ds}",
               "scaling_time_all"),
              ("thr", False, "Throughput (seq/s)",
-              f"Throughput scaling — {len(series)} tools{title_ds}",
               "scaling_throughput_all"),
              ("ram", True, "Peak RAM (MB, log scale)",
-              f"Peak RAM scaling — {len(series)} tools{title_ds}",
               "scaling_ram_all")]
-    for col, logy, ylabel, title, stem in specs:
+    for col, logy, ylabel, stem in specs:
         fig, ax = plt.subplots(figsize=(12.5, 7.5), dpi=300)
         drew_projection = False
         for tool in series:
@@ -284,22 +271,11 @@ def main_multi(args):
             ax.set_xlim(right=float(args.x_max))
         ax.set_xlabel("Dataset size N (pos+neg)", fontsize=12, fontweight="bold")
         ax.set_ylabel(ylabel, fontsize=12, fontweight="bold")
-        ax.set_title(title, fontsize=13, fontweight="bold", pad=12)
-        ax.set_xlabel("Dataset size N (pos+neg)", fontsize=12, fontweight="bold")
-        ax.set_ylabel(ylabel, fontsize=12, fontweight="bold")
-        ax.set_title(title, fontsize=13, fontweight="bold", pad=12)
-        leg = ax.legend(fontsize=9, loc="upper left")
-        leg.get_title().set_fontweight("bold")
+        ax.legend(fontsize=9, loc="upper left")
         ax.grid(True, which="both", linestyle=":", alpha=0.5)
         save(fig, resd / stem)
         print(f"  [SAVED] 2_resources/{stem}.png/.pdf")
 
-    (out / "MANIFEST.json").write_text(json.dumps(
-        {"type": "scaling_all", "dataset": ds,
-         "tools": [REGISTRY_TO_DISPLAY.get(t, t) for t in series],
-         "sources": runs,
-         "project_to": args.project_to or None,
-         "context": args.context_tsv or None}, indent=2))
     print(f"Done -> {out}")
     return
 

@@ -2,7 +2,7 @@
 """
 Refined Intergenic Region (IGR) Extraction & Structural RNA Masking Tool.
 
-Enhancements over baseline:
+Enhancements over the reference approach:
   1. Non-coding RNA & Structural Feature Masking: Excludes CDS, tRNA, rRNA, ncRNA,
      scRNA, sRNA, pseudogenes, riboswitches, tmRNA, RNase P, and SRP RNA from IGR space.
   2. Circular Chromosome Wrap-Around: Merges the terminal spacer (after last feature)
