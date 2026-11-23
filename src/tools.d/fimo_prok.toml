@@ -1,0 +1,14 @@
+# FIMO with unified prokaryote motif database (zero-shot, no training)
+name = "FIMO + Prokaryote DB"
+short = "fimo_prok"
+category = "Other"
+pixi_env = "tools/meme/pixi.toml"
+gpu_capable = false
+n_sequences = 1988
+model_paths = []
+notes = "Zero-shot: FIMO scans with 838 prokaryotic motifs (PRODORIC + RegulonDB). No S. pneumoniae training."
+
+outputs = [
+    "output/predictions/fimo_prok_pos.csv",
+    "output/predictions/fimo_prok_neg.csv",
+]

@@ -97,7 +97,7 @@ PROMOTER_TOOLS = {
         ],
         model_paths=[config.promoters_dir / "weights/PromoterLCNN/IsPromoter_fold_5"],
         gpu_capable=True,
-        gpu_id="0",                      # GPU 0 = RTX 3090 (PCI_BUS_ID): TF 2.6 kernels nativos
+        gpu_id="1",                      # 5090 (cache JIT-PTX caliente tras primer run; si wedged post-driver, volver a 3090/sm_86)
     ),
     "mldspp": Tool(
         name="MLDSPP XGBoost",
@@ -138,7 +138,7 @@ PROMOTER_TOOLS = {
         # config/tokenizer (weights overwritten, strict=False).
         model_files=[str(config.ipromp_model_dir / "12_fold_1.pth")],
         gpu_capable=True,
-        gpu_id="0",                      # GPU 0 = RTX 3090 (PCI_BUS_ID): misma que LCNN; torch cu128 soporta sm_86
+        gpu_id="1",                      # 5090-only (PCI_BUS_ID idx 1); torch cu128 soporta sm_120
         notes="DNABERT-6 transformer. Heavy on CPU, fast on GPU.",
     ),
     "prokbert": Tool(
@@ -151,7 +151,7 @@ PROMOTER_TOOLS = {
         # Weights come from the HuggingFace Hub cache (no local file).
         model_files=[_hf_cache_blobs("neuralbioinfo/prokbert-mini-promoter")],
         gpu_capable=True,
-        gpu_id="0",
+        gpu_id="1",
         notes="Official fine-tuned ProkBERT-mini-promoter gLM transformer.",
     ),
     "prompt": Tool(

@@ -206,8 +206,8 @@ def main():
                                            key=lambda x: order_idx.get(x[0], 999)):
             s = PALETTE.get(label, {"color": "#333", "ls": "-", "lw": 1.8})
             ax.plot(fpr, tpr, color=s["color"], linestyle=s["ls"],
-                    linewidth=s["lw"], label=f"{label} (AUC = {a:.3f})")
-        ax.plot([0, 1], [0, 1], color="grey", lw=1.2, ls="--", label="Chance (0.500)")
+                    linewidth=s["lw"], label=f"{label} (AUC = {a:.2f})")
+        ax.plot([0, 1], [0, 1], color="grey", lw=1.2, ls="--", label="Chance (0.50)")
         ax.set_xlim([-0.01, 1.01]); ax.set_ylim([-0.01, 1.02])
         ax.set_xlabel("False Positive Rate (1 - Specificity)", fontsize=12, fontweight="bold")
         ax.set_ylabel("True Positive Rate (Sensitivity)", fontsize=12, fontweight="bold")

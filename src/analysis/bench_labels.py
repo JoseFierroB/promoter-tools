@@ -2,18 +2,35 @@
 """Shared benchmark labels: numberless display names for tables/legends/titles.
 
 Rules:
-- Dataset numbers live ONLY in directory/file names (e.g. "2_d39v_tigr4_high").
+- Dataset numbers live ONLY in directory/file names (e.g. "4_d39v_tigr4_high").
   Tables, legends and titles use DS_DISPLAY (no numbers).
 """
 from datetime import date
 
 DS_DISPLAY = {
     "1_d39v": "D39V",
-    "2_d39v_tigr4_high": "D39V+TIGR4 high",
-    "2_d39v_tigr4_high_sigma": "D39V+TIGR4 high",
+    "2_tigr4_high": "TIGR4 HC",
+    "3_tigr4_all": "TIGR4 all",
     "4_d39v_tigr4_high": "D39V+TIGR4 high",
+    "2_d39v_tigr4_high": "D39V+TIGR4 high",
     "4_d39v_tigr4_high_sigma": "D39V+TIGR4 high",
+    "16_d39v_tigr4_high_igr_1to2": "D39V+TIGR4 IGR",
+    "17_d39v_tigr4_high_mix5050": "D39V+TIGR4 mix",
+    "18_d39v_tigr4_high_cds_1to2": "D39V+TIGR4 CDS",
+    "d39v_tigr4_hc_1_to2_5050_dedup": "D39V+TIGR4 balanced",
+    "2_d39v_tigr4_high_sigma": "D39V+TIGR4 high",
     "3_d39v_tigr4_all": "D39V+TIGR4 all",
+    "5_d39v_tigr4_all": "D39V+TIGR4 all",
+    "6_d39v_igr": "D39V IGR",
+    "7_tigr4_igr_high": "TIGR4 IGR HC",
+    "8_tigr4_igr_all": "TIGR4 IGR all",
+    "9_d39v_igr_tigr4_igr_high": "D39V+TIGR4 IGR HC",
+    "10_d39v_igr_tigr4_igr_all": "D39V+TIGR4 IGR all",
+    "11_d39v_cds": "D39V CDS",
+    "12_tigr4_cds_high": "TIGR4 CDS HC",
+    "13_tigr4_cds_all": "TIGR4 CDS all",
+    "14_d39v_cds_tigr4_cds_high": "D39V+TIGR4 CDS HC",
+    "15_d39v_cds_tigr4_cds_all": "D39V+TIGR4 CDS all",
     "scale_10k": "Scale 10k",
     "scale_30k": "Scale 30k",
     "scale_60k": "Scale 60k",
@@ -26,7 +43,7 @@ DS_DISPLAY = {
 }
 
 # ---------------------------------------------------------------------------
-# Primary tool palette & order — single source of truth for all plots.
+# Canonical tool palette & order — single source of truth for all plots.
 # Grouped by method family (BDT → RF → CNN → NN → gLM → motif/PWM)
 # so bars/lines/legends are always in the same, non-metric order.
 # ---------------------------------------------------------------------------

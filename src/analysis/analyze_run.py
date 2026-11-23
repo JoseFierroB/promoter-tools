@@ -2,9 +2,9 @@
 """Analyze one CLI run: ROC + AUC rows for a single dataset.
 
 Agnostic: works on any run dir produced by `src/cli.py run`. Reads the
-primary 1_inference/predictions/{name}_{fam}[.tsv] with legacy fallback.
-Writes a title-free 1_inference/roc_auc_{name}.{png,pdf} and
-3_tables/metrics_rows.tsv. No root-level copies or SVG exports.
+primary 1_inference/predictions/{name}_{fam}[.tsv].
+Writes 1_inference/roc_auc_{name}.{png,pdf} and
+3_tables/metrics_rows.tsv.
 """
 from pathlib import Path
 
@@ -16,41 +16,36 @@ import pandas as pd
 from sklearn.metrics import roc_curve, auc
 
 try:
-    from bench_labels import PALETTE, TOOL_ORDER  # primary (single source)
+    from bench_labels import PALETTE, TOOL_ORDER
 except Exception:  # fallback when run as script without package context
     PALETTE = {
-        "MLDSPP 0% [BDT]":       {"color": "#F81D54", "ls": "-",  "lw": 1.8, "method": "BDT"},
-        "MLDSPP 75% [BDT]":      {"color": "#55001C", "ls": "-",  "lw": 1.8, "method": "BDT"},
+        "MLDSPP [BDT]":      {"color": "#55001C", "ls": "-",  "lw": 1.8, "method": "BDT"},
         "PromoTech RF-HOT [RF]": {"color": "#F1A52B", "ls": "-",  "lw": 1.9, "method": "RF"},
         "PromoterLCNN [CNN]":    {"color": "#973C04", "ls": "-",  "lw": 1.9, "method": "CNN"},
         "prompt [NN]":           {"color": "#0060E6", "ls": "-",  "lw": 1.8, "method": "NN"},
         "ProkBERT-mini [gLM]":   {"color": "#2D004D", "ls": "-",  "lw": 2.3, "method": "gLM"},
         "iPro-MP [gLM]":         {"color": "#BA9CEE", "ls": "-",  "lw": 2.1, "method": "gLM"},
         "FIMO ProkDB [PWMs]":    {"color": "#002616", "ls": "--", "lw": 1.7, "method": "PWMs"},
-        "STREME+FIMO [motif]":   {"color": "#18974C", "ls": ":",  "lw": 1.7, "method": "motif"},
     }
     TOOL_ORDER = [
-        "MLDSPP 0% [BDT]", "MLDSPP 75% [BDT]", "PromoTech RF-HOT [RF]",
+        "MLDSPP [BDT]", "PromoTech RF-HOT [RF]",
         "PromoterLCNN [CNN]", "prompt [NN]", "ProkBERT-mini [gLM]",
-        "iPro-MP [gLM]", "FIMO ProkDB [PWMs]", "STREME+FIMO [motif]",
+        "iPro-MP [gLM]", "FIMO ProkDB [PWMs]",
     ]
 
-# registry key -> (display label, loader kind) — insertion order = TOOL_ORDER above
 TOOLS = {
-    "mldspp": ("MLDSPP 0% [BDT]", "posneg_dir"),
-    "mldspp_75": ("MLDSPP 75% [BDT]", "posneg_dir"),
+    "mldspp": ("MLDSPP [BDT]", "posneg_dir"),
     "promotech_hot": ("PromoTech RF-HOT [RF]", "posneg_dir"),
     "lcnn": ("PromoterLCNN [CNN]", "posneg_dir"),
     "prompt": ("prompt [NN]", "single_tsv"),
     "prokbert": ("ProkBERT-mini [gLM]", "single_tsv"),
     "ipromp_sp12": ("iPro-MP [gLM]", "ipromp_dir"),
     "fimo_prok": ("FIMO ProkDB [PWMs]", "fimo_dir"),
-    "meme": ("STREME+FIMO [motif]", "meme_dir"),
 }
-FAM = {"mldspp": "mldspp", "mldspp_75": "mldspp_75",
+FAM = {"mldspp": "mldspp",
        "promotech_hot": "promotech", "lcnn": "lcnn", "prompt": "prompt",
        "prokbert": "prokbert", "ipromp_sp12": "ipromp",
-       "fimo_prok": "fimo", "meme": "meme"}
+       "fimo_prok": "fimo"}
 
 
 def _posneg(p, n):
@@ -74,7 +69,7 @@ def load_tool(pred_root: Path, name: str, key: str, n_pos_hint=None):
 
     n_pos_hint fixes the iPro-MP split: that file has no LABEL column, so
     without a hint the split defaults to len//2, which mislabels when the
-    total is odd (e.g. 1727+1738=3465 -> 1732/1733).
+    total is odd.
     """
     fam = FAM[key]
     kind = TOOLS[key][1]
@@ -104,8 +99,6 @@ def load_tool(pred_root: Path, name: str, key: str, n_pos_hint=None):
                 n = base / "promotech" / "workdir" / "hot_pg_neg" / "sequences_predictions.csv"
             elif key == "mldspp":
                 p, n = base / "mldspp_pos.csv", base / "mldspp_neg.csv"
-            elif key == "mldspp_75":
-                p, n = base / "mldspp_75spn_pos.csv", base / "mldspp_75spn_neg.csv"
                 if not (p.exists() and n.exists()):
                     p, n = base / "mldspp_pos.csv", base / "mldspp_neg.csv"
             else:
@@ -217,8 +210,8 @@ def analyze_run(pred_root: Path, name: str, out_dir: Path, only=None) -> pd.Data
     for cname, fpr, tpr, a in sorted(curves, key=lambda x: order_idx.get(x[0], 999)):
         style = PALETTE.get(cname, {"color": "#333333", "ls": "-", "lw": 1.8})
         ax.plot(fpr, tpr, color=style["color"], linestyle=style["ls"],
-                linewidth=style["lw"], label=f"{cname} (AUC = {a:.3f})")
-    ax.plot([0, 1], [0, 1], "k--", lw=1.2, alpha=0.6, label="Random Guess (AUC = 0.500)")
+                linewidth=style["lw"], label=f"{cname} (AUC = {a:.2f})")
+    ax.plot([0, 1], [0, 1], "k--", lw=1.2, alpha=0.6, label="Random Guess (AUC = 0.50)")
     ax.set_xlim([-0.02, 1.02])
     ax.set_ylim([-0.02, 1.02])
     ax.set_xlabel("False Positive Rate (1 - Specificity)", fontsize=12, fontweight="bold")

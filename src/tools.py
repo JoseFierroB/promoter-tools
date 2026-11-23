@@ -1,0 +1,224 @@
+"""Declarative tool definitions for the unified benchmark."""
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Callable, Optional
+
+from src.config import config
+
+ROOT = config.root
+_TOOL_SIZE_CACHE = {}
+
+
+@dataclass
+class Tool:
+    """A benchmark tool with its runtime configuration."""
+    name: str
+    short_name: str
+    category: str                      # "ML", "DL", "Other"
+    pixi_env: Path                     # path to pixi.toml
+    outputs: list[Path] = field(default_factory=list)
+    model_paths: list[Path] = field(default_factory=list)
+    gpu_capable: bool = False
+    gpu_id: str = ""                     # CUDA_VISIBLE_DEVICES value for local runs ("" = CPU)
+    n_sequences: int = 1988
+    enabled: bool = True
+    notes: str = ""
+
+    def model_size_mb(self) -> float:
+        key = str(id(self)) + ":" + ",".join(str(p) for p in self.model_paths)
+        if key in _TOOL_SIZE_CACHE:
+            return _TOOL_SIZE_CACHE[key]
+        total = 0
+        for p in self.model_paths:
+            pp = Path(p)
+            try:
+                if pp.is_file():
+                    total += pp.stat().st_size
+                elif pp.is_dir():
+                    for f in pp.rglob("*"):
+                        if f.is_file():
+                            total += f.stat().st_size
+            except OSError:
+                continue
+        result = round(total / (1024 * 1024), 2)
+        _TOOL_SIZE_CACHE[key] = result
+        return result
+
+
+# ════════════════════════════════════════════════════════════════
+# Tool Registry — single combined FASTA for all
+# ════════════════════════════════════════════════════════════════
+
+PROMOTER_TOOLS = {
+    "promotech_hot": Tool(
+        name="PromoTech RF-HOT (PG Max)",
+        short_name="promotech_hot",
+        category="ML",
+        pixi_env=config.promotech_dir / "pixi.toml",
+        outputs=[
+            ROOT / "output/predictions/promotech/workdir/hot_pg_pos/genome_predictions.csv",
+            ROOT / "output/predictions/promotech/workdir/hot_pg_pos/sequences_predictions.csv",
+            ROOT / "output/predictions/promotech/workdir/hot_pg_neg/genome_predictions.csv",
+            ROOT / "output/predictions/promotech/workdir/hot_pg_neg/sequences_predictions.csv",
+        ],
+        model_paths=[config.promotech_models_dir / "RF-HOT.model"],
+        gpu_capable=False,
+    ),
+    "promotech_tetra": Tool(
+        name="PromoTech RF-TETRA (PG Max)",
+        short_name="promotech_tetra",
+        category="ML",
+        pixi_env=config.promotech_dir / "pixi.toml",
+        outputs=[
+            ROOT / "output/predictions/promotech/workdir/tetra_pg_pos/genome_predictions.csv",
+            ROOT / "output/predictions/promotech/workdir/tetra_pg_pos/sequences_predictions.csv",
+            ROOT / "output/predictions/promotech/workdir/tetra_pg_neg/genome_predictions.csv",
+            ROOT / "output/predictions/promotech/workdir/tetra_pg_neg/sequences_predictions.csv",
+        ],
+        model_paths=[config.promotech_models_dir / "RF-TETRA.model"],
+        gpu_capable=False,
+    ),
+    "lcnn": Tool(
+        name="PromoterLCNN",
+        short_name="lcnn",
+        category="DL",
+        pixi_env=config.promoters_dir / "pixi.toml",
+        outputs=[
+            ROOT / "output/predictions/lcnn/lcnn_pos.csv",
+            ROOT / "output/predictions/lcnn/lcnn_neg.csv",
+        ],
+        model_paths=[config.promoters_dir / "weights/PromoterLCNN/IsPromoter_fold_5"],
+        gpu_capable=True,
+        gpu_id="0",                      # GPU 0 = RTX 3090 (PCI_BUS_ID): TF 2.6 kernels nativos
+    ),
+    "mldspp": Tool(
+        name="MLDSPP XGBoost",
+        short_name="mldspp",
+        category="ML",
+        pixi_env=config.mldspp_dir / "pixi.toml",
+        outputs=[
+            ROOT / "output/predictions/mldspp_pos.csv",
+            ROOT / "output/predictions/mldspp_neg.csv",
+        ],
+        model_paths=[],
+        gpu_capable=False,
+        notes="Model is tiny (<1MB), trained on-the-fly",
+    ),
+    "mldspp_75": Tool(
+        name="MLDSPP XGBoost (75% spn)",
+        short_name="mldspp_75",
+        category="ML",
+        pixi_env=config.mldspp_dir / "pixi.toml",
+        outputs=[
+            ROOT / "output/predictions/mldspp_75spn_pos.csv",
+            ROOT / "output/predictions/mldspp_75spn_neg.csv",
+        ],
+        model_paths=[],
+        gpu_capable=False,
+        notes="75% S. pneumoniae in training — data leakage, for reference only",
+    ),
+    "ipromp_sp12": Tool(
+        name="iPro-MP (H. pylori)",
+        short_name="ipromp_sp12",
+        category="DL",
+        pixi_env=config.ipromp_dir / "pixi.toml",
+        outputs=[ROOT / "output/predictions/ipromp/ipromp_12_predictions.csv"],
+        model_paths=[config.ipromp_model_dir, config.dnabert_dir],
+        gpu_capable=True,
+        gpu_id="0",                      # GPU 0 = RTX 3090 (PCI_BUS_ID): misma que LCNN; torch cu128 soporta sm_86
+        notes="DNABERT-6 transformer. Heavy on CPU, fast on GPU.",
+    ),
+    "prokbert": Tool(
+        name="ProkBERT-mini (NeuralBioInfo)",
+        short_name="prokbert_mini",
+        category="DL",
+        pixi_env=config.ipromp_dir / "pixi.toml",
+        outputs=[ROOT / "output/predictions/prokbert.tsv"],
+        model_paths=[],
+        gpu_capable=True,
+        gpu_id="0",
+        notes="Official fine-tuned ProkBERT-mini-promoter gLM transformer.",
+    ),
+    "prompt": Tool(
+        name="Prompt MLP (B. subtilis 168)",
+        short_name="prompt",
+        category="ML",
+        pixi_env=config.ipromp_dir / "pixi.toml",
+        outputs=[ROOT / "output/predictions/prompt.tsv"],
+        model_paths=[ROOT / "tools/Prompt/mlp/ckpt/168/model_500.pth"],
+        gpu_capable=False,
+        notes="Official Prompt MLP model trained on B. subtilis 168.",
+    ),
+    "evosnr": Tool(
+        name="EvoSNR-Prom (Lexicon)",
+        short_name="evosnr",
+        category="DL",
+        pixi_env=config.ipromp_dir / "pixi.toml",
+        outputs=[ROOT / "output/predictions/evosnr.tsv"],
+        model_paths=[ROOT / "tools/EvoSNR-Prom/data/Esch/fasttext_model/model.bin"],
+        gpu_capable=False,
+        notes="EvoSNR-Prom FastText lexicon model aggregated over 81 bp fragment.",
+    ),
+}
+
+
+def _load_toml_tools():
+    """Auto-register tools from tools.d/*.toml files. Non-breaking add-on."""
+    try:
+        import tomllib
+    except ImportError:
+        try:
+            import tomli as tomllib
+        except ImportError:
+            return  # No TOML parser available, skip
+
+    tools_dir = Path(__file__).parent / "tools.d"
+    if not tools_dir.exists():
+        return
+
+    for toml_file in sorted(tools_dir.glob("*.toml")):
+        try:
+            data = tomllib.loads(toml_file.read_text())
+        except Exception:
+            continue
+
+        short = data.get("short", toml_file.stem)
+        if short in PROMOTER_TOOLS:
+            continue  # Don't override Python-defined tools
+
+        pixi_env_raw = Path(data.get("pixi_env", "pixi.toml"))
+        if not pixi_env_raw.is_absolute():
+            pixi_env_raw = ROOT / pixi_env_raw
+
+        PROMOTER_TOOLS[short] = Tool(
+            name=data.get("name", short),
+            short_name=short,
+            category=data.get("category", "Other"),
+            pixi_env=pixi_env_raw,
+            model_paths=[Path(p) for p in data.get("model_paths", [])],
+            gpu_capable=data.get("gpu_capable", False),
+            n_sequences=data.get("n_sequences", 1988),
+            notes=data.get("notes", ""),
+        )
+
+
+# Load TOML overrides after Python registry
+_load_toml_tools()
+
+
+def get_enabled_tools():
+    """Return all enabled tools, ready to run."""
+    return [t for t in PROMOTER_TOOLS.values() if t.enabled]
+
+
+def enable(tool_names: list[str]):
+    """Enable only the specified tools, disable others."""
+    for k in PROMOTER_TOOLS:
+        PROMOTER_TOOLS[k].enabled = k in tool_names
+
+
+def disable(tool_names: list[str]):
+    """Disable specified tools."""
+    for k in tool_names:
+        if k in PROMOTER_TOOLS:
+            PROMOTER_TOOLS[k].enabled = False
