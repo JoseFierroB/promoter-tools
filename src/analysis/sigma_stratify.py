@@ -228,7 +228,7 @@ def main():
         ax.legend(loc="lower right", fontsize=9.2, frameon=True, framealpha=0.95)
         ax.grid(True, linestyle=":", alpha=0.6)
         plt.tight_layout()
-        for ext in ("png", "pdf"):
+        for ext in ("png", "pdf", "svg"):
             fig.savefig(sig_dir / f"roc_{sig}_{args.name}{args.tag}.{ext}", bbox_inches="tight")
         plt.close(fig)
         print(f"  [sigma] ROC saved: 1_inference/sigma/roc_{sig}_{args.name}{args.tag}.png/.pdf")

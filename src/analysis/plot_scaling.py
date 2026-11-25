@@ -85,7 +85,7 @@ def load_point(run_dir: Path, tool: str):
 
 
 def save(fig, path: Path):
-    for ext in ("png", "pdf"):
+    for ext in ("png", "pdf", "svg"):
         fig.savefig(path.with_suffix(f".{ext}"), dpi=300, bbox_inches="tight")
     plt.close(fig)
 

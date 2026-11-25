@@ -134,7 +134,8 @@ def aggregate_runs(runs: list[dict], metric_keys: list[str] = None) -> dict:
         return {}
 
     if metric_keys is None:
-        metric_keys = ["time_s", "throughput_seq_s"]
+        metric_keys = ["time_s", "throughput_seq_s",
+                       "wall_seconds", "peak_ram_mb", "peak_vram_mb"]
 
     result = {"n_runs": len(runs)}
     for key in metric_keys:
@@ -151,9 +152,9 @@ def aggregate_runs(runs: list[dict], metric_keys: list[str] = None) -> dict:
     result["success_rate"] = round(np.mean(successes), 2)
     result["success"] = result["success_rate"] == 1.0
 
-    # Pick best run's other fields
-    for key in ["tool", "category", "n_sequences", "peak_ram_mb", "peak_vram_mb",
-                "model_size_mb", "mean_cpu_pct", "gpu_util_pct", "wall_seconds"]:
+    # Pick best run's other fields (skip keys already aggregated as mean).
+    for key in ["tool", "category", "n_sequences",
+                "model_size_mb", "mean_cpu_pct", "gpu_util_pct"]:
         for r in runs:
             if key in r and r[key] is not None:
                 result[key] = r[key]

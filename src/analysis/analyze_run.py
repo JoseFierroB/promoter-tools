@@ -233,7 +233,7 @@ def analyze_run(pred_root: Path, name: str, out_dir: Path, only=None) -> pd.Data
     ax.legend(loc="lower right", fontsize=9.2, frameon=True, framealpha=0.95)
     ax.grid(True, linestyle=":", alpha=0.6)
     plt.tight_layout()
-    for ext in ("png", "pdf"):
+    for ext in ("png", "pdf", "svg"):
         fig.savefig(plots / f"roc_auc_{name}.{ext}", bbox_inches="tight")
     plt.close(fig)
     print(f"  [analyze] ROC saved: 1_inference/roc_auc_{name}.png/.pdf")

@@ -53,7 +53,10 @@ class ComparisonLayoutTests(unittest.TestCase):
                                       {}, run_display={r: r for r in runs})
                     self.assertEqual([t.get_text().replace("\n", " ")
                                       for t in ax.get_xticklabels()], plots.PRIMARY_ORDER)
-                    for series, run in zip(ax.containers, runs):
+                    from matplotlib.container import BarContainer
+                    bar_series = [c for c in ax.containers
+                                  if isinstance(c, BarContainer)]
+                    for series, run in zip(bar_series, runs):
                         for bar, tool in zip(series, plots.PRIMARY_ORDER):
                             np.testing.assert_equal(bar.get_height(), values[(tool, run)])
                     assert_readable(self, ax)

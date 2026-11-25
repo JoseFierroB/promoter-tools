@@ -123,12 +123,34 @@ def main_run(run_dir: Path):
             sub = sub.sort_values(["_tool_sort", "tool"], kind="stable")
         labels = [_short_label(t) for t in sub["tool"]]
         colors = [PALETTE.get(t, {}).get("color", "#455A64") for t in sub["tool"]]
-        vals = sub[col].astype(float).tolist()
+        # Aggregate repeated rounds per tool: mean bar ± SD whisker + dots.
+        import numpy as _np
+        gvals, gerrs, gpts, glab, gcol = [], [], [], [], []
+        for t, grp in sub.groupby("tool", sort=False):
+            v = pd.to_numeric(grp[col], errors="coerce").dropna().tolist()
+            if not v:
+                continue
+            m = float(_np.mean(v))
+            s = float(_np.std(v, ddof=1)) if len(v) > 1 else 0.0
+            gvals.append(m)
+            gerrs.append(s)
+            gpts.append(v)
+            glab.append(_short_label(t))
+            gcol.append(PALETTE.get(t, {}).get("color", "#455A64"))
+        labels, vals, errs, pts, colors = glab, gvals, gerrs, gpts, gcol
         # Wide, fixed layout prevents long tool names from colliding when all
         # tools are present in a run (especially MEME and ProkBERT-mini).
         fig, ax = plt.subplots(figsize=(max(13.5, len(sub) * 1.65), 7), dpi=300)
-        bars = ax.bar(range(len(sub)), vals, color=colors, edgecolor="black", linewidth=0.8)
-        ax.set_xticks(range(len(sub)))
+        bars = ax.bar(range(len(vals)), vals, yerr=errs, capsize=3,
+                      error_kw={"elinewidth": 1.2},
+                      color=colors, edgecolor="black", linewidth=0.8)
+        for xi, p in zip(range(len(vals)), pts):
+            p = [float(v) for v in p]
+            if len(p) > 1:
+                j = (_np.arange(len(p)) - (len(p) - 1) / 2) * 0.04
+                ax.plot([xi + jj for jj in j], p, "o", color="black",
+                        ms=3, alpha=0.7, zorder=4)
+        ax.set_xticks(range(len(vals)))
         ax.set_xticklabels(labels, fontsize=10.5, fontweight="bold",
                            rotation=22, ha="right", rotation_mode="anchor")
         ax.set_ylabel(ylabel, fontsize=12, fontweight="bold")
@@ -139,7 +161,7 @@ def main_run(run_dir: Path):
             ax.spines[spine].set_visible(False)
         fig.subplots_adjust(left=0.08, right=0.985, bottom=0.24, top=0.90)
         stem = {"wall_seconds": "compute_time", "peak_ram_mb": "peak_ram"}[col]
-        for ext in ("png", "pdf"):
+        for ext in ("png", "pdf", "svg"):
             fig.savefig(out / f"{stem}.{ext}", dpi=300, bbox_inches="tight")
         plt.close(fig)
         print(f"  [compute] saved 2_resources/{stem}.png/.pdf")

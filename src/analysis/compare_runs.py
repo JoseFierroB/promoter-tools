@@ -178,15 +178,40 @@ def _inside_legend(ax, ncol=1, **kwargs):
                      framealpha=0.9, fontsize=10, ncol=ncol, **kwargs)
 
 
-def single_bars(ax, tools, vals, ylabel):
+def _mean_sd(vals):
+    """Mean ± SD of a value list (SD=0 with fewer than 2 finite values)."""
+    vals = [float(v) for v in vals if v is not None and np.isfinite(v)]
+    if not vals:
+        return float("nan"), 0.0
+    if len(vals) == 1:
+        return vals[0], 0.0
+    return float(np.mean(vals)), float(np.std(vals, ddof=1))
+
+
+def _scatter_points(ax, x, vals_list):
+    """Overlay individual round values as jittered dots (only when >1)."""
+    for xi, pts in zip(x, vals_list):
+        pts = [float(p) for p in pts if p is not None and np.isfinite(p)]
+        if len(pts) > 1:
+            j = (np.arange(len(pts)) - (len(pts) - 1) / 2) * 0.04
+            ax.plot(xi + j, pts, "o", color="black", ms=3, alpha=0.7,
+                    zorder=4)
+
+
+def single_bars(ax, tools, vals, ylabel, errs=None, points=None):
     """One bar per tool, primary TOOL_ORDER (BDT→RF→CNN→NN→gLM→motif), not alphabetical/value."""
     paired = sorted(zip(tools, vals), key=lambda item: _tool_order(item[0]))
     tools = [t for t, _ in paired]
     vals = [v for _, v in paired]
+    if errs is None:
+        errs = [0.0] * len(tools)
     x = np.arange(len(tools))
     bars = ax.bar(x, vals, 0.52,
+                  yerr=errs, capsize=3, error_kw={"elinewidth": 1.2},
                   color=[TOOL_COLORS.get(t, "#333333") for t in tools],
                   edgecolor="black", linewidth=0.8, zorder=3)
+    if points is not None:
+        _scatter_points(ax, x, [points.get(t, []) for t in tools])
     _style_bar_axes(ax, tools, ylabel)
 
 
@@ -195,7 +220,9 @@ def regime_bars(ax, tools, runs, values, ylabel, regime_of: dict,
     """Grouped bars per tool, one bar per run (regime). Tool colors + hatch per regime.
 
     Tools in primary TOOL_ORDER (BDT→RF→CNN→NN→gLM→motif).
-    Exact values live in 3_tables/resources_compare.tsv, not on the bars.
+    values maps (tool, run) -> scalar or list of round values; lists are
+    plotted as mean ± SD with individual dots. Exact numbers live in
+    3_tables/resources_compare.tsv, not on the bars.
     """
     import matplotlib.patches as mpatches
     tools = sorted(tools, key=_tool_order)
@@ -203,13 +230,19 @@ def regime_bars(ax, tools, runs, values, ylabel, regime_of: dict,
     n = len(runs)
     width = 0.82 / max(n, 1)
     for i, run in enumerate(runs):
-        vals = [values.get((t, run), np.nan) for t in tools]
+        raw = [values.get((t, run), np.nan) for t in tools]
+        raw = [v if isinstance(v, list) else [v] for v in raw]
+        ms = [_mean_sd(v) for v in raw]
+        vals = [m for m, _ in ms]
+        errs = [e for _, e in ms]
         off = (i - (n - 1) / 2) * width
         hatch = REGIME_HATCHES[i % len(REGIME_HATCHES)]
         ax.bar(x + off, vals, width,
+               yerr=errs, capsize=3, error_kw={"elinewidth": 1.2},
                edgecolor="black", linewidth=0.8,
                color=[TOOL_COLORS.get(t, "#9E9E9E") for t in tools],
                hatch=hatch, zorder=3)
+        _scatter_points(ax, x + off, raw)
     handles = [mpatches.Rectangle((0, 0), 1, 1, facecolor="#9E9E9E",
                                   hatch=REGIME_HATCHES[i % len(REGIME_HATCHES)],
                                   edgecolor="black",
@@ -222,7 +255,7 @@ def regime_bars(ax, tools, runs, values, ylabel, regime_of: dict,
 
 
 def save_fig(fig, path: Path):
-    for ext in ("png", "pdf"):
+    for ext in ("png", "pdf", "svg"):
         fig.savefig(path.with_suffix(f".{ext}"), dpi=300, bbox_inches="tight")
     plt.close(fig)
 
@@ -336,9 +369,13 @@ def compare_runs(run_dirs, out_dir: Path, exclude=None):
             if sub.empty:
                 continue
             tools = [t for t in tools_res if t in set(sub["Tool"])]
-            vals = [float(sub[sub["Tool"] == t][col].iloc[0]) for t in tools]
+            grouped = {t: sub[sub["Tool"] == t][col].tolist() for t in tools}
+            ms = {t: _mean_sd(grouped[t]) for t in tools}
+            vals = [ms[t][0] for t in tools]
+            errs = [ms[t][1] for t in tools]
             fig, ax = _comparison_figure(len(tools), 1)
-            single_bars(ax, tools, vals, ylabel)
+            single_bars(ax, tools, vals, ylabel, errs=errs,
+                        points=grouped)
             save_fig(fig, resd / stem)
             print(f"  [SAVED] 2_resources/{stem}")
     else:
@@ -354,7 +391,9 @@ def compare_runs(run_dirs, out_dir: Path, exclude=None):
             sub = res_all[pd.to_numeric(res_all[col], errors="coerce").notna()]
             if sub.empty:
                 continue
-            vals = {(r["Tool"], r["run"]): float(r[col]) for _, r in sub.iterrows()}
+            vals = {}
+            for _, r in sub.iterrows():
+                vals.setdefault((r["Tool"], r["run"]), []).append(float(r[col]))
             fig, ax = _comparison_figure(len(tools_res), len(labels))
             regime_bars(ax, tools_res, labels, vals, ylabel,
                         regime_of, run_display=run_display)
@@ -374,8 +413,10 @@ def compare_runs(run_dirs, out_dir: Path, exclude=None):
                             key=lambda t: order_idx.get(t, 999))
             weights = [float(vsub[vsub["Tool"] == t]["model_size_mb"].iloc[0])
                        for t in vtools]
-            peaks = [float(vsub[vsub["Tool"] == t]["peak_vram_mb"].iloc[0])
-                     for t in vtools]
+            peak_lists = [vsub[vsub["Tool"] == t]["peak_vram_mb"].tolist()
+                          for t in vtools]
+            peaks = [_mean_sd(p)[0] for p in peak_lists]
+            verrs = [_mean_sd(p)[1] for p in peak_lists]
             fig, ax = _comparison_figure(len(vtools), 2)
             x = np.arange(len(vtools))
             w = 0.35
@@ -386,8 +427,10 @@ def compare_runs(run_dirs, out_dir: Path, exclude=None):
                    color="#455A64", edgecolor="black", linewidth=0.8,
                    zorder=3)
             ax.bar(x + w / 2, peaks, w, label="Max Inference VRAM",
+                   yerr=verrs, capsize=3, error_kw={"elinewidth": 1.2},
                    color="#C5CAE9", edgecolor="black", linewidth=0.8,
                    zorder=3)
+            _scatter_points(ax, x + w / 2, peak_lists)
             reference_display = run_display[vram_reference_label]
             _style_bar_axes(ax, vtools, "Memory (MB)")
             _inside_legend(ax, ncol=2, title=f"Reference: {reference_display}")

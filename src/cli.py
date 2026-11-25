@@ -230,7 +230,18 @@ def cmd_run(args):
         if not m["success"]:
             print("FAIL", flush=True)
 
-    df = pd.DataFrame(results)
+    # Expand per-round rows when the backend ran replicates: one row per
+    # (tool, rep) so both rounds and averages stay in the TSV. Single runs
+    # keep rep=1 (column always present).
+    rows = []
+    for m in results:
+        reps = m.pop("_reps", None)
+        if reps:
+            rows.extend(reps)
+        else:
+            m.setdefault("rep", 1)
+            rows.append(m)
+    df = pd.DataFrame(rows)
     df["name"] = token
     df["configuration"] = configuration
     df["run_date"] = run_date()

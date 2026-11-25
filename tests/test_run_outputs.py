@@ -91,14 +91,14 @@ class RunOutputTests(unittest.TestCase):
             self.assertTrue(all(not ax.get_title() for ax in fig.axes))
             self.assertIsNone(fig._suptitle)
             self.assertEqual(len(fig.axes), 1)
-            self.assertIn(Path(path).suffix, (".png", ".pdf"))
+            self.assertIn(Path(path).suffix, (".png", ".pdf", ".svg"))
             saved.append(Path(path).relative_to(layout.root))
             return save(fig, path, *args, **kwargs)
 
         with patch.object(Figure, "savefig", checked_save):
             auc_plots.main(layout.inference / "predictions")
             compute.main_run(layout.root)
-        self.assertEqual(len(saved), 6)  # one ROC, time and RAM, two formats each
+        self.assertEqual(len(saved), 9)  # one ROC, time and RAM, three formats each
         self.assertTrue((layout.tables / "metrics_rows.tsv").is_file())
         self.assertTrue((layout.tables / "resource_metrics.tsv").is_file())
         self.assertEqual({p.name for p in layout.root.iterdir()},
@@ -119,7 +119,7 @@ class RunOutputTests(unittest.TestCase):
 
         def inspect(fig, path, **kwargs):
             self.assertFalse(fig.axes[0].get_title())
-            self.assertIn(Path(path).suffix, (".png", ".pdf"))
+            self.assertIn(Path(path).suffix, (".png", ".pdf", ".svg"))
             if Path(path).stem == "compare_time":
                 heights.append([bar.get_height() for bar in fig.axes[0].patches])
 
@@ -127,7 +127,7 @@ class RunOutputTests(unittest.TestCase):
             compare_runs.compare_runs([a.root, b.root, a.root], output)
         table = pd.read_csv(output / "3_tables/resources_compare.tsv", sep="\t")
         self.assertEqual(table["run"].nunique(), 2)
-        self.assertEqual(heights, [[5., 10.], [5., 10.]])
+        self.assertEqual(heights, [[5., 10.], [5., 10.], [5., 10.]])  # png+pdf+svg
         self.assertEqual(set(table["speedup_vs_slowest"]), {1., 2.})
 
     def test_compare_skips_failed_rows_and_empty_tables(self):
@@ -177,7 +177,7 @@ class RunOutputTests(unittest.TestCase):
                 patch.object(Figure, "savefig", check):
             sigma_stratify.main()
         self.assertEqual(set(saved), {f"roc_{sig}_demo.{ext}" for sig in ("SigA", "SigX", "None")
-                                     for ext in ("png", "pdf")})
+                                     for ext in ("png", "pdf", "svg")})
 
     def test_cli_mock_run_plots_and_repeat_are_self_contained(self):
         inputs = self.root / "inputs"
