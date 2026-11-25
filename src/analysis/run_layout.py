@@ -1,51 +1,29 @@
 #!/usr/bin/env python3
-"""Centralized run layout — single source of truth for all output paths.
+"""Run layout — single source of truth for all output paths.
 
-Reversible design: keeps legacy `output/<YYMMDD>_runs/<name>/<config>/`
-working while introducing primary `output/runs/<YYMMDD>_<name>_<config>/`
-capsule with `MANIFEST.json`. All path logic lives here so other modules
-do not hard-code `"output/..."` strings.
-
-Capsule (one run = one dir):
-  output/runs/<YYMMDD>_<name>_<config>/   # primary
-  output/<YYMMDD>_runs/<name>/<config>/   # legacy (symlink or same content)
-    STATUS.json          # running/complete, tools, input_sha, pos_src/neg_src, n_pos/n_neg
-    MANIFEST.json        # {run_id, date, dataset, config, input_sha, n, tools, layout_version, created_at, legacy_path, primary_path}
+One run = one dir:
+  output/<YYMMDD>_runs/<name>/<config>/
     1_inference/         # title-free roc_auc_{name}.{png,pdf}, predictions/ subdir
-      predictions/       # {name}_{fam}[.tsv] (primary) + legacy fallback at root/predictions
+      predictions/       # {name}_{fam}[.tsv]
     2_resources/         # resource_metrics.tsv, compute_time/peak_ram.{png,pdf}
-    3_tables/            # metrics_rows.tsv, metrics_table.tsv, resource_metrics.tsv (link)
-    # no root/predictions, root/plots, root/resources, root/*.tsv — all inside 1/2/3
+    3_tables/            # metrics_rows.tsv, metrics_table.tsv
 
-Comparisons / benchmarks (lightweight views, no prediction copies):
-  output/comparisons/<YYMMDD>_<tokens>/   # primary
-  output/<YYMMDD>_comparison_*            # legacy (symlink)
-    MANIFEST.json  # {sources: [primary run paths], dataset, regimes, input_shas}
+Comparisons (lightweight views, no prediction copies):
+  output/comparisons/<YYMMDD>_<tokens>/
     2_resources/compare_{time,ram,speedup,vram}.{png,pdf}
     3_tables/resources_compare.tsv
-  output/benchmarks/<YYMMDD>_<Ndatasets>datasets/
-    MANIFEST.json
-    roc/  atlas/  benchmark_metrics.tsv
 
-Legacy paths remain readable; new per-run exports stay inside 1/2/3.
+No JSON manifests: runs are plain directories; reruns overwrite.
+Old STATUS.json/MANIFEST.json files are still read when present
+(backward compat) but nothing writes them anymore.
 """
 from __future__ import annotations
 import json
-import time
 from pathlib import Path
-from typing import List, Optional
 
-# bump when layout changes
-LAYOUT_VERSION = "1.0"
-
-# primary roots (new)
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 RUNS_ROOT = PROJECT_ROOT / "output/runs"
 COMPARISONS_ROOT = PROJECT_ROOT / "output/comparisons"
-BENCHMARKS_ROOT = PROJECT_ROOT / "output/benchmarks"
-
-# legacy roots (kept for compat)
-LEGACY_RUNS_PREFIX = "output"  # + "/<YYMMDD>_runs/<name>/<config>/"
 
 def _sanitize(s: str) -> str:
     import re
@@ -63,32 +41,11 @@ def primary_run_dir(date: str, name: str, config: str, base: Path = RUNS_ROOT) -
     token = prefix + dataset + suffix
     return base / token
 
-def legacy_run_dir(date: str, name: str, config: str, base: Path = PROJECT_ROOT / "output") -> Path:
-    """output/<YYMMDD>_runs/<name>/<config>/"""
-    return base / f"{date}_runs" / _sanitize(name) / _sanitize(config)
-
-def comparison_dir(date: str, tokens: List[str], base: Path = COMPARISONS_ROOT) -> Path:
-    stem = f"{date}_comparison_" + "__".join(_sanitize(t) for t in tokens)
-    if len(stem) > 100:
-        stem = stem[:100].rstrip("_")
-    return base / stem
-
-def benchmark_dir(date: str, n_datasets: int, base: Path = BENCHMARKS_ROOT) -> Path:
-    return base / f"{date}_{n_datasets}datasets"
-
 class RunLayout:
     """Helper wrapping a single run's directory tree."""
 
     def __init__(self, run_root: Path):
         self.root = Path(run_root)
-
-    @classmethod
-    def from_primary(cls, date: str, name: str, config: str, base: Path = RUNS_ROOT):
-        return cls(primary_run_dir(date, name, config, base))
-
-    @classmethod
-    def from_legacy(cls, date: str, name: str, config: str, base: Path = PROJECT_ROOT / "output"):
-        return cls(legacy_run_dir(date, name, config, base))
 
     @classmethod
     def resolve(cls, path: Path) -> "RunLayout":
@@ -108,7 +65,12 @@ class RunLayout:
         declared = self.metadata.get("predictions_path")
         if declared:
             path = Path(declared)
-            return path if path.is_absolute() else self.root / path
+            if not path.is_absolute():
+                path = self.root / path
+            # manifests written on another machine/layout may declare a stale
+            # path: trust it only when it exists and is non-empty.
+            if path.is_dir() and any(path.iterdir()):
+                return path
         # primary: 1_inference/predictions — legacy fallback: root/predictions
         cand = self.root / "1_inference" / "predictions"
         if cand.is_dir() and any(cand.iterdir()):
@@ -208,128 +170,7 @@ class RunLayout:
     def legacy_resources(self) -> Path:
         return self.root / "resources"
 
-    @property
-    def status_path(self) -> Path:
-        return self.root / "STATUS.json"
-
-    @property
-    def manifest_path(self) -> Path:
-        return self.root / "MANIFEST.json"
-
     def ensure_dirs(self):
-        # primary hierarchy only — no legacy symlinks/files at root
         (self.root / "1_inference" / "predictions").mkdir(parents=True, exist_ok=True)
         self.resources.mkdir(parents=True, exist_ok=True)
         self.tables.mkdir(parents=True, exist_ok=True)
-        # note: no creation of root/predictions, root/plots, root/resources — deprecated
-        # migration will move existing legacy dirs into primary locations
-
-    def write_manifest(self, *, date: str, name: str, config: str,
-                       input_sha: str = "", pos_src: str = "", neg_src: str = "",
-                       n_pos: int = 0, n_neg: int = 0, tools: Optional[List[str]] = None,
-                       legacy_path: str = "", primary_path: str = ""):
-        manifest = {
-            "layout_version": LAYOUT_VERSION,
-            "run_id": f"{date}_{name}_{config}",
-            "date": date,
-            "dataset": name,
-            "config": config,
-            "input_sha": input_sha,
-            "pos_src": pos_src,
-            "neg_src": neg_src,
-            "n_pos": n_pos,
-            "n_neg": n_neg,
-            "n_total": (n_pos + n_neg) if (n_pos or n_neg) else 0,
-            "tools": sorted(tools or []),
-            "created_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
-            "primary_path": primary_path or str(self.root),
-            "legacy_path": legacy_path,
-        }
-        self.manifest_path.write_text(json.dumps(manifest, indent=2))
-        # also ensure STATUS.json has same core fields (written by cli)
-        return manifest
-
-    def write_comparison_manifest(self, out_dir: Path, *, sources: List[str],
-                                  dataset: str = "", regimes: List[str] = None,
-                                  input_shas: List[str] = None):
-        out_dir = Path(out_dir)
-        out_dir.mkdir(parents=True, exist_ok=True)
-        m = {
-            "layout_version": LAYOUT_VERSION,
-            "type": "comparison",
-            "date": time.strftime("%y%m%d"),
-            "dataset": dataset,
-            "sources": sources,
-            "regimes": regimes or [],
-            "input_shas": input_shas or [],
-            "created_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
-        }
-        (out_dir / "MANIFEST.json").write_text(json.dumps(m, indent=2))
-        # legacy symlink for old comparison path users
-        return m
-
-    def write_benchmark_manifest(self, out_dir: Path, *, source_runs: List[str],
-                                 datasets: List[str] = None, n_tools: int = 0):
-        out_dir = Path(out_dir)
-        out_dir.mkdir(parents=True, exist_ok=True)
-        m = {
-            "layout_version": LAYOUT_VERSION,
-            "type": "benchmark",
-            "date": time.strftime("%y%m%d"),
-            "source_runs": source_runs,
-            "datasets": datasets or [],
-            "n_tools": n_tools,
-            "created_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
-        }
-        (out_dir / "MANIFEST.json").write_text(json.dumps(m, indent=2))
-        return m
-
-
-def ensure_legacy_symlink(primary: Path, legacy: Path):
-    """Create legacy symlink to primary for backward compat (no data duplication)."""
-    try:
-        if legacy.exists():
-            return
-        legacy.parent.mkdir(parents=True, exist_ok=True)
-        # use relative symlink if possible
-        try:
-            rel = primary.resolve().relative_to(legacy.parent.resolve())
-            legacy.symlink_to(rel)
-        except Exception:
-            legacy.symlink_to(primary.resolve())
-    except Exception:
-        pass
-
-def migrate_legacy_to_primary(date: str, name: str, config: str,
-                                dry_run: bool = True) -> dict:
-    """Plan (and optionally execute) migration of one legacy run to primary."""
-    legacy = legacy_run_dir(date, name, config)
-    primary = primary_run_dir(date, name, config)
-    plan = {
-        "legacy": str(legacy),
-        "primary": str(primary),
-        "legacy_exists": legacy.exists(),
-        "primary_exists": primary.exists(),
-        "action": "none",
-    }
-    if not legacy.exists():
-        plan["action"] = "no_legacy"
-        return plan
-    if primary.exists():
-        plan["action"] = "exists"
-        return plan
-    plan["action"] = "symlink" if dry_run else "migrated"
-    if not dry_run:
-        ensure_legacy_symlink(primary, legacy)
-        # if primary does not exist, copy structure via symlink
-        # actually we want primary to be the real data, legacy symlink to it
-        # so we need to move legacy content to primary then symlink back
-        if not primary.exists():
-            primary.parent.mkdir(parents=True, exist_ok=True)
-            legacy.rename(primary)
-            ensure_legacy_symlink(primary, legacy)
-            plan["action"] = "migrated"
-    else:
-        # dry-run: just report what would happen
-        plan["action"] = "would_symlink"
-    return plan

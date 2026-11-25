@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Smoke integration test: run 2 tools on the canonical d39v dataset and assert outputs."""
+"""Smoke integration test: run 2 tools on the d39v dataset and assert outputs."""
 import subprocess
 import sys
 from pathlib import Path

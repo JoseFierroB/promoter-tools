@@ -135,13 +135,12 @@ def load_cds_and_regulators(gff_cds_path: str) -> Tuple[Dict[str, List[Tuple[int
         
     return cds_data, regulator_data
 
-def find_associated_regulator(chrom: str, pos: int, strand: str, regulator_data: Dict, chrom_map: Dict, max_dist=50) -> Tuple[str, str]:
+def find_associated_regulator(chrom: str, pos: int, strand: str, regulator_data: Dict, max_dist=50) -> Tuple[str, str]:
     """Finds the closest upstream protein binding site on the same strand within max_dist bp."""
-    resolved_reg_chrom = chrom
-    if resolved_reg_chrom not in regulator_data or not regulator_data[resolved_reg_chrom]:
+    if chrom not in regulator_data or not regulator_data[chrom]:
         return "None", "N/A"
         
-    candidates = regulator_data[resolved_reg_chrom]
+    candidates = regulator_data[chrom]
     valid = []
     for start, end, s_r, reg_name, feat_id in candidates:
         if s_r == strand:
@@ -154,18 +153,17 @@ def find_associated_regulator(chrom: str, pos: int, strand: str, regulator_data:
         return best_reg, str(best_dist)
     return "None", "N/A"
 
-def find_downstream_cds_distance(chrom: str, pos: int, strand: str, cds_data: Dict, chrom_map: Dict) -> Tuple[str, str]:
+def find_downstream_cds_distance(chrom: str, pos: int, strand: str, cds_data: Dict) -> Tuple[str, str]:
     """Finds the closest downstream CDS on the same strand and calculates the distance (5' UTR length)."""
-    resolved_cds_chrom = chrom
-    if resolved_cds_chrom not in cds_data or not cds_data[resolved_cds_chrom]:
+    if chrom not in cds_data or not cds_data[chrom]:
         return "None", "N/A"
         
-    candidates = cds_data[resolved_cds_chrom]
+    candidates = cds_data[chrom]
     valid = []
     for start, end, s_g, locus in candidates:
         if s_g == strand:
             dist = (start - pos) if strand == '+' else (pos - end)
-            if dist >= -20:
+            if dist >= 0:
                 valid.append((dist, locus))
                 
     if valid:
@@ -173,45 +171,16 @@ def find_downstream_cds_distance(chrom: str, pos: int, strand: str, cds_data: Di
         return best_locus, str(best_dist)
     return "None", "N/A"
 
-def find_promoter_boxes(seq_str: str, sigma_factor: str, tss_idx: int) -> Tuple[str, str, str, str]:
-    """Finds putative -10 and -35 boxes in the sequence window (TSS at index tss_idx).
-    Returns a tuple of (minus_10_seq, minus_10_dist, minus_35_seq, minus_35_dist).
-    If no match passes the similarity threshold, returns 'None' or 'N/A'.
-    """
-    if len(seq_str) < tss_idx + 1:
-        return "N/A", "N/A", "N/A", "N/A"
-        
-    m10_cons = "TACGAT" if sigma_factor == "SigX" else "TATAAT"
-    
-    # Clean inner function to scan a coordinate window for a specific motif consensus
-    def scan(consensus: str, start: int, end: int) -> Tuple[str, str]:
-        best_seq, best_dist, min_mis = "None", "N/A", 99
-        start_bounded = max(0, start)
-        end_bounded = min(len(seq_str) - len(consensus), end)
-        for i in range(start_bounded, end_bounded + 1):
-            slice_seq = seq_str[i:i+len(consensus)]
-            if len(slice_seq) != len(consensus):
-                continue
-            mis = sum(a != b for a, b in zip(slice_seq, consensus))
-            if mis < min_mis:
-                min_mis, best_seq, best_dist = mis, slice_seq, str(tss_idx - i)
-        return (best_seq, best_dist) if min_mis <= 3 else ("None", "N/A")
-
-    m10_seq, m10_dist = scan(m10_cons, tss_idx - 20, tss_idx - 6)
-    m35_seq, m35_dist = scan("TTGACA", tss_idx - 42, tss_idx - 28)
-    return m10_seq, m10_dist, m35_seq, m35_dist
-
-def determine_sigma_factor(chrom: str, pos: int, strand: str, regulator_data: Dict, chrom_map: Dict, max_dist=100) -> Tuple[str, Tuple]:
+def determine_sigma_factor(chrom: str, pos: int, strand: str, regulator_data: Dict, max_dist=100) -> Tuple[str, Tuple]:
     """Classifies TSS to exactly one sigma factor (either SigA or SigX).
     Looks for RpoD (SigA) or ComX (SigX) binding sites upstream on the same strand.
     If both exist, resolves conflict by selecting the one closer to the TSS.
     Returns (sigma_name, assoc_site_tuple) where assoc_site_tuple is (chrom, start, end, strand, reg_name).
     """
-    resolved_reg_chrom = chrom
-    if resolved_reg_chrom not in regulator_data or not regulator_data[resolved_reg_chrom]:
+    if chrom not in regulator_data or not regulator_data[chrom]:
         return "None", None
         
-    candidates = regulator_data[resolved_reg_chrom]
+    candidates = regulator_data[chrom]
     sigma_candidates = []
     
     for start, end, s_r, reg_name, feat_id in candidates:
@@ -228,14 +197,15 @@ def determine_sigma_factor(chrom: str, pos: int, strand: str, regulator_data: Di
             dist = start - pos
             
         if 0 <= dist <= max_dist:
-            sigma_candidates.append((sigma_name, dist, (resolved_reg_chrom, start, end, s_r, reg_name)))
+            sigma_candidates.append((sigma_name, dist, (chrom, start, end, s_r, reg_name)))
             
     if not sigma_candidates:
         return "None", None
         
     # Select the closest sigma binding site
-    sigma_candidates.sort(key=lambda x: x[1])
-    return sigma_candidates[0][0], sigma_candidates[0][2]
+    nearest = min(sigma_candidates, key=lambda candidate: candidate[1])
+    sigma_name, _, assoc_site = nearest
+    return sigma_name, assoc_site
 
 def run_proximity_analysis(extracted_positives: List[Dict], window_size: int, conflict_threshold: int) -> List[Dict]:
     """Analyzes same-strand TSS proximity conflicts and labels redundancy status.
@@ -289,7 +259,14 @@ def run_proximity_analysis(extracted_positives: List[Dict], window_size: int, co
             # for internal numerical comparison. This is safe because 'tech_pri' is the first element
             # in the tuple: a manually curated TSS (tech_pri=3) always outranks an RNA-seq TSS (tech_pri=1)
             # regardless of their score.
-            score_key = 0 if tss["score"] == 'curated' else (int(tss["score"]) if str(tss["score"]).isdigit() else 0)
+            def _score_key(value):
+                if value == 'curated':
+                    return 0
+                try:
+                    return int(float(str(value)))
+                except (ValueError, TypeError):
+                    return 0
+            score_key = _score_key(tss["score"])
             return (tech_pri, pos_key, score_key)
 
         best_tss = max(cluster, key=representative_key)
@@ -304,36 +281,7 @@ def run_proximity_analysis(extracted_positives: List[Dict], window_size: int, co
                   f"discarding: {discarded_positions}.", file=sys.stderr)
             
         i = j
-        
-    # 2. Compute overlap statuses and percentages
-    for k in range(len(extracted_positives)):
-        tss = extracted_positives[k]
-        pos = tss["pos"]
-        chrom = tss["chrom"]
-        strand = tss["strand"]
-        
-        neighbors = []
-        if k > 0:
-            prev_tss = extracted_positives[k - 1]
-            if prev_tss["chrom"] == chrom and prev_tss["strand"] == strand:
-                neighbors.append(abs(pos - prev_tss["pos"]))
-        if k < len(extracted_positives) - 1:
-            next_tss = extracted_positives[k + 1]
-            if next_tss["chrom"] == chrom and next_tss["strand"] == strand:
-                neighbors.append(abs(next_tss["pos"] - pos))
-                
-        min_distance = min(neighbors) if neighbors else float('inf')
-        
-        if min_distance < window_size:
-            tss["overlap_status"] = "Redundant_Overlap"
-            tss["overlap_pct"] = round(max(0.0, 100.0 * (window_size - min_distance) / window_size), 2)
-        elif min_distance <= 150:
-            tss["overlap_status"] = "Cluster_Isoform"
-            tss["overlap_pct"] = 0.0
-        else:
-            tss["overlap_status"] = "Isolated"
-            tss["overlap_pct"] = 0.0
-            
+
     return extracted_positives
 
 def extract_positives() -> None:
@@ -357,9 +305,6 @@ def extract_positives() -> None:
     # Calculate total window size dynamically
     window_size = args.upstream + args.downstream + 1
 
-    # Use default hardcoded chromosome mapping
-    chrom_map = {}  # not needed: all data uses the same chromosome ID
-
     # Load structural annotations (CDS & Regulators)
     cds_data, regulator_data = load_cds_and_regulators(args.gff_cds)
     
@@ -371,7 +316,7 @@ def extract_positives() -> None:
                 if r_name in SIGMA_FACTOR_MAPPING:
                     all_sigma_binding_sites.add((chrom_id, r_start, r_end, r_strand, r_name))
     
-    skipped = {"bounds": 0, "n_bases": 0, "low_conf": 0, "strand_corrected": 0}
+    skipped = {"bounds": 0, "n_bases": 0, "low_conf": 0}
     valid_bases = {'A', 'C', 'G', 'T'}
     unique_positives = {}
 
@@ -386,12 +331,11 @@ def extract_positives() -> None:
 
     for rec in parsed_records:
         chrom = rec.id
-        resolved_genome_chrom = chrom
-        if resolved_genome_chrom not in genome:
-            print(f"[WARNING] Chromosome '{chrom}' (resolved as '{resolved_genome_chrom}') not found in genome FASTA.", file=sys.stderr)
+        if chrom not in genome:
+            print(f"[WARNING] Chromosome '{chrom}' not found in genome FASTA.", file=sys.stderr)
             continue
             
-        genome_seq = genome[resolved_genome_chrom].seq
+        genome_seq = genome[chrom].seq
 
         for feat in get_all_tss(rec.features):
             name = feat.qualifiers.get('Name', [''])[0].lower()
@@ -445,7 +389,7 @@ def extract_positives() -> None:
                 score = 'curated'
 
             # Cross-reference closest upstream regulator within the k-mer window size
-            assoc_reg, reg_dist = find_associated_regulator(chrom, s, strand, regulator_data, chrom_map, max_dist=window_size)
+            assoc_reg, reg_dist = find_associated_regulator(chrom, s, strand, regulator_data, max_dist=window_size)
 
             # Determine the source/technique of the TSS
             source = ""
@@ -455,14 +399,14 @@ def extract_positives() -> None:
                 source = feat.qualifiers['source'][0]
 
             # Determine the exact sigma factor association within the k-mer window size
-            sigma_factor, assoc_site = determine_sigma_factor(chrom, s, strand, regulator_data, chrom_map, max_dist=window_size)
+            sigma_factor, assoc_site = determine_sigma_factor(chrom, s, strand, regulator_data, max_dist=window_size)
 
             # Find closest downstream CDS start (5' UTR length) if CDS data is loaded
             downstream_cds, cds_dist = "None", "N/A"
             if cds_data:
-                downstream_cds, cds_dist = find_downstream_cds_distance(chrom, s, strand, cds_data, chrom_map)
+                downstream_cds, cds_dist = find_downstream_cds_distance(chrom, s, strand, cds_data)
 
-            coord_key = (resolved_genome_chrom, s, strand)
+            coord_key = (chrom, s, strand)
             if coord_key in unique_positives:
                 continue
 
@@ -507,8 +451,7 @@ def extract_positives() -> None:
         "Sequence_ID", "Chromosome", "TSS_Position_0based", "Strand", 
         "TSS_ID", "Confidence_Level", "Score", "Associated_Regulator", "Regulator_Distance_bp",
         "Sigma_Factor", "Downstream_Gene", "5UTR_Length_bp", 
-        "Minus_10_Seq", "Minus_10_Dist_bp", "Minus_35_Seq", "Minus_35_Dist_bp",
-        "GC_Content(%)", "Overlap_Status", "Overlap_Percentage", "Is_Cluster_Representative"
+        "GC_Content(%)", "Is_Cluster_Representative"
     ]
 
     extracted = 0
@@ -552,17 +495,12 @@ def extract_positives() -> None:
                 if plus1_base in ('A', 'G'):
                     purines_at_plus1 += 1
             
-            # Scan sequence for putative -10 and -35 promoter boxes
-            m10_seq, m10_dist, m35_seq, m35_dist = find_promoter_boxes(seq, meta["sigma_factor"], args.upstream)
-            
             row = [
                 header, meta["chrom"], meta["pos"], meta["strand"], 
                 meta["clean_id"], "Low" if meta["is_low_conf"] else "High", 
                 meta["score"], meta["associated_reg"], meta["regulator_dist"],
                 meta["sigma_factor"], meta["downstream_cds"], meta["cds_dist"],
-                m10_seq, m10_dist, m35_seq, m35_dist,
-                round(gc_content, 2), meta["overlap_status"],
-                meta["overlap_pct"], meta["is_representative"]
+                round(gc_content, 2), meta["is_representative"]
             ]
             
             # 1. Write to general dataset
@@ -592,9 +530,6 @@ def extract_positives() -> None:
 
     # Calculate proximity cluster variables first
     representatives = sum(1 for x in analyzed_list if x["is_representative"])
-    overlap_count = sum(1 for x in analyzed_list if x["overlap_status"] == "Redundant_Overlap")
-    isoform_count = sum(1 for x in analyzed_list if x["overlap_status"] == "Cluster_Isoform")
-    isolated_count = sum(1 for x in analyzed_list if x["overlap_status"] == "Isolated")
     
     # Calculate conflict breakdown by sigma factor
     discarded_sig_a = sum(1 for x in analyzed_list if not x["is_representative"] and x["sigma_factor"] == "SigA")
@@ -654,13 +589,9 @@ def extract_positives() -> None:
     print(f"  - Distant from TSS (150-500bp):     {unmapped_by_dist['distant']}", file=sys.stderr)
     print(f"  - Very distant from TSS (>500bp):   {unmapped_by_dist['very_distant']}", file=sys.stderr)
     print(f"  - Silent (no TSS downstream):       {unmapped_by_dist['no_tss']}", file=sys.stderr)
-    print(f"Strand adjustments applied (corrected):{skipped['strand_corrected']}", file=sys.stderr)
     
     print("\nPROXIMITY CONFLCT ANALYSIS:", file=sys.stderr)
     
-    print(f"Redundant Overlaps (< {window_size} bp):       {overlap_count}", file=sys.stderr)
-    print(f"Cluster Promoter Isoforms (81-150 bp): {isoform_count}", file=sys.stderr)
-    print(f"Isolated Promoters (> 150 bp):        {isolated_count}", file=sys.stderr)
     print(f"Steric Hindrance Representatives:     {representatives} (Satellite peaks filtered: {len(analyzed_list) - representatives})", file=sys.stderr)
 
     print("\nBIOLOGICAL & STATISTICAL QC:", file=sys.stderr)

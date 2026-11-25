@@ -5,7 +5,7 @@ Usage:
     python src/analysis/compute_metrics.py <run_dir> [--bootstrap N]
 
 Reads predictions/{name}_{fam}[.tsv] via analyze_run.load_all (new layout
-first, legacy fallback) and writes <run_dir>/metrics_table.tsv with columns:
+first, legacy fallback) and writes <run_dir>/3_tables/metrics_table.tsv with columns:
 dataset,tool,n_pos,n_neg,auc,auc_ci_low,auc_ci_high,threshold,tp,fn,fp,tn,
 sensitivity,specificity,precision,f1,accuracy[,delong_p_vs_best].
 
@@ -24,6 +24,7 @@ sys.path.insert(0, str(ROOT / "src" / "analysis"))
 sys.path.insert(0, str(ROOT))
 from analyze_run import load_all  # noqa: E402
 from src.analysis.statistics import bootstrap_auc_ci, delong_test  # noqa: E402
+from run_layout import RunLayout
 
 
 def confusion_at_best(y_true, y_score):
@@ -42,20 +43,24 @@ def confusion_at_best(y_true, y_score):
             "specificity": spec, "precision": prec, "f1": f1, "accuracy": acc}
 
 
-def main(run_dir: Path, n_bootstrap: int = 500):
-    run_dir = Path(run_dir)
-    pred_root = run_dir / "predictions" if run_dir.name != "predictions" else run_dir
-    if run_dir.name == "predictions":
-        run_dir = run_dir.parent
-    import re
-    name = (run_dir.parent.name if re.match(r"^\d+cpu(-gpu)?$", run_dir.name)
-            else run_dir.name)
+def main(run_dir: Path, n_bootstrap: int = 500, only=None, all_tools=False):
+    requested = Path(run_dir)
+    layout = RunLayout.resolve(requested)
+    run_dir = layout.root
+    pred_root = requested if requested.name == "predictions" else layout.predictions
+    name = layout.dataset_name
     if not pred_root.exists():
         print(f"ERROR: no predictions/ in {run_dir}")
         sys.exit(2)
+    if only is None and not all_tools:
+        try:
+            from bench_labels import DEFAULT_TOOLS_7
+        except ImportError:
+            from src.analysis.bench_labels import DEFAULT_TOOLS_7
+        only = list(DEFAULT_TOOLS_7)
 
     scored = {}
-    for key, (label, y_true, y_score) in load_all(pred_root, name).items():
+    for key, (label, y_true, y_score) in load_all(pred_root, name, only).items():
         scored[label] = (y_true, y_score)
     if not scored:
         print("  [metrics] no predictions found, nothing to compute")
@@ -87,8 +92,9 @@ def main(run_dir: Path, n_bootstrap: int = 500):
                 r["delong_p_vs_best"] = float("nan")
 
     met = pd.DataFrame(rows).sort_values("auc", ascending=False)
-    met.to_csv(run_dir / "metrics_table.tsv", sep="\t", index=False)
-    print(f"  [metrics] {len(met)} tool rows -> metrics_table.tsv "
+    layout.tables.mkdir(parents=True, exist_ok=True)
+    met.to_csv(layout.tables / "metrics_table.tsv", sep="\t", index=False)
+    print(f"  [metrics] {len(met)} tool rows -> 3_tables/metrics_table.tsv "
           f"(best: {best})")
     return met
 
@@ -98,5 +104,7 @@ if __name__ == "__main__":
     p = argparse.ArgumentParser(description="Per-run confusion + CI + DeLong metrics.")
     p.add_argument("run_dir", help="Run dir (output/<date>_runs/<name>/<config>/)")
     p.add_argument("--bootstrap", type=int, default=500, help="Bootstrap replicates for AUC CI")
+    p.add_argument("--only", nargs="*", default=None, help="Tool keys to include; default: canonical 7 tools")
+    p.add_argument("--all-tools", action="store_true", help="Include all 9 registry tools instead of the default 7")
     a = p.parse_args()
-    main(Path(a.run_dir), a.bootstrap)
+    main(Path(a.run_dir), a.bootstrap, a.only, a.all_tools)

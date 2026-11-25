@@ -226,10 +226,10 @@ def main():
 
                 kmer_norm = seq_fwd.upper()
                 kmer_rc = str(Seq(kmer_norm).reverse_complement())
-                canonical_kmer = min(kmer_norm, kmer_rc)
+                rep_kmer = min(kmer_norm, kmer_rc)
 
-                if canonical_kmer not in seen_kmers:
-                    seen_kmers.add(canonical_kmer)
+                if rep_kmer not in seen_kmers:
+                    seen_kmers.add(rep_kmer)
                     # Alternate strand assignment
                     strand = "+" if len(candidate_negatives) % 2 == 0 else "-"
                     seq_final = seq_fwd if strand == "+" else kmer_rc

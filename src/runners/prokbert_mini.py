@@ -207,14 +207,10 @@ def main():
         df_out = pd.concat(frames, ignore_index=True)
         df_out.to_csv(out_path, sep="\t" if out_path.suffix == ".tsv" else ",", index=False)
     else:
-        out_dir = out_path / "prokbert"
-        out_dir.mkdir(parents=True, exist_ok=True)
         frames = []
         if pos_ids:
-            pd.DataFrame({"ID": pos_ids, "PRED": pos_preds}).to_csv(out_dir / "prokbert_pos.csv", sep="\t", index=False)
             frames.append(pd.DataFrame({"ID": pos_ids, "LABEL": 1, "PRED": pos_preds}))
         if neg_ids:
-            pd.DataFrame({"ID": neg_ids, "PRED": neg_preds}).to_csv(out_dir / "prokbert_neg.csv", sep="\t", index=False)
             frames.append(pd.DataFrame({"ID": neg_ids, "LABEL": 0, "PRED": neg_preds}))
         pd.concat(frames, ignore_index=True).to_csv(out_path / "prokbert.tsv", sep="\t", index=False)
 

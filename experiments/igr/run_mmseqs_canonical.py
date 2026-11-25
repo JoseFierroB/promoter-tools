@@ -1,13 +1,22 @@
 #!/usr/bin/env python3
 """Reproduce the canonical MMseqs2 cross-strain IGR clustering (2247 clusters).
 
-Reconstructed canonical command (registered here; see notes on the residual gap):
+Reconstructed canonical command (registered here verbatim; see notes on
+the residual gap):
 
-    mmseqs easy-cluster ALL_IGRS_DEDUP.fasta OUT TMP \\
-        --min-seq-id 0.95 -c 0.70 --cov-mode 0 --cluster-mode 1 \\
-        -k 5 --mask 0 --threads 8
+    mmseqs easy-cluster \
+      output/intergenic/combined/All_IGRs.fasta \
+      output/intergenic/mmseqs2/combined_clusters/All_id0_95_cov0_70 \
+      /tmp/mmseqs_tmp \
+      --min-seq-id 0.95 \
+      -c 0.70 \
+      --cov-mode 0 \
+      --cluster-mode 1 \
+      -k 5 \
+      --mask 0 \
+      --threads 8
 
-Parameter provenance:
+Parameter provenance (all flags match the registered command exactly):
   --min-seq-id 0.95 -c 0.70 --cov-mode 0 : archive/root_misc/MEMORIA.md:13 +
       output/tables/mmseqs2_params_sensitivity_note.md (run All_id0_95_cov0_70).
   --cluster-mode 1 (connected components) : MEMORIA.md:13.
@@ -15,10 +24,14 @@ Parameter provenance:
       set-cover, not connected components; mode 1 matches MEMORIA.)
   -k 5 --mask 0 : same as the intra-genome runs in output/intergenic/README.md
       (small k, no low-complexity masking — IGRs are AT-rich for real).
-  Input: output/intergenic/combined/All_IGRs.fasta (3454) exact-dedup keep-first
-      -> 2659 sequences. (The reversibility note's "2659 input" = 3454 raw minus
-      795 exact duplicates, verified: len(set(seqs)) == 2659. NOT a <20bp filter:
-      >20bp gives 2608, >=20bp gives 2626.)
+  NOTE on the input: this script exact-dedups All_IGRs.fasta keep-first
+      (3454 -> 2659) before clustering, because the reversibility note's
+      "2659 input" = 3454 raw minus 795 exact duplicates, verified:
+      len(set(seqs)) == 2659. NOT a <20bp filter (>20bp gives 2608,
+      >=20bp gives 2626.) With the raw 3454 input the same flags give 2422
+      clusters (further from 2247); with dedup input, 2278. The dedup step
+      is this script's documented reconstruction choice, not part of the
+      registered command.
   Binary: mmseqs 15.6f452 (pixi.lock, default env).
 
 Variant sweep (261005, mmseqs 15.6f452, 8 threads; canonical = 2247 clusters):
@@ -40,7 +53,8 @@ Residual gap: best reproduction gives 2278 clusters vs canonical 2247
 sensitivity/evalue/reassign/threads/input-full-vs-dedup. Likely causes:
 original run used an older MMseqs2 version, or post-processing
 (merge/split) after clustering. The verification below quantifies the gap
-instead of hiding it.
+instead of hiding it. Companion: experiments/igr/run_mmseqs_cross.py
+registers + verifies the canonical easy-search (D39V_vs_TIGR4.m8).
 
 Usage:
     pixi run python experiments/igr/run_mmseqs_canonical.py [-o output/intergenic/mmseqs2/repro_canonical] [--threads 8]

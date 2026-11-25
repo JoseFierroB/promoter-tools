@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """FIMO zero-shot promoter prediction — unified runner (Prok or E. coli DB).
 
-Invoked directly (defaults to Prok DB) or through the thin wrappers
-fimo_prok.py / fimo_db.py, which inject --db/--label/--tag.
+Invoked directly (defaults to Prok DB) or through the thin wrapper
+fimo_prok.py, which injects --db/--label/--tag.
 """
 import argparse
 import concurrent.futures
@@ -36,7 +36,7 @@ def _run_fimo_chunk(db: str, fasta_path: Path, timeout: int) -> str:
     return res.stdout
 
 
-def main():
+def main(argv=None):
     p = argparse.ArgumentParser(description="FIMO zero-shot promoter prediction")
     p.add_argument("--pos", required=True, help="Positive FASTA")
     p.add_argument("--neg", required=True, help="Negative FASTA")
@@ -44,7 +44,7 @@ def main():
     p.add_argument("--db", default=str(PROK_DB), help="Motif DB path")
     p.add_argument("--label", default="fimo_prok", help="Output file prefix (e.g. fimo_prok)")
     p.add_argument("--tag", default="FIMO_PROK", help="Tag for the summary line")
-    args = p.parse_args()
+    args = p.parse_args(argv)
 
     pos = list(SeqIO.parse(args.pos, "fasta"))
     neg = list(SeqIO.parse(args.neg, "fasta"))

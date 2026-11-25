@@ -16,12 +16,10 @@ Output (inside the comparison dir):
   3_tables/resources_compare.tsv (incl. speedup_vs_slowest per tool)
   CONTENTS.md
 """
-import json
 import sys
 from collections import Counter
 from datetime import date
 from pathlib import Path
-from textwrap import fill
 
 import matplotlib
 matplotlib.use("Agg")
@@ -38,7 +36,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 # registry `tool` names (resource_metrics.tsv) -> primary display labels (single source of truth)
 REGISTRY_TO_DISPLAY = {
-    "MLDSPP XGBoost": "MLDSPP 0% [BDT]",
+    "MLDSPP XGBoost": "MLDSPP [BDT]",
     "MLDSPP XGBoost (75% spn)": "MLDSPP 75% [BDT]",
     "Prompt MLP (B. subtilis 168)": "prompt [NN]",
     "ProkBERT-mini (NeuralBioInfo)": "ProkBERT-mini [gLM]",
@@ -53,18 +51,18 @@ try:
     from bench_labels import TOOL_ORDER as PRIMARY_ORDER, TOOL_COLORS  # type: ignore
 except Exception:
     TOOL_COLORS = {
-        "MLDSPP 0% [BDT]": "#F81D54",
+        "MLDSPP [BDT]": "#F81D54",
         "MLDSPP 75% [BDT]": "#55001C",
         "PromoTech RF-HOT [RF]": "#F1A52B",
         "PromoterLCNN [CNN]": "#973C04",
         "prompt [NN]": "#0060E6",
-        "ProkBERT-mini [gLM]": "#2D004D",
+        "ProkBERT-mini [gLM]": "#734595",
         "iPro-MP [gLM]": "#BA9CEE",
-        "FIMO ProkDB [PWMs]": "#002616",
+        "FIMO ProkDB [PWMs]": "#2E9E5B",
         "STREME+FIMO [motif]": "#18974C",
     }
     PRIMARY_ORDER = [
-        "MLDSPP 0% [BDT]", "MLDSPP 75% [BDT]", "PromoTech RF-HOT [RF]",
+        "MLDSPP [BDT]", "MLDSPP 75% [BDT]", "PromoTech RF-HOT [RF]",
         "PromoterLCNN [CNN]", "prompt [NN]", "ProkBERT-mini [gLM]",
         "iPro-MP [gLM]", "FIMO ProkDB [PWMs]", "STREME+FIMO [motif]",
     ]
@@ -145,21 +143,6 @@ REGIME_DISPLAY = {
 REGIME_HATCHES = ["//", "\\\\", "..", ""]
 
 
-def fmt_time_short(v: float) -> str:
-    if v >= 100:
-        return f"{v:.0f}s\n({v / 60:.1f}m)"
-    return f"{v:.2f}s"
-
-
-def fmt_ram(v: float) -> str:
-    return f"{v:,.1f} MB"
-
-
-def fmt_ram_value(v: float) -> str:
-    """Compact RAM labels; the shared y axis specifies MB."""
-    return f"{v:,.1f}"
-
-
 def _tool_order(tool):
     """Use the shared method order, with a deterministic fallback for new tools."""
     ranks = {t: i for i, t in enumerate(PRIMARY_ORDER)}
@@ -174,7 +157,7 @@ def _comparison_figure(n_tools, n_series):
                         dpi=300, constrained_layout=True)
 
 
-def _style_bar_axes(ax, tools, ylabel, title):
+def _style_bar_axes(ax, tools, ylabel):
     ax.set_xticks(np.arange(len(tools)))
     # Keep the full names, but put the method on its own line.
     ax.set_xticklabels([t.replace(" [", "\n[") for t in tools],
@@ -183,157 +166,98 @@ def _style_bar_axes(ax, tools, ylabel, title):
     ax.set_xlabel("Tool and Model Architecture", fontsize=12,
                   fontweight="bold", labelpad=14)
     ax.set_ylabel(ylabel, fontsize=12, fontweight="bold")
-    ax.set_title(fill(title, width=85), fontsize=13, fontweight="bold", pad=18)
     ax.set_axisbelow(True)
     ax.grid(True, axis="y", linestyle="--", alpha=0.5)
     ax.spines[["top", "right"]].set_visible(False)
     ax.margins(x=0.025)
 
 
-def _outside_legend(ax, **kwargs):
-    return ax.legend(loc="upper left", bbox_to_anchor=(1.015, 1),
-                     borderaxespad=0, frameon=True, fontsize=10, **kwargs)
+def _inside_legend(ax, ncol=1, **kwargs):
+    """Legend in the upper-right corner, inside the axes (never outside)."""
+    return ax.legend(loc="upper right", borderaxespad=0.5, frameon=True,
+                     framealpha=0.9, fontsize=10, ncol=ncol, **kwargs)
 
 
-def _annotate_bars(ax, entries, ylim_top=None, rotation=None):
-    """Anchor every value to its bar and fit labels in display coordinates.
-
-    entries contains (bar, value, text, color). Start with horizontal labels;
-    if the rendered text intersects another label or bar, use vertical labels
-    for the whole figure. An explicit rotation is preserved by widening the
-    figure until each label fits above its own bar.
-    ylim_top is a lower bound: annotations may require a little more headroom.
-    """
-    if not entries:
-        ax.set_ylim(0, ylim_top or 1)
-        return []
-    fig = ax.figure
-    annotations = []
-    maximum = max(v for _, v, _, _ in entries)
-    ax.set_ylim(0, max(maximum * 1.12, ylim_top or 0, 1e-9))
-    for bar, value, label, color in entries:
-        annotation = ax.annotate(
-            label, (bar.get_x() + bar.get_width() / 2, value),
-            xytext=(0, 5), textcoords="offset points", ha="center", va="bottom",
-            fontsize=9, fontweight="bold", color=color,
-            rotation=rotation or 0,
-            annotation_clip=False, clip_on=False)
-        # Headroom is managed below, independently of the outside legend/title.
-        annotation.set_in_layout(False)
-        annotations.append(annotation)
-
-    if rotation is not None:
-        # Fit the rotated bounding boxes within their bar lanes. This keeps
-        # 45-degree values close to the bars even with four regimes.
-        for _ in range(4):
-            fig.canvas.draw()
-            renderer = fig.canvas.get_renderer()
-            pad = 2 * fig.dpi / 72
-            ratio = max((a.get_window_extent(renderer).width + 2 * pad)
-                        / b.get_window_extent(renderer).width
-                        for a, (b, _, _, _) in zip(annotations, entries))
-            if ratio <= 1.01:
-                break
-            extra_width = ax.get_window_extent(renderer).width / fig.dpi * (ratio - 1)
-            fig.set_size_inches(fig.get_figwidth() + extra_width, fig.get_figheight())
-
-    fig.canvas.draw()
-    renderer = fig.canvas.get_renderer()
-    boxes = [a.get_window_extent(renderer) for a in annotations]
-    bar_boxes = [b.get_window_extent(renderer) for b, _, _, _ in entries]
-    pad = 2 * fig.dpi / 72
-    crowded = any(box.padded(pad).overlaps(other)
-                  for i, box in enumerate(boxes) for other in boxes[i + 1:])
-    crowded |= any(box.padded(pad).overlaps(bar_box)
-                   for i, box in enumerate(boxes)
-                   for j, bar_box in enumerate(bar_boxes) if i != j)
-    if crowded and rotation is None:
-        for annotation in annotations:
-            annotation.set_rotation(90)
-
-    # Compute the required limit from text height in pixels, so a long label
-    # above the tallest bar stays inside the axes at the actual export size.
-    for _ in range(4):
-        fig.canvas.draw()
-        renderer = fig.canvas.get_renderer()
-        height = ax.get_window_extent(renderer).height
-        upper = ax.get_ylim()[1]
-        for annotation, (_, value, _, _) in zip(annotations, entries):
-            text_height = annotation.get_window_extent(renderer).height
-            remaining = height - text_height - (5 + 6) * fig.dpi / 72
-            if remaining > 0:
-                upper = max(upper, value * height / remaining)
-        if upper <= ax.get_ylim()[1] * (1 + 1e-6):
-            break
-        ax.set_ylim(0, upper * 1.01)
-    return annotations
+def _mean_sd(vals):
+    """Mean ± SD of a value list (SD=0 with fewer than 2 finite values)."""
+    vals = [float(v) for v in vals if v is not None and np.isfinite(v)]
+    if not vals:
+        return float("nan"), 0.0
+    if len(vals) == 1:
+        return vals[0], 0.0
+    return float(np.mean(vals)), float(np.std(vals, ddof=1))
 
 
-def single_bars(ax, tools, vals, ylabel, title, fmt, annotation_rotation=None):
+def _scatter_points(ax, x, vals_list):
+    """Overlay individual round values as jittered dots (only when >1)."""
+    for xi, pts in zip(x, vals_list):
+        pts = [float(p) for p in pts if p is not None and np.isfinite(p)]
+        if len(pts) > 1:
+            j = (np.arange(len(pts)) - (len(pts) - 1) / 2) * 0.04
+            ax.plot(xi + j, pts, "o", color="black", ms=3, alpha=0.7,
+                    zorder=4)
+
+
+def single_bars(ax, tools, vals, ylabel, errs=None, points=None):
     """One bar per tool, primary TOOL_ORDER (BDT→RF→CNN→NN→gLM→motif), not alphabetical/value."""
     paired = sorted(zip(tools, vals), key=lambda item: _tool_order(item[0]))
     tools = [t for t, _ in paired]
     vals = [v for _, v in paired]
+    if errs is None:
+        errs = [0.0] * len(tools)
     x = np.arange(len(tools))
     bars = ax.bar(x, vals, 0.52,
+                  yerr=errs, capsize=3, error_kw={"elinewidth": 1.2},
                   color=[TOOL_COLORS.get(t, "#333333") for t in tools],
                   edgecolor="black", linewidth=0.8, zorder=3)
-    _style_bar_axes(ax, tools, ylabel, title)
-    _annotate_bars(ax, [(b, v, fmt(v), "black") for b, v in zip(bars, vals)
-                        if np.isfinite(v)], rotation=annotation_rotation)
+    if points is not None:
+        _scatter_points(ax, x, [points.get(t, []) for t in tools])
+    _style_bar_axes(ax, tools, ylabel)
 
 
-def regime_bars(ax, tools, runs, values, ylabel, title, fmt,
-                regime_of: dict, ylim_top=None, annotation_rotation=None,
+def regime_bars(ax, tools, runs, values, ylabel, regime_of: dict,
                 run_display=None):
     """Grouped bars per tool, one bar per run (regime). Tool colors + hatch per regime.
 
     Tools in primary TOOL_ORDER (BDT→RF→CNN→NN→gLM→motif).
-    Every finite value is annotated directly above its own bar.
+    values maps (tool, run) -> scalar or list of round values; lists are
+    plotted as mean ± SD with individual dots. Exact numbers live in
+    3_tables/resources_compare.tsv, not on the bars.
     """
     import matplotlib.patches as mpatches
     tools = sorted(tools, key=_tool_order)
     x = np.arange(len(tools))
     n = len(runs)
     width = 0.82 / max(n, 1)
-    entries = []
     for i, run in enumerate(runs):
-        vals = [values.get((t, run), np.nan) for t in tools]
+        raw = [values.get((t, run), np.nan) for t in tools]
+        raw = [v if isinstance(v, list) else [v] for v in raw]
+        ms = [_mean_sd(v) for v in raw]
+        vals = [m for m, _ in ms]
+        errs = [e for _, e in ms]
         off = (i - (n - 1) / 2) * width
         hatch = REGIME_HATCHES[i % len(REGIME_HATCHES)]
-        bars = ax.bar(x + off, vals, width,
-                      edgecolor="black", linewidth=0.8,
-                      color=[TOOL_COLORS.get(t, "#9E9E9E") for t in tools],
-                      hatch=hatch, zorder=3)
-        entries.extend((b, v, fmt(v), TOOL_COLORS.get(t, "black"))
-                       for b, v, t in zip(bars, vals, tools) if np.isfinite(v))
+        ax.bar(x + off, vals, width,
+               yerr=errs, capsize=3, error_kw={"elinewidth": 1.2},
+               edgecolor="black", linewidth=0.8,
+               color=[TOOL_COLORS.get(t, "#9E9E9E") for t in tools],
+               hatch=hatch, zorder=3)
+        _scatter_points(ax, x + off, raw)
     handles = [mpatches.Rectangle((0, 0), 1, 1, facecolor="#9E9E9E",
                                   hatch=REGIME_HATCHES[i % len(REGIME_HATCHES)],
                                   edgecolor="black",
                                   label=(run_display or {}).get(
                                       r, REGIME_DISPLAY.get(regime_of.get(r, r), r)))
                for i, r in enumerate(runs)]
-    _style_bar_axes(ax, tools, ylabel, title)
-    _outside_legend(ax, handles=handles, title="Execution Regime",
-                    handlelength=2.5, handleheight=2.0)
-    _annotate_bars(ax, entries, ylim_top, rotation=annotation_rotation)
+    _style_bar_axes(ax, tools, ylabel)
+    _inside_legend(ax, ncol=len(runs), handles=handles, title="Execution Regime",
+                   handlelength=2.5, handleheight=2.0)
 
 
 def save_fig(fig, path: Path):
-    for ext in ("png", "pdf"):
+    for ext in ("png", "pdf", "svg"):
         fig.savefig(path.with_suffix(f".{ext}"), dpi=300, bbox_inches="tight")
     plt.close(fig)
-
-
-def _dataset_title(res_all: pd.DataFrame, dataset_label: str = None) -> str:
-    if dataset_label:
-        return dataset_label
-    if "name" in res_all.columns:
-        from bench_labels import DS_DISPLAY
-        names = [str(v) for v in res_all["name"].unique()]
-        if len(names) == 1:
-            return DS_DISPLAY.get(names[0], names[0])
-    return "comparison"
 
 
 def _total_n(res_all: pd.DataFrame) -> int:
@@ -359,37 +283,19 @@ def _vram_reference(res_all, regime_of):
     return res_all[res_all["run"] == reference], reference
 
 
-def _plot_title(metric, dataset, total_n):
-    return f"{metric} — {dataset}" + (f" (N={total_n:,})" if total_n else "")
-
-
-def compare_runs(run_dirs, out_dir: Path, dataset_label: str = None):
+def compare_runs(run_dirs, out_dir: Path, exclude=None):
     layouts = [RunLayout.resolve(Path(rd)) for rd in run_dirs]
     out_dir = Path(out_dir).resolve()
-    # Validate every input before creating directories or overwriting a manifest.
+    # Refuse to write inside an input run (or its ancestors): comparisons
+    # must live in their own directory.
     for layout in layouts:
         if (out_dir == layout.root or out_dir in layout.root.parents
                 or layout.root in out_dir.parents):
             raise ValueError(f"Comparison output {out_dir} is an input run, its "
                              f"ancestor, or its descendant ({layout.root}); "
                              "choose a separate directory.")
-    status_path = out_dir / "STATUS.json"
-    if status_path.exists() or status_path.is_symlink():
-        raise ValueError(f"Comparison output {out_dir} contains STATUS.json; "
-                         "refusing to overwrite a run directory.")
-    manifest_path = out_dir / "MANIFEST.json"
-    if manifest_path.exists() or manifest_path.is_symlink():
-        try:
-            manifest = json.loads(manifest_path.read_text())
-        except (OSError, ValueError) as exc:
-            raise ValueError(f"Cannot validate comparison output manifest "
-                             f"{manifest_path}: {exc}") from exc
-        if not isinstance(manifest, dict) or manifest.get("type") != "comparison":
-            raise ValueError(f"Comparison output {out_dir} has a non-comparison "
-                             "MANIFEST.json; choose a separate directory.")
     loaded = []
     source_paths = []
-    input_shas = []
     seen = set()
     for layout in layouts:
         source = str(layout.root)
@@ -400,9 +306,6 @@ def compare_runs(run_dirs, out_dir: Path, dataset_label: str = None):
         if r is not None:
             loaded.append(r)
             source_paths.append(source)
-            sha = layout.metadata.get("input_sha")
-            if sha:
-                input_shas.append(sha)
     if not loaded:
         print("ERROR: no usable runs found.")
         sys.exit(2)
@@ -410,6 +313,11 @@ def compare_runs(run_dirs, out_dir: Path, dataset_label: str = None):
     labels = source_paths
     display_labels = {source: label for source, (label, _) in zip(labels, loaded)}
     res_all = pd.concat([r for _, r in loaded], ignore_index=True)
+    if exclude:
+        drop = set(exclude)
+        n0 = len(res_all)
+        res_all = res_all[~res_all.get("Tool", pd.Series(dtype=str)).isin(drop)].reset_index(drop=True)
+        print(f"  [compare] excluded {sorted(drop)}: {n0} -> {len(res_all)} rows")
 
     tools_res = [t for t in PRIMARY_ORDER if t in set(res_all.get("Tool", []))]
     tools_res += [t for t in sorted(set(res_all.get("Tool", [])) - set(tools_res))]
@@ -418,17 +326,7 @@ def compare_runs(run_dirs, out_dir: Path, dataset_label: str = None):
     tab = out_dir / "3_tables"
     for d in (resd, tab):
         d.mkdir(parents=True, exist_ok=True)
-    RunLayout(out_dir).write_comparison_manifest(
-        out_dir, sources=source_paths, dataset=_dataset_title(res_all, dataset_label),
-        regimes=[REGIME_DISPLAY.get(str(r["configuration"]), str(r["configuration"]))
-                 for _, r in res_all.drop_duplicates("run").iterrows()],
-        input_shas=list(dict.fromkeys(input_shas)),
-    )
 
-    ds_title = _dataset_title(res_all, dataset_label)
-    # fallback: if dataset_label generic ("results"/"comparison"), try to infer from run_dirs
-    if ds_title in ("comparison", "results", "") and dataset_label:
-        ds_title = dataset_label
     total_n = _total_n(res_all)
     n_tag = f", N={total_n:,}" if total_n else ""
     regime_of = {}
@@ -460,46 +358,45 @@ def compare_runs(run_dirs, out_dir: Path, dataset_label: str = None):
             lambda s: s.max() / s.replace(0, np.nan))
     res_all.to_csv(tab / "resources_compare.tsv", sep="\t", index=False)
     if len(labels) == 1:
-        cfg_single = regimes_disp[0] if regimes_disp else ""
         specs = [("wall_seconds", f"Execution Time (seconds{n_tag})",
-                  f"Execution time — {ds_title} (N={total_n:,}, {cfg_single})" if total_n and cfg_single else f"Execution time — {ds_title}",
-                  "compare_time", fmt_time_short),
+                  "compare_time"),
                  ("peak_ram_mb", "Peak Memory Usage (MB)",
-                  f"Peak RAM — {ds_title} (N={total_n:,}, {cfg_single})" if total_n and cfg_single else f"Peak RAM — {ds_title}",
-                  "compare_ram", fmt_ram_value)]
-        for col, ylabel, title, stem, fmt in specs:
+                  "compare_ram")]
+        for col, ylabel, stem in specs:
             if col not in res_all.columns:
                 continue
             sub = res_all[pd.to_numeric(res_all[col], errors="coerce").notna()]
             if sub.empty:
                 continue
             tools = [t for t in tools_res if t in set(sub["Tool"])]
-            vals = [float(sub[sub["Tool"] == t][col].iloc[0]) for t in tools]
+            grouped = {t: sub[sub["Tool"] == t][col].tolist() for t in tools}
+            ms = {t: _mean_sd(grouped[t]) for t in tools}
+            vals = [ms[t][0] for t in tools]
+            errs = [ms[t][1] for t in tools]
             fig, ax = _comparison_figure(len(tools), 1)
-            single_bars(ax, tools, vals, ylabel, title, fmt,
-                        annotation_rotation=45)
+            single_bars(ax, tools, vals, ylabel, errs=errs,
+                        points=grouped)
             save_fig(fig, resd / stem)
             print(f"  [SAVED] 2_resources/{stem}")
     else:
         specs = [("wall_seconds", "Execution Time (s)",
-                  _plot_title("Execution time", ds_title, total_n),
-                  "compare_time", fmt_time_short),
+                  "compare_time"),
                  ("peak_ram_mb", "Peak Memory Usage (MB)",
-                  _plot_title("Peak RAM", ds_title, total_n),
-                  "compare_ram", fmt_ram_value),
+                  "compare_ram"),
                  ("speedup_vs_slowest", "Speedup vs slowest config (x)",
-                  _plot_title("Speedup", ds_title, total_n),
-                  "compare_speedup", lambda v: f"{v:.2f}x")]
-        for col, ylabel, title, stem, fmt in specs:
+                  "compare_speedup")]
+        for col, ylabel, stem in specs:
             if col not in res_all.columns:
                 continue
             sub = res_all[pd.to_numeric(res_all[col], errors="coerce").notna()]
             if sub.empty:
                 continue
-            vals = {(r["Tool"], r["run"]): float(r[col]) for _, r in sub.iterrows()}
+            vals = {}
+            for _, r in sub.iterrows():
+                vals.setdefault((r["Tool"], r["run"]), []).append(float(r[col]))
             fig, ax = _comparison_figure(len(tools_res), len(labels))
-            regime_bars(ax, tools_res, labels, vals, ylabel, title, fmt,
-                        regime_of, annotation_rotation=45, run_display=run_display)
+            regime_bars(ax, tools_res, labels, vals, ylabel,
+                        regime_of, run_display=run_display)
             save_fig(fig, resd / stem)
             print(f"  [SAVED] 2_resources/{stem}")
 
@@ -516,29 +413,27 @@ def compare_runs(run_dirs, out_dir: Path, dataset_label: str = None):
                             key=lambda t: order_idx.get(t, 999))
             weights = [float(vsub[vsub["Tool"] == t]["model_size_mb"].iloc[0])
                        for t in vtools]
-            peaks = [float(vsub[vsub["Tool"] == t]["peak_vram_mb"].iloc[0])
-                     for t in vtools]
+            peak_lists = [vsub[vsub["Tool"] == t]["peak_vram_mb"].tolist()
+                          for t in vtools]
+            peaks = [_mean_sd(p)[0] for p in peak_lists]
+            verrs = [_mean_sd(p)[1] for p in peak_lists]
             fig, ax = _comparison_figure(len(vtools), 2)
             x = np.arange(len(vtools))
             w = 0.35
             # Grouped (not stacked: peak already contains resident weights).
             # Peak bars share one pastel: the value (height) compares,
             # not the color. Both bars are VRAM info by construction.
-            b1 = ax.bar(x - w / 2, weights, w, label="Model weights",
-                        color="#455A64", edgecolor="black", linewidth=0.8,
-                        zorder=3)
-            b2 = ax.bar(x + w / 2, peaks, w, label="Max Inference VRAM",
-                        color="#C5CAE9", edgecolor="black", linewidth=0.8,
-                        zorder=3)
+            ax.bar(x - w / 2, weights, w, label="Model weights",
+                   color="#455A64", edgecolor="black", linewidth=0.8,
+                   zorder=3)
+            ax.bar(x + w / 2, peaks, w, label="Max Inference VRAM",
+                   yerr=verrs, capsize=3, error_kw={"elinewidth": 1.2},
+                   color="#C5CAE9", edgecolor="black", linewidth=0.8,
+                   zorder=3)
+            _scatter_points(ax, x + w / 2, peak_lists)
             reference_display = run_display[vram_reference_label]
-            _style_bar_axes(ax, vtools, "Memory (MB)",
-                            _plot_title("GPU Memory", ds_title, total_n))
-            _outside_legend(ax, title=f"Reference: {reference_display}")
-            entries = [(b, v, fmt_ram(v), "black") for b, v in zip(b1, weights)]
-            # Single-line GB labels fit horizontally above the bars.
-            entries += [(b, v, f"{v / 1024:.2f} GB" if v >= 1024 else fmt_ram(v),
-                         "black") for b, v in zip(b2, peaks)]
-            _annotate_bars(ax, [e for e in entries if np.isfinite(e[1])])
+            _style_bar_axes(ax, vtools, "Memory (MB)")
+            _inside_legend(ax, ncol=2, title=f"Reference: {reference_display}")
             save_fig(fig, resd / "compare_vram")
             print("  [SAVED] 2_resources/compare_vram")
 
@@ -602,14 +497,15 @@ def main():
     p.add_argument("runs", nargs="+", help="Run dirs (output/<date>_runs/<name>/<config>/)")
     p.add_argument("-o", "--output", default=None,
                    help="Comparison dir (default: inherited date+names from input runs)")
-    p.add_argument("--dataset", default=None,
-                   help="Dataset display name for plot titles")
+    p.add_argument("--exclude", nargs="*", default=None,
+                   help="Display labels to drop (e.g. 'MLDSPP 75pct [BDT]'); "
+                        "useful for 7-tool cuts without touching run dirs")
     a = p.parse_args()
     if a.output:
         out = Path(a.output)
     else:
         out = default_comparison_dir(a.runs)
-    compare_runs(a.runs, out, dataset_label=a.dataset)
+    compare_runs(a.runs, out, exclude=a.exclude)
 
 
 if __name__ == "__main__":

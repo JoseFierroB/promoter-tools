@@ -121,13 +121,18 @@ class LocalRunner(Runner):
         return True  # Always available (no Slurm needed)
 
     def run(self, tool: Tool) -> dict:
-        """Execute tool n_runs times, return aggregate with mean ± SD."""
+        """Execute tool n_runs times, return aggregate with mean ± SD.
+
+        The aggregate carries "_reps": the individual per-round dicts,
+        so callers can record every round alongside the average.
+        """
         print(f"  [{tool.name}]", flush=True)
         runs = []
         for i in range(self.n_runs):
             if self.n_runs > 1:
                 print(f"    Run {i+1}/{self.n_runs}...", end=" ", flush=True)
             m = self._run_once(tool)
+            m["rep"] = i + 1
             runs.append(m)
             if self.n_runs > 1:
                 status = "OK" if m["success"] else "FAIL"
@@ -137,7 +142,9 @@ class LocalRunner(Runner):
             return runs[0]
 
         from src.analysis.statistics import aggregate_runs
-        return aggregate_runs(runs)
+        agg = aggregate_runs(runs)
+        agg["_reps"] = runs
+        return agg
 
     def _run_once(self, tool: Tool) -> dict:
         env_path = tool.pixi_env

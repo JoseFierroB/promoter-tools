@@ -6,11 +6,11 @@ Parses experimental TSS annotations from S1_TSS.tsv (exported once from
 S1_TSS.xlsx, Aprianto et al., 2018) against the TIGR4 genome (NC_003028.fasta).
 
 Features:
-- Multi-tier dataset generation ('high_conf_primary', 'extended_primary', 'all_tss').
+- Multi-tier dataset generation ('high_conf_primary', 'extended_high',
+  'extended_primary', 'all_tss').
 - Extraction efficiency metrics (Theoretical maximum TSS candidates vs extracted 81-mers).
 - Same-strand steric hindrance conflict resolution.
-- Advanced GC bias statistics (Z-score, Cohen's d).
-- Biological validation metrics (+1 Purine preference, -10 box match, UTR spacing).
+- GC bias statistics vs genome background (Z-score, Cohen's d).
 
 Usage:
     pixi run python src/dataset/positive_tss_tigr4.py \
@@ -23,9 +23,6 @@ Usage:
 
 import argparse
 import math
-import os
-import re
-import statistics
 import sys
 from pathlib import Path
 from typing import Dict, List, Tuple
@@ -39,11 +36,12 @@ from Bio.Seq import Seq
 
 # ── TIGR4 helpers (inlined: each extraction script is self-contained) ──
 
-def load_genome(fasta_path: Path) -> Tuple[str, Seq, int]:
+def load_genome(fasta_path: Path) -> Tuple[str, Seq]:
     """Load the first record of a FASTA genome file."""
     if not fasta_path.exists():
         alt_fasta = fasta_path.parent / "TIGR4.fasta"
         if alt_fasta.exists():
+            print(f"[WARNING] {fasta_path.name} not found, falling back to {alt_fasta.name}", file=sys.stderr)
             fasta_path = alt_fasta
         else:
             print(f"[ERROR] FASTA file not found at {fasta_path}", file=sys.stderr)
@@ -57,14 +55,14 @@ def load_genome(fasta_path: Path) -> Tuple[str, Seq, int]:
     chrom_id = list(genome_dict.keys())[0]
     seq = genome_dict[chrom_id].seq
     print(f"[INFO] Loaded genome '{chrom_id}' (length: {len(seq):,} bp) from {fasta_path.name}")
-    return chrom_id, seq, len(seq)
+    return chrom_id, seq
 
 
 def write_dataset_files(records: List[Dict], out_prefix: Path) -> Tuple[Path, Path]:
     """Write records as .fasta + .tsv (metadata without Sequence column)."""
     out_prefix.parent.mkdir(parents=True, exist_ok=True)
-    fasta_out = out_prefix.with_suffix(".fasta")
-    tsv_out = out_prefix.with_suffix(".tsv")
+    fasta_out = Path(str(out_prefix) + ".fasta")
+    tsv_out = Path(str(out_prefix) + ".tsv")
 
     with open(fasta_out, "w") as f:
         for r in records:
@@ -101,9 +99,7 @@ def compute_gc_statistics(records: List[Dict], genome_seq: Seq) -> Dict:
     }
 
 
-# ════════════════════════════════════════════════════════════════
-# 1. CLI Arguments & Configuration
-# ════════════════════════════════════════════════════════════════
+# 1. CLI arguments
 
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -156,14 +152,8 @@ def parse_arguments() -> argparse.Namespace:
     return parser.parse_args()
 
 
-# ════════════════════════════════════════════════════════════════
-# 2. Genome Loading & Validation
-# ════════════════════════════════════════════════════════════════
-
-# ════════════════════════════════════════════════════════════════
-# 3. TSV Sheet Filtering & Loading (from data/tigr4/S1_TSS.tsv,
-#    exported once from S1_TSS.xlsx with a _Source_Sheet column)
-# ════════════════════════════════════════════════════════════════
+# 2. TSS table loading (S1_TSS.tsv, exported once from S1_TSS.xlsx
+#    with a _Source_Sheet column)
 
 def load_tigr4_tss_table(tsv_path: Path, tier: str) -> Tuple[pd.DataFrame, List[str]]:
     if not tsv_path.exists():
@@ -200,9 +190,7 @@ def load_tigr4_tss_table(tsv_path: Path, tier: str) -> Tuple[pd.DataFrame, List[
     return combined_df, target_sheets
 
 
-# ════════════════════════════════════════════════════════════════
-# 4. Biological Window Extraction
-# ════════════════════════════════════════════════════════════════
+# 3. Window extraction (81-mers centered on TSS)
 
 def extract_promoter_windows(
     df_tss: pd.DataFrame,
@@ -226,13 +214,14 @@ def extract_promoter_windows(
         locus = str(row.get("Locus_tag", row.get("Locus", f"TIGR4_TSS_{idx}"))).strip()
         strand = str(row.get("Strand", "+")).strip()
 
-        tss_col = (
-            "TSS_position"
-            if "TSS_position" in row and pd.notna(row["TSS_position"])
-            else ("Secondary_TSS" if "Secondary_TSS" in row and pd.notna(row["Secondary_TSS"])
-            else ("Primary_TSS" if "Primary_TSS" in row and pd.notna(row["Primary_TSS"])
-            else "TSS"))
-        )
+        # TSS coordinate: first non-null column in priority order.
+        # (Secondary before Primary: rows from the "Secondary TSS" sheets
+        # describe the secondary TSS itself, paired with its primary.)
+        tss_col = None
+        for candidate in ("TSS_position", "Secondary_TSS", "Primary_TSS", "TSS"):
+            if candidate in row and pd.notna(row[candidate]):
+                tss_col = candidate
+                break
         if tss_col not in row or pd.isna(row[tss_col]):
             exclusion_stats["skipped_missing_tss"] += 1
             continue
@@ -267,9 +256,9 @@ def extract_promoter_windows(
 
         sheet_source = row.get("_Source_Sheet", "Unknown")
         is_secondary = str(sheet_source).startswith("Secondary")
-        utr_key = f"Secondary_5'-UTR_length" if is_secondary else f"Primary_5'-UTR_length"
-        cov_key = f"Secondary_Processed_cov" if is_secondary else f"Primary_Processed_cov"
-        ratio_key = f"Secondary_Ratio" if is_secondary else f"Primary_Ratio"
+        utr_key = "Secondary_5'-UTR_length" if is_secondary else "Primary_5'-UTR_length"
+        cov_key = "Secondary_Processed_cov" if is_secondary else "Primary_Processed_cov"
+        ratio_key = "Secondary_Ratio" if is_secondary else "Primary_Ratio"
         utr_len = row.get(utr_key, None)
         if pd.isna(utr_len):
             utr_len = row.get("5'-UTR_length", None)
@@ -298,9 +287,7 @@ def extract_promoter_windows(
     return extracted_records, exclusion_stats
 
 
-# ════════════════════════════════════════════════════════════════
-# 5. Steric Hindrance Conflict Resolution
-# ════════════════════════════════════════════════════════════════
+# 4. Steric hindrance conflict resolution (same strand, < threshold)
 
 def resolve_steric_conflicts(records: List[Dict], threshold: int) -> Tuple[List[Dict], int]:
     if threshold <= 0 or not records:
@@ -350,28 +337,26 @@ def _pick_best_tss_in_cluster(cluster: List[Dict]) -> Dict:
         elif "Low Confidence" in sheet:
             sheet_score = 1
 
+        # Most upstream first (same convention as positive_tss_d39v.py:
+        # max() wins, so negate the coordinate on the + strand).
+        pos = item.get("TSS_Position")
+        upstream_key = -pos if item.get("Strand") == "+" else pos
+
         try:
             cov = float(item.get("Processed_Coverage", 0))
         except (ValueError, TypeError):
             cov = 0.0
 
-        return (sheet_score, cov)
+        return (sheet_score, upstream_key, cov)
 
-    cluster.sort(key=rank_key, reverse=True)
-    return cluster[0]
+    return max(cluster, key=rank_key)
 
 
-# ════════════════════════════════════════════════════════════════
-# 6. Advanced GC Bias & Biological Validation Metrics
-# ════════════════════════════════════════════════════════════════
+# 5. GC statistics (sample vs genome background)
 
-# ════════════════════════════════════════════════════════════════
-# 7. Dataset Exporters (.fasta & .tsv)
-# ════════════════════════════════════════════════════════════════
+# 6. Dataset export (.fasta + .tsv)
 
-# ════════════════════════════════════════════════════════════════
-# 8. Executive Console Summary
-# ════════════════════════════════════════════════════════════════
+# 7. Console summary
 
 def report_summary(
     records: List[Dict],
@@ -384,8 +369,8 @@ def report_summary(
     upstream: int = 60,
     downstream: int = 20,
 ):
-    n_pos = sum(1 for r in records if r["Strand"] == "+")
-    n_neg = sum(1 for r in records if r["Strand"] == "-")
+    n_plus = sum(1 for r in records if r["Strand"] == "+")
+    n_minus = sum(1 for r in records if r["Strand"] == "-")
     total_eval = exclusion_stats.get("total_evaluated", len(records))
     n_extracted = stats.get("n_samples", len(records))
     yield_pct = (n_extracted / total_eval * 100.0) if total_eval > 0 else 0.0
@@ -408,28 +393,21 @@ def report_summary(
     print(f" • Skipped Invalid 'N' Bases:            {exclusion_stats.get('skipped_invalid_n', 0):,}")
     print("─" * 65)
     print("DATASET COMPOSITION & BIAS:")
-    print(f" • Strand Distribution:     + strand: {n_pos:,} | - strand: {n_neg:,}")
+    print(f" • Strand Distribution:     + strand: {n_plus:,} | - strand: {n_minus:,}")
     print(f" • Sampled GC Content:       {stats.get('mean_gc', 0):.2f}% ± {stats.get('stdev_gc', 0):.2f}%")
     print(f" • Genome Background GC:     {stats.get('genome_gc_mean', 0):.2f}%")
     print(f" • GC Bias Significance:     Z-score = {stats.get('z_score', 0):+.2f} | Cohen's d = {stats.get('cohen_d', 0):+.2f}")
     print("─" * 65)
-    print("BIOLOGICAL VALIDATION METRICS:")
-    print(f" • +1 Initiator Purines (A+G): {stats.get('plus1_purines_pct', 0):.1f}% (A: {stats.get('plus1_a_pct', 0):.1f}%, G: {stats.get('plus1_g_pct', 0):.1f}%)")
-    print(f" • -10 Box Variant Match:       {stats.get('pribnow_pct', 0):.1f}% (Exact TATAAT: {stats.get('pribnow_exact_pct', 0):.1f}%)")
-    print(f" • Reference 5'-UTR (15-45bp): {stats.get('reference_utr_pct', 0):.1f}% of evaluated UTRs")
-    print("═" * 65)
     print(f"[SUCCESS] FASTA dataset ➔ {fasta_out}")
     print(f"[SUCCESS] Metadata TSV ➔ {tsv_out}\n")
 
 
-# ════════════════════════════════════════════════════════════════
-# 9. Main Pipeline Orchestrator
-# ════════════════════════════════════════════════════════════════
+# 8. Main
 
 def main():
     args = parse_arguments()
 
-    chrom_id, genome_seq, seq_len = load_genome(Path(args.fasta))
+    chrom_id, genome_seq = load_genome(Path(args.fasta))
     df_tss, target_sheets = load_tigr4_tss_table(Path(args.tsv), args.tier)
 
     raw_records, exclusion_stats = extract_promoter_windows(

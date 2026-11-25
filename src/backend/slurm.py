@@ -1,6 +1,7 @@
 """Slurm runner: execute tools via sbatch + sacct on HPC clusters."""
 import os, subprocess, time
 from pathlib import Path
+from shlex import quote
 from typing import Optional
 
 from src.backend.base import Runner
@@ -16,13 +17,15 @@ class SlurmRunner(Runner):
     def __init__(self, partition: str = "production",
                  time_limit: str = "2:00:00",
                  cpus: int = 4, mem_gb: int = 16,
-                 pos_fasta: Path = None, neg_fasta: Path = None):
+                 pos_fasta: Path = None, neg_fasta: Path = None,
+                 output_dir: str = None):
         self.partition = partition
         self.time_limit = time_limit
         self.cpus = cpus
         self.mem_gb = mem_gb
         self.pos_fasta = Path(pos_fasta) if pos_fasta else config.pos_fasta
         self.neg_fasta = Path(neg_fasta) if neg_fasta else config.neg_fasta
+        self.output_dir = str(output_dir) if output_dir is not None else str(ROOT / "output/predictions")
 
     def available(self) -> bool:
         """Check if Slurm is available."""
@@ -103,6 +106,11 @@ class SlurmRunner(Runner):
         if "promotech" in tool.short_name:
             n_seqs = _count_seqs(self.pos_fasta) + _count_seqs(self.neg_fasta)
             extra_args += f'  --timeout {_promotech_timeout(n_seqs)}'
+        if tool.short_name == "prokbert_mini":
+            if os.environ.get("PROMOTER_TOOLS_PROKBERT_BATCH", ""):
+                extra_args += f'  --batch-size {os.environ["PROMOTER_TOOLS_PROKBERT_BATCH"]}'
+            if os.environ.get("PROMOTER_TOOLS_PROKBERT_PREFETCH", ""):
+                extra_args += f'  --prefetch-workers {os.environ["PROMOTER_TOOLS_PROKBERT_PREFETCH"]}'
         if tool.short_name == "mldspp_75":
             from src.backend.local import _pick_mldspp_split
             split = _pick_mldspp_split(self.pos_fasta)
@@ -119,7 +127,7 @@ export PIXI_HOME="{os.environ.get('PIXI_HOME', os.path.expanduser('~/.pixi'))}"
 export PATH="$PIXI_HOME/bin:$PATH"
 PYTHONPATH="{ROOT}" {python_bin} "{runner}" \\
   --pos "{self.pos_fasta}" --neg "{self.neg_fasta}" \\
-  -o "{ROOT / 'output/predictions'}"{extra_args}
+  -o {quote(str(self.output_dir))}{extra_args}
 """
 
     def _wait(self, job_id: str, poll_seconds: int = 10, max_wait: int = 7200):

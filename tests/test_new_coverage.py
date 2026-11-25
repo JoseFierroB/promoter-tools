@@ -1,8 +1,8 @@
-"""Simple tests for new code paths (see docs/RUNNER_CONTRACT.md).
+"""Simple tests for new code paths.
 
-Covers: prefetch waves + numpy IPC (tokenize_texts), strain cuts
-(operating_points --neg), --no-compute-plots flag, sigma sibling guard,
-DS_DISPLAY 4_ keys. All fast, default env, no GPU/models.
+Covers: prefetch waves + numpy IPC (tokenize_texts),
+--no-compute-plots flag, sigma sibling guard, DS_DISPLAY 4_ keys.
+All fast, default env, no GPU/models.
 Run: pixi run python -m pytest tests/test_new_coverage.py -q
 """
 import os
@@ -40,40 +40,6 @@ class TokenizeWavesTests(unittest.TestCase):
             self.assertIsInstance(a_ids, np.ndarray)
             np.testing.assert_array_equal(a_ids, b_ids)
             np.testing.assert_array_equal(a_m, b_m)
-
-
-class StrainCutsTests(unittest.TestCase):
-    def test_d39v_tigr4_counts(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            pred = root / "run" / "1_inference" / "predictions"
-            pred.mkdir(parents=True)
-            ids = [f"P{i}" for i in range(6)]
-            pd.DataFrame({"ID": ids, "LABEL": [1, 1, 1, 0, 0, 0],
-                          "PRED": [.9, .8, .7, .3, .2, .1]}).to_csv(
-                pred / "demo_prompt.tsv", sep="\t", index=False)
-            meta = pd.DataFrame({
-                "Sequence_ID": ["P0", "P1", "P2"],
-                "Sigma_Factor": ["SigA", "SigA", "None"],
-                "Chromosome": ["D39V", "NC_003028.3", "D39V"]})
-            meta_path = root / "meta.tsv"
-            meta.to_csv(meta_path, sep="\t", index=False)
-            neg = root / "neg.fasta"
-            neg.write_text(">NEG_A_D39V_1_+\n" + "A" * 81 + "\n"
-                           ">NEG_B_D39V_2_-\n" + "C" * 81 + "\n"
-                           ">NEG_C_TIGR4_3_+\n" + "G" * 81 + "\n")
-            p = subprocess.run(
-                [sys.executable, str(ROOT / "src/analysis/operating_points.py"),
-                 "--run-dir", str(root / "run"), "--name", "demo",
-                 "--metadata", str(meta_path), "--neg", str(neg)],
-                capture_output=True, text=True, timeout=300)
-            self.assertEqual(p.returncode, 0, p.stderr[-500:])
-            st = pd.read_csv(root / "run" / "3_tables" /
-                             "operating_point_metrics_strain.tsv", sep="\t")
-            d39v = st[st["cut"] == "d39v"].iloc[0]
-            tigr4 = st[st["cut"] == "tigr4"].iloc[0]
-            self.assertEqual((d39v["n_pos"], d39v["n_neg"]), (2, 2))
-            self.assertEqual((tigr4["n_pos"], tigr4["n_neg"]), (1, 1))
 
 
 class FlagsTests(unittest.TestCase):

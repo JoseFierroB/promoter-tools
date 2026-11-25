@@ -49,9 +49,11 @@ def main():
     import torch
 
     sys.path.insert(0, str(TOOLS_DIR / "iPro-MP"))
-    from importlib.util import spec_from_file_location
+    from importlib.util import module_from_spec, spec_from_file_location
     spec = spec_from_file_location("ip", str(TOOLS_DIR / "iPro-MP/iPro-MP_predict.py"))
-    ip = spec.loader.load_module()
+    ip = module_from_spec(spec)
+    sys.modules["ip"] = ip
+    spec.loader.exec_module(ip)
 
     pos_recs = list(SeqIO.parse(args.pos, "fasta")) if args.pos else []
     neg_recs = list(SeqIO.parse(args.neg, "fasta")) if args.neg else []

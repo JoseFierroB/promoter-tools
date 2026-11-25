@@ -113,7 +113,7 @@ def main():
 
     y_true, models = load_igr_predictions(pr_dir, n_pos=723, n_neg=723)
 
-    # Baseline D39V CDS AUCs for comparison
+    # Reference D39V CDS AUCs for comparison
     cds_aucs = {
         "iPro-MP [gLM]": 0.955,
         "MLDSPP 75%* [BDT]": 0.957,

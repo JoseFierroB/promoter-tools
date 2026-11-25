@@ -2,9 +2,9 @@
 """Analyze one CLI run: ROC + AUC rows for a single dataset.
 
 Agnostic: works on any run dir produced by `src/cli.py run`. Reads the
-primary 1_inference/predictions/{name}_{fam}[.tsv].
-Writes 1_inference/roc_auc_{name}.{png,pdf} and
-3_tables/metrics_rows.tsv.
+primary 1_inference/predictions/{name}_{fam}[.tsv] with legacy fallback.
+Writes a title-free 1_inference/roc_auc_{name}.{png,pdf} and
+3_tables/metrics_rows.tsv. No root-level copies or SVG exports.
 """
 from pathlib import Path
 
@@ -16,36 +16,41 @@ import pandas as pd
 from sklearn.metrics import roc_curve, auc
 
 try:
-    from bench_labels import PALETTE, TOOL_ORDER
+    from bench_labels import PALETTE, TOOL_ORDER  # primary (single source)
 except Exception:  # fallback when run as script without package context
     PALETTE = {
-        "MLDSPP [BDT]":      {"color": "#55001C", "ls": "-",  "lw": 1.8, "method": "BDT"},
+        "MLDSPP [BDT]":       {"color": "#F81D54", "ls": "-",  "lw": 1.8, "method": "BDT"},
+        "MLDSPP 75% [BDT]":      {"color": "#55001C", "ls": "-",  "lw": 1.8, "method": "BDT"},
         "PromoTech RF-HOT [RF]": {"color": "#F1A52B", "ls": "-",  "lw": 1.9, "method": "RF"},
         "PromoterLCNN [CNN]":    {"color": "#973C04", "ls": "-",  "lw": 1.9, "method": "CNN"},
         "prompt [NN]":           {"color": "#0060E6", "ls": "-",  "lw": 1.8, "method": "NN"},
-        "ProkBERT-mini [gLM]":   {"color": "#2D004D", "ls": "-",  "lw": 2.3, "method": "gLM"},
+        "ProkBERT-mini [gLM]":   {"color": "#734595", "ls": "-",  "lw": 2.3, "method": "gLM"},
         "iPro-MP [gLM]":         {"color": "#BA9CEE", "ls": "-",  "lw": 2.1, "method": "gLM"},
-        "FIMO ProkDB [PWMs]":    {"color": "#002616", "ls": "--", "lw": 1.7, "method": "PWMs"},
+        "FIMO ProkDB [PWMs]":    {"color": "#2E9E5B", "ls": "--", "lw": 1.7, "method": "PWMs"},
+        "STREME+FIMO [motif]":   {"color": "#18974C", "ls": ":",  "lw": 1.7, "method": "motif"},
     }
     TOOL_ORDER = [
-        "MLDSPP [BDT]", "PromoTech RF-HOT [RF]",
+        "MLDSPP [BDT]", "MLDSPP 75% [BDT]", "PromoTech RF-HOT [RF]",
         "PromoterLCNN [CNN]", "prompt [NN]", "ProkBERT-mini [gLM]",
-        "iPro-MP [gLM]", "FIMO ProkDB [PWMs]",
+        "iPro-MP [gLM]", "FIMO ProkDB [PWMs]", "STREME+FIMO [motif]",
     ]
 
+# registry key -> (display label, loader kind) — insertion order = TOOL_ORDER above
 TOOLS = {
     "mldspp": ("MLDSPP [BDT]", "posneg_dir"),
+    "mldspp_75": ("MLDSPP 75% [BDT]", "posneg_dir"),
     "promotech_hot": ("PromoTech RF-HOT [RF]", "posneg_dir"),
     "lcnn": ("PromoterLCNN [CNN]", "posneg_dir"),
     "prompt": ("prompt [NN]", "single_tsv"),
     "prokbert": ("ProkBERT-mini [gLM]", "single_tsv"),
     "ipromp_sp12": ("iPro-MP [gLM]", "ipromp_dir"),
     "fimo_prok": ("FIMO ProkDB [PWMs]", "fimo_dir"),
+    "meme": ("STREME+FIMO [motif]", "meme_dir"),
 }
-FAM = {"mldspp": "mldspp",
+FAM = {"mldspp": "mldspp", "mldspp_75": "mldspp_75",
        "promotech_hot": "promotech", "lcnn": "lcnn", "prompt": "prompt",
        "prokbert": "prokbert", "ipromp_sp12": "ipromp",
-       "fimo_prok": "fimo"}
+       "fimo_prok": "fimo", "meme": "meme"}
 
 
 def _posneg(p, n):
@@ -69,7 +74,7 @@ def load_tool(pred_root: Path, name: str, key: str, n_pos_hint=None):
 
     n_pos_hint fixes the iPro-MP split: that file has no LABEL column, so
     without a hint the split defaults to len//2, which mislabels when the
-    total is odd.
+    total is odd (e.g. 1727+1738=3465 -> 1732/1733).
     """
     fam = FAM[key]
     kind = TOOLS[key][1]
@@ -99,6 +104,8 @@ def load_tool(pred_root: Path, name: str, key: str, n_pos_hint=None):
                 n = base / "promotech" / "workdir" / "hot_pg_neg" / "sequences_predictions.csv"
             elif key == "mldspp":
                 p, n = base / "mldspp_pos.csv", base / "mldspp_neg.csv"
+            elif key == "mldspp_75":
+                p, n = base / "mldspp_75spn_pos.csv", base / "mldspp_75spn_neg.csv"
                 if not (p.exists() and n.exists()):
                     p, n = base / "mldspp_pos.csv", base / "mldspp_neg.csv"
             else:
@@ -133,6 +140,12 @@ def load_all(pred_root: Path, name: str, only=None):
     iPro-MP with that hint (its file lacks a LABEL column).
     """
     keys = [k for k in TOOLS if only is None or k in only]
+    if only is not None:
+        unknown = [k for k in only if k not in TOOLS]
+        if unknown:
+            raise SystemExit(
+                f"ERROR: unknown tool key(s) {unknown}. "
+                f"Valid keys: {sorted(TOOLS)}")
     scored = {}
     for key in keys:
         if key == "ipromp_sp12":
@@ -220,7 +233,7 @@ def analyze_run(pred_root: Path, name: str, out_dir: Path, only=None) -> pd.Data
     ax.legend(loc="lower right", fontsize=9.2, frameon=True, framealpha=0.95)
     ax.grid(True, linestyle=":", alpha=0.6)
     plt.tight_layout()
-    for ext in ("png", "pdf"):
+    for ext in ("png", "pdf", "svg"):
         fig.savefig(plots / f"roc_auc_{name}.{ext}", bbox_inches="tight")
     plt.close(fig)
     print(f"  [analyze] ROC saved: 1_inference/roc_auc_{name}.png/.pdf")

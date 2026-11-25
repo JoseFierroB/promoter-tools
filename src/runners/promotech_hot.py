@@ -55,9 +55,13 @@ def main():
         pd.DataFrame({"PRED": df["score"].values}).to_csv(
             od / "sequences_predictions.csv", sep="\t", index=False)
 
+        # Keep only what downstream scoring reads (analyze_run loads the two
+        # sequences_predictions.csv); the raw workdir (CHROM/RF-HOT .data,
+        # logs) stays in tmpdir and is deleted below.
         out_dest = Path(args.output) / "promotech/workdir" / od.name
         out_dest.mkdir(parents=True, exist_ok=True)
-        shutil.copytree(od, out_dest, dirs_exist_ok=True)
+        for fname in ("genome_predictions.csv", "sequences_predictions.csv"):
+            shutil.copy2(od / fname, out_dest / fname)
 
     elapsed = time.perf_counter() - t0
     shutil.rmtree(tmpdir, ignore_errors=True)

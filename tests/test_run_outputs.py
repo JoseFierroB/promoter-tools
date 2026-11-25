@@ -37,8 +37,6 @@ class RunOutputTests(unittest.TestCase):
     def fixture(self, date="260917", cfg="1cpu-gpu", seconds=5.0):
         layout = RunLayout(self.root / f"{date}_runs" / "demo" / cfg)
         layout.ensure_dirs()
-        layout.write_manifest(date=date, name="demo", config=cfg,
-                              input_sha="same-input", n_pos=3, n_neg=3)
         pd.DataFrame({"LABEL": [1, 1, 1, 0, 0, 0],
                       "PRED": [.9, .8, .4, .6, .2, .1]}).to_csv(
             layout.inference / "predictions/demo_prompt.tsv", sep="\t", index=False)
@@ -93,18 +91,18 @@ class RunOutputTests(unittest.TestCase):
             self.assertTrue(all(not ax.get_title() for ax in fig.axes))
             self.assertIsNone(fig._suptitle)
             self.assertEqual(len(fig.axes), 1)
-            self.assertIn(Path(path).suffix, (".png", ".pdf"))
+            self.assertIn(Path(path).suffix, (".png", ".pdf", ".svg"))
             saved.append(Path(path).relative_to(layout.root))
             return save(fig, path, *args, **kwargs)
 
         with patch.object(Figure, "savefig", checked_save):
             auc_plots.main(layout.inference / "predictions")
             compute.main_run(layout.root)
-        self.assertEqual(len(saved), 6)  # one ROC, time and RAM, two formats each
+        self.assertEqual(len(saved), 9)  # one ROC, time and RAM, three formats each
         self.assertTrue((layout.tables / "metrics_rows.tsv").is_file())
         self.assertTrue((layout.tables / "resource_metrics.tsv").is_file())
         self.assertEqual({p.name for p in layout.root.iterdir()},
-                         {"1_inference", "2_resources", "3_tables", "MANIFEST.json"})
+                         {"1_inference", "2_resources", "3_tables"})
         self.assertFalse((layout.inference / "1_inference").exists())
 
     def test_confusion_table_uses_canonical_predictions_and_tables(self):
@@ -114,14 +112,14 @@ class RunOutputTests(unittest.TestCase):
         self.assertTrue((layout.tables / "metrics_table.tsv").is_file())
         self.assertFalse((layout.root / "metrics_table.tsv").exists())
 
-    def test_compare_keeps_titles_and_distinguishes_same_config_other_dates(self):
+    def test_compare_title_free_and_distinguishes_same_config_other_dates(self):
         a, b = self.fixture(), self.fixture("260918", seconds=10.)
         output = self.root / "comparison"
         heights = []
 
         def inspect(fig, path, **kwargs):
-            self.assertTrue(fig.axes[0].get_title())
-            self.assertIn(Path(path).suffix, (".png", ".pdf"))
+            self.assertFalse(fig.axes[0].get_title())
+            self.assertIn(Path(path).suffix, (".png", ".pdf", ".svg"))
             if Path(path).stem == "compare_time":
                 heights.append([bar.get_height() for bar in fig.axes[0].patches])
 
@@ -129,7 +127,7 @@ class RunOutputTests(unittest.TestCase):
             compare_runs.compare_runs([a.root, b.root, a.root], output)
         table = pd.read_csv(output / "3_tables/resources_compare.tsv", sep="\t")
         self.assertEqual(table["run"].nunique(), 2)
-        self.assertEqual(heights, [[5., 10.], [5., 10.]])
+        self.assertEqual(heights, [[5., 10.], [5., 10.], [5., 10.]])  # png+pdf+svg
         self.assertEqual(set(table["speedup_vs_slowest"]), {1., 2.})
 
     def test_compare_skips_failed_rows_and_empty_tables(self):
@@ -148,12 +146,15 @@ class RunOutputTests(unittest.TestCase):
 
     def test_compare_rejects_overwriting_a_source_capsule(self):
         layout = self.fixture()
-        before = layout.manifest_path.read_bytes()
+        before = sorted(p.relative_to(layout.root).as_posix()
+                        for p in layout.root.rglob("*"))
         with self.assertRaises(ValueError):
             compare_runs.compare_runs([layout.root], layout.root)
         with self.assertRaises(ValueError):
             compare_runs.compare_runs([layout.root], layout.root.parent)
-        self.assertEqual(layout.manifest_path.read_bytes(), before)
+        after = sorted(p.relative_to(layout.root).as_posix()
+                       for p in layout.root.rglob("*"))
+        self.assertEqual(before, after)
 
     def test_sigma_exports_are_individual_and_title_free(self):
         layout = self.fixture()
@@ -176,7 +177,7 @@ class RunOutputTests(unittest.TestCase):
                 patch.object(Figure, "savefig", check):
             sigma_stratify.main()
         self.assertEqual(set(saved), {f"roc_{sig}_demo.{ext}" for sig in ("SigA", "SigX", "None")
-                                     for ext in ("png", "pdf")})
+                                     for ext in ("png", "pdf", "svg")})
 
     def test_cli_mock_run_plots_and_repeat_are_self_contained(self):
         inputs = self.root / "inputs"
@@ -208,24 +209,25 @@ class RunOutputTests(unittest.TestCase):
                 patch.object(local, "LocalRunner", FakeRunner), \
                 patch.object(Figure, "savefig"):
             cli.cmd_run(args)
-            # A repeat has independent default predictions and its own alias.
+            ext_files = list((self.root / "external_predictions").glob("*prompt*"))
+            self.assertTrue(ext_files, "runner output missing in --output-dir")
+            # A repeat overwrites the same run dir (no bumps, no aliases).
             args.output_dir = None
             args.output = None
             cli.cmd_run(args)
         run = self.root / "output/260917_runs/demo/1cpu"
-        repeat = self.root / "output/260917_runs/demo_02/1cpu"
-        for path in (run, repeat):
-            layout = RunLayout(path)
-            self.assertEqual(layout.dataset_name, "demo")
-            self.assertTrue(layout.find_resource_metrics().is_file())
-            self.assertTrue((layout.tables / "resource_metrics.tsv").is_file())
-            self.assertTrue((layout.tables / "metrics_rows.tsv").is_file())
-            self.assertFalse((path / "resources").exists())
-            self.assertFalse((path / "metrics_rows.tsv").exists())
-        self.assertEqual(RunLayout(run).predictions, self.root / "external_predictions")
-        aliases = list((self.root / "output/runs").iterdir())
-        self.assertEqual({p.resolve() for p in aliases}, {run, repeat})
-        self.assertNotEqual(RunLayout(run).metadata["run_id"], RunLayout(repeat).metadata["run_id"])
+        self.assertFalse((self.root / "output/260917_runs/demo_02").exists())
+        self.assertFalse((self.root / "output/runs").exists())
+        layout = RunLayout(run)
+        self.assertEqual(layout.dataset_name, "demo")
+        self.assertTrue(layout.find_resource_metrics().is_file())
+        self.assertTrue((layout.tables / "resource_metrics.tsv").is_file())
+        self.assertTrue((layout.tables / "metrics_rows.tsv").is_file())
+        self.assertFalse((run / "resources").exists())
+        self.assertFalse((run / "metrics_rows.tsv").exists())
+        self.assertFalse((run / "STATUS.json").exists())
+        self.assertFalse((run / "MANIFEST.json").exists())
+        self.assertEqual(layout.predictions, run / "1_inference/predictions")
 
 
 if __name__ == "__main__":
