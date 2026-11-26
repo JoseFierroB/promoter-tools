@@ -123,9 +123,9 @@ def main_run(run_dir: Path):
             sub = sub.sort_values(["_tool_sort", "tool"], kind="stable")
         labels = [_short_label(t) for t in sub["tool"]]
         colors = [PALETTE.get(t, {}).get("color", "#455A64") for t in sub["tool"]]
-        # Aggregate repeated rounds per tool: mean bar ± SD whisker + dots.
+        # Aggregate repeated rounds per tool: mean bar ± SD whisker.
         import numpy as _np
-        gvals, gerrs, gpts, glab, gcol = [], [], [], [], []
+        gvals, gerrs, glab, gcol = [], [], [], []
         for t, grp in sub.groupby("tool", sort=False):
             v = pd.to_numeric(grp[col], errors="coerce").dropna().tolist()
             if not v:
@@ -134,22 +134,15 @@ def main_run(run_dir: Path):
             s = float(_np.std(v, ddof=1)) if len(v) > 1 else 0.0
             gvals.append(m)
             gerrs.append(s)
-            gpts.append(v)
             glab.append(_short_label(t))
             gcol.append(PALETTE.get(t, {}).get("color", "#455A64"))
-        labels, vals, errs, pts, colors = glab, gvals, gerrs, gpts, gcol
+        labels, vals, errs, colors = glab, gvals, gerrs, gcol
         # Wide, fixed layout prevents long tool names from colliding when all
         # tools are present in a run (especially MEME and ProkBERT-mini).
         fig, ax = plt.subplots(figsize=(max(13.5, len(sub) * 1.65), 7), dpi=300)
         bars = ax.bar(range(len(vals)), vals, yerr=errs, capsize=3,
                       error_kw={"elinewidth": 1.2},
                       color=colors, edgecolor="black", linewidth=0.8)
-        for xi, p in zip(range(len(vals)), pts):
-            p = [float(v) for v in p]
-            if len(p) > 1:
-                j = (_np.arange(len(p)) - (len(p) - 1) / 2) * 0.04
-                ax.plot([xi + jj for jj in j], p, "o", color="black",
-                        ms=3, alpha=0.7, zorder=4)
         ax.set_xticks(range(len(vals)))
         ax.set_xticklabels(labels, fontsize=10.5, fontweight="bold",
                            rotation=22, ha="right", rotation_mode="anchor")

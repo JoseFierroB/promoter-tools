@@ -188,17 +188,7 @@ def _mean_sd(vals):
     return float(np.mean(vals)), float(np.std(vals, ddof=1))
 
 
-def _scatter_points(ax, x, vals_list):
-    """Overlay individual round values as jittered dots (only when >1)."""
-    for xi, pts in zip(x, vals_list):
-        pts = [float(p) for p in pts if p is not None and np.isfinite(p)]
-        if len(pts) > 1:
-            j = (np.arange(len(pts)) - (len(pts) - 1) / 2) * 0.04
-            ax.plot(xi + j, pts, "o", color="black", ms=3, alpha=0.7,
-                    zorder=4)
-
-
-def single_bars(ax, tools, vals, ylabel, errs=None, points=None):
+def single_bars(ax, tools, vals, ylabel, errs=None):
     """One bar per tool, primary TOOL_ORDER (BDT→RF→CNN→NN→gLM→motif), not alphabetical/value."""
     paired = sorted(zip(tools, vals), key=lambda item: _tool_order(item[0]))
     tools = [t for t, _ in paired]
@@ -210,8 +200,6 @@ def single_bars(ax, tools, vals, ylabel, errs=None, points=None):
                   yerr=errs, capsize=3, error_kw={"elinewidth": 1.2},
                   color=[TOOL_COLORS.get(t, "#333333") for t in tools],
                   edgecolor="black", linewidth=0.8, zorder=3)
-    if points is not None:
-        _scatter_points(ax, x, [points.get(t, []) for t in tools])
     _style_bar_axes(ax, tools, ylabel)
 
 
@@ -242,7 +230,6 @@ def regime_bars(ax, tools, runs, values, ylabel, regime_of: dict,
                edgecolor="black", linewidth=0.8,
                color=[TOOL_COLORS.get(t, "#9E9E9E") for t in tools],
                hatch=hatch, zorder=3)
-        _scatter_points(ax, x + off, raw)
     handles = [mpatches.Rectangle((0, 0), 1, 1, facecolor="#9E9E9E",
                                   hatch=REGIME_HATCHES[i % len(REGIME_HATCHES)],
                                   edgecolor="black",
@@ -252,6 +239,48 @@ def regime_bars(ax, tools, runs, values, ylabel, regime_of: dict,
     _style_bar_axes(ax, tools, ylabel)
     _inside_legend(ax, ncol=len(runs), handles=handles, title="Execution Regime",
                    handlelength=2.5, handleheight=2.0)
+
+
+def regime_boxplots(ax, tools, runs, values, ylabel, regime_of: dict,
+                      run_display=None, legend=True):
+    """Grouped boxplots per tool, one box per run (regime).
+
+    Same grouping/colors/hatches as regime_bars, but shows the full
+    distribution of the repeated rounds (median, IQR, whiskers, outliers).
+    Groups with a single value draw a collapsed box (no dispersion measured).
+    """
+    import matplotlib.patches as mpatches
+    tools = sorted(tools, key=_tool_order)
+    x = np.arange(len(tools))
+    n = len(runs)
+    width = 0.82 / max(n, 1)
+    boxw = width * 0.7
+    for i, run in enumerate(runs):
+        hatch = REGIME_HATCHES[i % len(REGIME_HATCHES)]
+        for j, t in enumerate(tools):
+            v = values.get((t, run), np.nan)
+            v = [float(x) for x in (v if isinstance(v, list) else [v])
+                 if x is not None and np.isfinite(x)]
+            if not v:
+                continue
+            bp = ax.boxplot([v], positions=[x[j] + (i - (n - 1) / 2) * width],
+                            widths=boxw, patch_artist=True, zorder=3)
+            for box in bp["boxes"]:
+                box.set(facecolor=TOOL_COLORS.get(t, "#9E9E9E"),
+                        edgecolor="black", linewidth=0.8, hatch=hatch)
+            for el in ("whiskers", "caps", "medians"):
+                for ln in bp[el]:
+                    ln.set(color="black", linewidth=1.0)
+    handles = [mpatches.Rectangle((0, 0), 1, 1, facecolor="#9E9E9E",
+                                  hatch=REGIME_HATCHES[i % len(REGIME_HATCHES)],
+                                  edgecolor="black",
+                                  label=(run_display or {}).get(
+                                      r, REGIME_DISPLAY.get(regime_of.get(r, r), r)))
+               for i, r in enumerate(runs)]
+    _style_bar_axes(ax, tools, ylabel)
+    if legend:
+        _inside_legend(ax, ncol=len(runs), handles=handles, title="Execution Regime",
+                       handlelength=2.5, handleheight=2.0)
 
 
 def save_fig(fig, path: Path):
@@ -374,10 +403,15 @@ def compare_runs(run_dirs, out_dir: Path, exclude=None):
             vals = [ms[t][0] for t in tools]
             errs = [ms[t][1] for t in tools]
             fig, ax = _comparison_figure(len(tools), 1)
-            single_bars(ax, tools, vals, ylabel, errs=errs,
-                        points=grouped)
+            single_bars(ax, tools, vals, ylabel, errs=errs)
             save_fig(fig, resd / stem)
             print(f"  [SAVED] 2_resources/{stem}")
+            if any(len(grouped[t]) > 1 for t in tools):
+                fig, ax = _comparison_figure(len(tools), 1)
+                regime_boxplots(ax, tools, ["_all"], {(t, "_all"): grouped[t] for t in tools},
+                                ylabel, {"_all": "_all"}, legend=False)
+                save_fig(fig, resd / f"{stem}_dist")
+                print(f"  [SAVED] 2_resources/{stem}_dist")
     else:
         specs = [("wall_seconds", "Execution Time (s)",
                   "compare_time"),
@@ -399,6 +433,12 @@ def compare_runs(run_dirs, out_dir: Path, exclude=None):
                         regime_of, run_display=run_display)
             save_fig(fig, resd / stem)
             print(f"  [SAVED] 2_resources/{stem}")
+            if any(len(v) > 1 for v in vals.values()):
+                fig, ax = _comparison_figure(len(tools_res), len(labels))
+                regime_boxplots(ax, tools_res, labels, vals, ylabel,
+                                regime_of, run_display=run_display)
+                save_fig(fig, resd / f"{stem}_dist")
+                print(f"  [SAVED] 2_resources/{stem}_dist")
 
     # --- GPU VRAM: weights vs peak (GPU tools only) ---
     GPU_TOOLS = {"PromoterLCNN [CNN]", "ProkBERT-mini [gLM]", "iPro-MP [gLM]"}
@@ -430,7 +470,6 @@ def compare_runs(run_dirs, out_dir: Path, exclude=None):
                    yerr=verrs, capsize=3, error_kw={"elinewidth": 1.2},
                    color="#C5CAE9", edgecolor="black", linewidth=0.8,
                    zorder=3)
-            _scatter_points(ax, x + w / 2, peak_lists)
             reference_display = run_display[vram_reference_label]
             _style_bar_axes(ax, vtools, "Memory (MB)")
             _inside_legend(ax, ncol=2, title=f"Reference: {reference_display}")
@@ -441,8 +480,9 @@ def compare_runs(run_dirs, out_dir: Path, exclude=None):
         fh.write("# Cross-run compute comparison\n\nRuns:\n")
         for lbl in labels:
             fh.write(f"- {display_labels[lbl]}: {lbl}\n")
-        fh.write("\n- 2_resources/compare_{time,ram,speedup}: "
-                 "single bars (1 run) or grouped by regime (>1 run).\n"
+        fh.write("\n- 2_resources/compare_{time,ram,speedup}: single bars (1 run) "
+                 "or grouped by regime (>1 run); *_dist variants are boxplots "
+                 "of the repeated rounds (drawn when any group has >1 value).\n"
                  "- 2_resources/compare_vram: weights vs peak VRAM (GPU tools).\n"
                  "- 3_tables/resources_compare.tsv: source table "
                  "(incl. speedup_vs_slowest per tool).\n")

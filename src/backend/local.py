@@ -1,6 +1,7 @@
 """Local runner: execute tools via subprocess in any machine."""
 import os
 import re
+import shutil
 import subprocess
 import time
 from pathlib import Path
@@ -13,6 +14,27 @@ from src.benchmark.tools import Tool
 from src.config import config
 
 ROOT = config.root
+
+
+def _rep_path(base: str, rep: int) -> str:
+    """Per-round output path: sibling file {stem}.rep{NN}{suffix} or dir {base}.rep{NN}."""
+    p = Path(str(base))
+    if p.suffix:
+        return str(p.parent / f"{p.stem}.rep{rep:02d}{p.suffix}")
+    return f"{base}.rep{rep:02d}"
+
+
+def _promote_rep(base: str, rep: int = 1):
+    """Copy round `rep` outputs to the canonical output path (round 1)."""
+    src = Path(_rep_path(base, rep))
+    dst = Path(str(base))
+    if not src.exists():
+        return
+    if src.is_dir():
+        shutil.copytree(src, dst, dirs_exist_ok=True)
+    else:
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, dst)
 
 
 def _count_seqs(fasta: Path) -> int:
@@ -125,18 +147,25 @@ class LocalRunner(Runner):
 
         The aggregate carries "_reps": the individual per-round dicts,
         so callers can record every round alongside the average.
+        With n_runs > 1 each round writes to {output}.rep{NN} and round 1
+        is promoted to the canonical output path afterwards.
         """
         print(f"  [{tool.name}]", flush=True)
+        base_out = self.output_dir
         runs = []
         for i in range(self.n_runs):
             if self.n_runs > 1:
                 print(f"    Run {i+1}/{self.n_runs}...", end=" ", flush=True)
+                self.output_dir = _rep_path(base_out, i + 1)
             m = self._run_once(tool)
             m["rep"] = i + 1
             runs.append(m)
             if self.n_runs > 1:
                 status = "OK" if m["success"] else "FAIL"
                 print(f"[{status}] {m.get('time_s', 'N/A')}")
+        self.output_dir = base_out
+        if self.n_runs > 1:
+            _promote_rep(base_out, 1)
 
         if len(runs) == 1:
             return runs[0]
